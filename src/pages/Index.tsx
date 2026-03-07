@@ -429,49 +429,297 @@ function StatCard({ label, value, iconBg, iconColor, changePill, changeColor, ic
   );
 }
 
-/* ───────── Tool Card ───────── */
-function ToolCard({ card, onClick, delay }: { card: typeof TOOL_CARDS[0]; onClick: () => void; delay: number }) {
-  const [hovered, setHovered] = useState(false);
-  const locked = card.locked;
-  const grad = locked ? 'linear-gradient(135deg, #e2e8f0, #cbd5e1)' : card.gradient;
+/* ───────── Locked Card Popup Data ───────── */
+const LOCKED_POPUP_DATA: Record<string, { emoji: string; title: string; message: string; percent: number; percentLabel: string; funDetail: string }> = {
+  offer: { emoji: '🔥', title: 'Offer Creation is On Fire!', message: 'Our team is literally burning the midnight oil building this. Your irresistible offers are almost ready.', percent: 65, percentLabel: '65% built', funDetail: 'flames' },
+  funnel: { emoji: '🚧', title: 'Funnels Under Construction!', message: 'Your conversion machine is being engineered. Every funnel step is being stress-tested for maximum sales.', percent: 45, percentLabel: '45% built', funDetail: 'building' },
+  creator: { emoji: '✨', title: 'Something Magical is Brewing!', message: "AI-powered product creation in the making. Soon you'll build ebooks, templates & micro-courses in minutes.", percent: 40, percentLabel: '40% built', funDetail: 'sparkles' },
+  copy: { emoji: '✍️', title: 'Words Are Being Crafted...', message: 'Your AI copywriter is learning to write headlines that stop thumbs, emails that sell, and ads that convert.', percent: 55, percentLabel: '55% built', funDetail: 'typing' },
+  ads: { emoji: '📡', title: 'Launching Ad Intelligence!', message: "We're training our AI on thousands of winning ads. Your campaign machine will be ready to dominate Meta & Google.", percent: 30, percentLabel: '30% built', funDetail: 'radar' },
+  landing: { emoji: '🎨', title: 'Designing the Designer!', message: "Meta, right? We're building a page builder inside a beautifully designed app. Worth the wait — trust the process.", percent: 25, percentLabel: '25% built', funDetail: 'blocks' },
+};
+
+/* ───────── Fun Detail Components ───────── */
+function FlamesDetail() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8 }}>
+      {['🔥', '🔥', '🔥'].map((f, i) => (
+        <span key={i} style={{ fontSize: 18, animation: `flameUp 0.4s ease ${0.1 + i * 0.15}s both` }}>{f}</span>
+      ))}
+    </div>
+  );
+}
+
+function BuildingDetail() {
+  const [dots, setDots] = useState('.');
+  useEffect(() => {
+    const iv = setInterval(() => setDots(d => d.length >= 3 ? '.' : d + '.'), 500);
+    return () => clearInterval(iv);
+  }, []);
+  return <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#06b6d4', fontWeight: 700, textAlign: 'center', marginTop: 8 }}>Building{dots}</div>;
+}
+
+function SparklesDetail() {
+  const positions = [
+    { top: -8, left: '20%', delay: 0 },
+    { top: -4, left: '60%', delay: 0.3 },
+    { top: 2, left: '80%', delay: 0.6 },
+    { top: -10, left: '40%', delay: 0.9 },
+    { top: 0, left: '10%', delay: 1.2 },
+  ];
+  return (
+    <div style={{ position: 'relative', height: 24, marginTop: 4 }}>
+      {positions.map((p, i) => (
+        <span key={i} style={{ position: 'absolute', top: p.top, left: p.left, fontSize: 14, animation: `sparkleFloat 1.5s ease ${p.delay}s infinite` }}>✨</span>
+      ))}
+    </div>
+  );
+}
+
+function TypingDetail() {
+  const text = 'Your headline is loading...';
+  const [charCount, setCharCount] = useState(0);
+  useEffect(() => {
+    if (charCount < text.length) {
+      const t = setTimeout(() => setCharCount(c => c + 1), 60);
+      return () => clearTimeout(t);
+    } else {
+      const t = setTimeout(() => setCharCount(0), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [charCount]);
+  return (
+    <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#8b5cf6', textAlign: 'center', marginTop: 8 }}>
+      {text.slice(0, charCount)}<span style={{ animation: 'blink 0.8s step-end infinite' }}>|</span>
+    </div>
+  );
+}
+
+function RadarDetail() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8, position: 'relative', height: 30 }}>
+      {[0, 0.5, 1].map((d, i) => (
+        <div key={i} style={{
+          position: 'absolute', width: 20, height: 20, borderRadius: '50%', border: '2px solid #f97316',
+          animation: `radarPulse 2s ease-out ${d}s infinite`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+function BlocksDetail() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8, position: 'relative', height: 30 }}>
+      <div style={{ width: 20, height: 14, borderRadius: 4, background: '#6366f1', animation: 'blockSlide 2s ease-in-out infinite' }} />
+      <div style={{ width: 20, height: 14, borderRadius: 4, background: '#7c3aed', animation: 'blockSlide 2s ease-in-out 0.5s infinite reverse' }} />
+    </div>
+  );
+}
+
+function FunDetailRenderer({ type }: { type: string }) {
+  switch (type) {
+    case 'flames': return <FlamesDetail />;
+    case 'building': return <BuildingDetail />;
+    case 'sparkles': return <SparklesDetail />;
+    case 'typing': return <TypingDetail />;
+    case 'radar': return <RadarDetail />;
+    case 'blocks': return <BlocksDetail />;
+    default: return null;
+  }
+}
+
+/* ───────── Locked Card Popup ───────── */
+function LockedCardPopup({ cardId, gradient, accent, onClose }: { cardId: string; gradient: string; accent: string; onClose: () => void }) {
+  const data = LOCKED_POPUP_DATA[cardId];
+  const [notified, setNotified] = useState(false);
+  const [fadingOut, setFadingOut] = useState(false);
+  const [fillActive, setFillActive] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => setFillActive(true), 100);
+    const t = setTimeout(() => {
+      setFadingOut(true);
+      setTimeout(onClose, 300);
+    }, 3500);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  if (!data) return null;
 
   return (
-    <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.5)', backdropFilter: 'blur(8px)',
+      zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      animation: fadingOut ? 'popupFadeOut 0.3s ease forwards' : 'fadeIn 0.2s ease',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        maxWidth: 360, width: '90%', borderRadius: 24, overflow: 'hidden',
+        animation: 'popIn 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        position: 'relative',
+      }}>
+        {/* Close button */}
+        <div onClick={onClose} style={{
+          position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', zIndex: 2, border: 'none', color: 'white', fontSize: 13, fontWeight: 700,
+        }}>✕</div>
+        {/* Top band */}
+        <div style={{ height: 100, background: gradient, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32,
+          }}>
+            {cardId === 'creator' ? <span style={{ animation: 'spinSlow 3s linear infinite' }}>{data.emoji}</span> : data.emoji}
+          </div>
+        </div>
+        {/* Bottom content */}
+        <div style={{ padding: 24, textAlign: 'center', background: 'white' }}>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a', marginBottom: 6, position: 'relative' }}>
+            {data.title}
+          </div>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.6, marginBottom: 8 }}>{data.message}</div>
+          <FunDetailRenderer type={data.funDetail} />
+          {/* Progress bar */}
+          <div style={{ marginTop: 16 }}>
+            <div style={{ height: 6, background: '#f1f5f9', borderRadius: 50, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 50, background: gradient,
+                width: fillActive ? `${data.percent}%` : '0%',
+                transition: 'width 0.8s ease 0.2s',
+              }} />
+            </div>
+            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, marginTop: 4, textAlign: 'right' }}>{data.percentLabel}</div>
+          </div>
+          {/* Notify button */}
+          <button onClick={(e) => { e.stopPropagation(); setNotified(true); }} style={{
+            width: '100%', marginTop: 16, borderRadius: 12, border: 'none', padding: 12,
+            fontWeight: 700, fontSize: 13.5, color: notified ? '#15803d' : 'white', cursor: 'pointer',
+            background: notified ? '#dcfce7' : gradient,
+            boxShadow: notified ? 'none' : `0 4px 16px ${accent}66`,
+            transition: 'all 0.2s',
+          }}>
+            {notified ? '✅ We\'ll notify you!' : 'Notify Me When Live →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Tool Card ───────── */
+function ToolCard({ card, onClick, delay, lockedIndex }: { card: typeof TOOL_CARDS[0]; onClick: () => void; delay: number; lockedIndex?: number }) {
+  const [hovered, setHovered] = useState(false);
+  const [bouncing, setBouncing] = useState(false);
+  const locked = card.locked;
+  const grad = card.gradient;
+  const entranceDelay = locked && lockedIndex !== undefined ? (0.18 + lockedIndex * 0.04) : delay;
+
+  const handleClick = () => {
+    if (locked) {
+      setBouncing(true);
+      setTimeout(() => setBouncing(false), 500);
+    }
+    onClick();
+  };
+
+  return (
+    <div onClick={handleClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       style={{
-        borderRadius: 20, overflow: 'hidden', cursor: locked ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
-        boxShadow: hovered && !locked ? `0 12px 40px ${card.accent}25` : '0 4px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(255,255,255,0.8)',
-        transform: hovered ? (locked ? 'translateY(-2px)' : 'translateY(-4px)') : 'none',
-        animation: `popIn 0.4s ease ${delay}s both`,
+        borderRadius: 20, overflow: 'hidden', cursor: 'pointer',
+        transition: 'all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        boxShadow: hovered ? `0 12px 40px ${card.accent}30` : '0 4px 20px rgba(0,0,0,0.06), 0 0 0 1px rgba(255,255,255,0.8)',
+        transform: hovered ? 'translateY(-4px)' : 'none',
+        animation: bouncing
+          ? 'cardBounce 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both'
+          : `popIn 0.4s ease ${entranceDelay}s both`,
       }}>
       {/* Top band */}
-      <div style={{ height: 120, background: grad, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{
+        height: 120, background: grad, position: 'relative', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        filter: hovered && locked ? 'brightness(1.05)' : 'none',
+        transition: 'filter 0.22s',
+      }}>
+        {/* Frosted overlay for locked */}
+        {locked && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.08)' }} />}
         {/* Big bg icon */}
-        <div style={{ position: 'absolute', right: -10, bottom: -10, opacity: locked ? 0.08 : 0.12, fontSize: 72 }}>
+        <div style={{ position: 'absolute', right: -10, bottom: -10, opacity: locked ? 0.15 : 0.12, fontSize: 72 }}>
           {card.id === 'niche' ? '🎯' : card.id === 'product' ? '🧭' : card.id === 'offer' ? '🎁' : card.id === 'funnel' ? '🔽' : card.id === 'creator' ? '✨' : card.id === 'copy' ? '✍️' : card.id === 'ads' ? '📢' : '📄'}
         </div>
         {/* Status badge */}
-        <div style={{ position: 'absolute', top: 12, left: 16 }}>
+        <div style={{ position: 'absolute', top: 12, left: 16, zIndex: 2 }}>
           {locked
-            ? <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(255,255,255,0.25)', color: 'white', padding: '2px 8px', borderRadius: 20, letterSpacing: '0.06em' }}>COMING SOON</span>
+            ? <span style={{
+                fontSize: 9, fontWeight: 800, color: 'white', padding: '3px 10px', borderRadius: 50,
+                letterSpacing: '0.1em', display: 'inline-block',
+                background: 'linear-gradient(90deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.2) 100%)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255,255,255,0.35)',
+                animation: 'badgePulse 2s ease-in-out infinite',
+                position: 'relative' as const, overflow: 'hidden',
+              }}>
+                <span style={{
+                  position: 'absolute' as const, inset: 0,
+                  background: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%)',
+                  backgroundSize: '200px 100%',
+                  animation: 'badgeShimmer 2.5s linear infinite',
+                }} />
+                <span style={{ position: 'relative' as const }}>⚡ BUILDING NOW</span>
+              </span>
             : <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(255,255,255,0.3)', color: 'white', padding: '2px 8px', borderRadius: 20, letterSpacing: '0.06em' }}>LIVE</span>
           }
         </div>
         {/* Number */}
-        <span style={{ position: 'absolute', bottom: 12, left: 20, fontFamily: 'Sora', fontWeight: 900, fontSize: 32, color: 'rgba(255,255,255,0.25)' }}>{card.num}</span>
-        {locked && <LockIcon />}
+        <span style={{ position: 'absolute', bottom: 12, left: 20, fontFamily: 'Sora', fontWeight: 900, fontSize: 32, color: locked ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.25)' }}>{card.num}</span>
+        {/* Lock icon for locked cards */}
+        {locked && (
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%',
+            background: hovered ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.18)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'lockBreathe 3s ease-in-out infinite',
+            transition: 'all 0.22s',
+            transform: hovered ? 'scale(1.1)' : 'scale(1)',
+            zIndex: 2,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+        )}
       </div>
       {/* Bottom content */}
-      <div style={{ padding: '18px 20px 20px', background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)' }}>
-        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: locked ? '#94a3b8' : '#0f172a', marginBottom: 4 }}>{card.name}</div>
-        <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: locked ? '#cbd5e1' : '#64748b', lineHeight: 1.6, marginBottom: 14 }}>{card.desc}</div>
+      <div style={{ padding: '18px 20px 20px', background: locked ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)' }}>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', opacity: locked ? 0.85 : 1, marginBottom: 4 }}>{card.name}</div>
+        <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#475569', opacity: locked ? 0.9 : 1, lineHeight: 1.6, marginBottom: 14 }}>{card.desc}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', gap: 6 }}>
             {card.tags.map(t => (
-              <span key={t} style={{ fontSize: 10, fontWeight: 600, color: locked ? '#94a3b8' : '#64748b', background: locked ? '#f8fafc' : '#f1f5f9', padding: '2px 8px', borderRadius: 20 }}>{t}</span>
+              <span key={t} style={{
+                fontSize: 10, fontWeight: 600,
+                color: locked ? card.accent : '#64748b',
+                background: locked ? `${card.accent}12` : '#f1f5f9',
+                border: locked ? `1px solid ${card.accent}25` : 'none',
+                padding: '2px 8px', borderRadius: 20,
+              }}>{t}</span>
             ))}
           </div>
           {locked
-            ? <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, background: '#f1f5f9', color: '#94a3b8', padding: '5px 14px', borderRadius: 50, cursor: 'not-allowed' }}>🔒 Coming Soon</span>
+            ? <span
+                onMouseEnter={e => { e.currentTarget.style.background = card.accent; e.currentTarget.style.color = 'white'; e.currentTarget.style.transform = 'scale(1.05)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = `${card.accent}12`; e.currentTarget.style.color = card.accent; e.currentTarget.style.transform = 'scale(1)'; }}
+                style={{
+                  fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12,
+                  background: `${card.accent}12`, color: card.accent,
+                  border: `1px solid ${card.accent}30`,
+                  padding: '5px 14px', borderRadius: 50, cursor: 'pointer',
+                  transition: 'all 0.18s',
+                }}>⚡ Coming Soon</span>
             : <button onMouseEnter={e => { e.currentTarget.style.background = card.accent; e.currentTarget.style.color = 'white'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = card.accentLight; e.currentTarget.style.color = card.accent; }}
                 style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: card.accent, background: card.accentLight, padding: '5px 14px', borderRadius: 50, border: 'none', cursor: 'pointer', transition: 'all 0.15s' }}>
