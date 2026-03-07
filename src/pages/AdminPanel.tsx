@@ -1236,3 +1236,111 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
     </div>
   );
 }
+
+// ─── ACTIVITY LOG TAB ────────────────────────────────────────
+function ActivityLogTab({ users, emailMap }: { users: UserRow[]; emailMap: Record<string, string> }) {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => { fetchLogs(); }, []);
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('admin_activity_log').select('*').order('created_at', { ascending: false }).limit(200);
+    setLogs((data || []) as any[]);
+    setLoading(false);
+  };
+
+  const actionIcons: Record<string, string> = {
+    user_edited: '✏️', user_deleted: '🗑', signup_approved: '✅', signup_rejected: '❌',
+    user_created: '➕', password_reset: '🔑', email_sent: '📧',
+  };
+  const actionColors: Record<string, { bg: string; color: string }> = {
+    user_edited: { bg: '#ede9fe', color: '#7c3aed' },
+    user_deleted: { bg: '#fee2e2', color: '#991b1b' },
+    signup_approved: { bg: '#dcfce7', color: '#15803d' },
+    signup_rejected: { bg: '#fef9c3', color: '#92400e' },
+    user_created: { bg: '#dcfce7', color: '#059669' },
+    password_reset: { bg: '#fef9c3', color: '#92400e' },
+    email_sent: { bg: '#f0f9ff', color: '#0891b2' },
+  };
+
+  const actionTypes = ['all', 'user_edited', 'user_deleted', 'signup_approved', 'signup_rejected', 'user_created', 'password_reset'];
+  const filtered = filter === 'all' ? logs : logs.filter(l => l.action_type === filter);
+
+  const relativeTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const getAdminName = (adminId: string) => {
+    const u = users.find(x => x.id === adminId);
+    return u?.full_name || emailMap[adminId] || 'Admin';
+  };
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 2 }}>Activity Log</h2>
+          <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' }}>All admin actions tracked with timestamps</p>
+        </div>
+        <button onClick={fetchLogs} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b' }}>🔄 Refresh</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
+        {actionTypes.map(a => (
+          <button key={a} onClick={() => setFilter(a)} style={{
+            padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+            background: filter === a ? '#7c3aed' : '#f1f5f9', color: filter === a ? 'white' : '#64748b',
+            textTransform: 'capitalize',
+          }}>{a === 'all' ? 'All' : a.replace(/_/g, ' ')}</button>
+        ))}
+      </div>
+
+      <div style={{ ...glassCard, overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No activity logged yet.</div>
+        ) : (
+          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+            {filtered.map((log: any) => {
+              const ac = actionColors[log.action_type] || { bg: '#f1f5f9', color: '#64748b' };
+              const icon = actionIcons[log.action_type] || '📋';
+              return (
+                <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: ac.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, background: ac.bg, color: ac.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{log.action_type.replace(/_/g, ' ')}</span>
+                      {log.target_user_name && <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{log.target_user_name}</span>}
+                    </div>
+                    {log.details && Object.keys(log.details).length > 0 && (
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.6 }}>
+                        {Object.entries(log.details).map(([k, v]) => (
+                          <span key={k} style={{ marginRight: 12 }}><strong style={{ color: '#94a3b8' }}>{k}:</strong> {String(v)}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                      by {getAdminName(log.admin_id)} · {relativeTime(log.created_at)} · {new Date(log.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
