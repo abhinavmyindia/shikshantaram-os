@@ -306,7 +306,7 @@ function AddUserTab({ onSuccess }: { onSuccess: () => void }) {
       if (data?.error) throw new Error(data.error);
 
       // Send welcome email
-      const appUrl = window.location.origin;
+      const appUrl = 'https://app.shikshantaram.in';
       await supabase.functions.invoke('send-welcome-email', {
         body: {
           email: form.email,
