@@ -413,8 +413,8 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
 }
 
 // ─── APPROVE ACCESS MODAL ────────────────────────────────────
-function ApproveAccessModal({ request, onClose, onApproved, showToast }: {
-  request: SignupRow; onClose: () => void; onApproved: () => void; showToast: (msg: string, type?: string) => void;
+function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivity }: {
+  request: SignupRow; onClose: () => void; onApproved: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
   const defaultTier = request.payment_type === 'full' ? 'premium' : 'basic';
   const [selectedTier, setSelectedTier] = useState(defaultTier);
@@ -447,6 +447,7 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast }: {
         reviewed_at: new Date().toISOString(),
       } as any).eq('id', request.id);
 
+      await logActivity('signup_approved', null, request.full_name, { email: request.email, tier: selectedTier, payment: paymentAmount });
       onClose();
       onApproved();
       showToast(`🎉 ${request.full_name} approved as ${selectedTier}! Email sent to ${request.email}`);
@@ -1242,6 +1243,7 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
           onClose={() => setApproveRequest(null)}
           onApproved={() => { fetchSignups(); onRefresh(); }}
           showToast={showToast}
+          logActivity={logActivity}
         />
       )}
     </div>
