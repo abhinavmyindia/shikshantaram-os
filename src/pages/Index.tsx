@@ -1284,7 +1284,7 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
     const t = setTimeout(() => {
       setFadingOut(true);
       setTimeout(onClose, 300);
-    }, 3500);
+    }, 15000);
     return () => clearTimeout(t);
   }, [onClose]);
 
