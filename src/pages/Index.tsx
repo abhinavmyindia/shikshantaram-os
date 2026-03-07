@@ -430,12 +430,26 @@ function ToolCard({ card, onClick, delay }: { card: typeof TOOL_CARDS[0]; onClic
 }
 
 /* ───────── Dashboard Home ───────── */
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string }) {
+  const [greeting, setGreeting] = useState(getGreeting());
+
+  useEffect(() => {
+    const interval = setInterval(() => setGreeting(getGreeting()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div>
       {/* Header */}
       <div style={{ animation: 'fadeUp 0.4s ease', marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 28, color: '#0f172a', letterSpacing: '-0.02em' }}>Good morning, {userName.split(' ')[0]} 👋</h1>
+        <h1 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 28, color: '#0f172a', letterSpacing: '-0.02em' }}>{greeting}, {userName.split(' ')[0]} 👋</h1>
         <p style={{ fontFamily: 'DM Sans', fontSize: 14.5, color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>Your digital product universe is ready. Let's build something legendary.</p>
       </div>
 
