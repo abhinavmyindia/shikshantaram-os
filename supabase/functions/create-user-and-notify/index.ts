@@ -110,16 +110,18 @@ serve(async (req) => {
         </div>
       </div>`;
 
-    await fetch("https://api.resend.com/emails", {
+    const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "Shikshantaram OS <onboarding@resend.dev>",
-        to: [email],
+        from: "Shikshantaram OS <auth@shikshantaram.in>",
+        to: [normalizedEmail],
         subject: `🎉 Your Shikshantaram OS ${tierLabel} Access is Live!`,
         html,
       }),
     });
+    const emailResult = await emailRes.json();
+    console.log("Resend response:", JSON.stringify(emailResult));
 
     return new Response(JSON.stringify({ success: true, userId, temp_password }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
