@@ -191,6 +191,10 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
         if (data?.error) throw new Error(data.error);
       }
 
+      await logActivity('user_edited', user.id, form.fullName, {
+        tier: form.accessTier, payment: form.paymentStatus,
+        ...(form.email !== originalEmail ? { email_changed: form.email } : {}),
+      });
       onSave();
       showToast(`✅ ${form.fullName} updated successfully.`);
     } catch (err: any) {
@@ -228,6 +232,7 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
       const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { userId: user.id } });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
+      await logActivity('user_deleted', user.id, user.full_name);
       setShowDelete(false);
       onClose();
       onDelete(user.id, user.full_name);
@@ -739,6 +744,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity }: { user
       const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { userId: deleteUser.id } });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
+      await logActivity('user_deleted', deleteUser.id, deleteUser.full_name);
       setDeleteUser(null);
       onRefresh();
       showToast(`🗑 ${deleteUser.full_name}'s account has been permanently deleted.`, 'warning');
@@ -862,6 +868,7 @@ function AddUserTab({ onSuccess, logActivity }: { onSuccess: () => void; logActi
           body: { email: normalizedEmail, full_name: form.fullName, access_tier: form.tier, temp_password: data.temp_password, login_url: 'https://app.shikshantaram.in' },
         });
         setResult({ success: true, message: `User added! Welcome email sent to ${normalizedEmail}` });
+        await logActivity('user_created', null, form.fullName, { email: normalizedEmail, tier: form.tier });
         onSuccess();
       }
     } catch (err: any) {
@@ -968,6 +975,7 @@ function ResetPasswordTab({ users, logActivity }: { users: UserRow[]; logActivit
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       const userName = users.find(u => u.id === selectedUser)?.full_name || 'User';
+      await logActivity('password_reset', selectedUser, userName);
       setResult({ success: true, message: `Password updated for ${userName}` });
       setNewPassword(''); setSelectedUser(''); setSearch('');
     } catch (err: any) {
@@ -1125,7 +1133,9 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
   const filtered = signups.filter(s => filter === 'all' || s.status === filter);
 
   const rejectSignup = async (requestId: string) => {
+    const req = signups.find(s => s.id === requestId);
     await supabase.from('signup_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString() } as any).eq('id', requestId);
+    await logActivity('signup_rejected', null, req?.full_name || null, { email: req?.email });
     fetchSignups();
     showToast('Request rejected.', 'warning');
   };
