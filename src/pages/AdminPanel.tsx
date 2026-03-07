@@ -78,7 +78,7 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
-  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback'];
+  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups'];
 
   return (
     <div style={{
@@ -111,7 +111,7 @@ export default function AdminPanel() {
         {tabs.map(t => {
           const id = t.split(' ').slice(1).join(' ').toLowerCase();
           const active = tab === id || (tab === 'overview' && t.includes('Overview'));
-          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : 'feedback';
+          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : t.includes('Signups') ? 'signups' : 'feedback';
           return (
             <button key={t} onClick={() => setTab(tabId)} style={{
               padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
@@ -137,6 +137,7 @@ export default function AdminPanel() {
             {tab === 'add' && <AddUserTab onSuccess={loadData} />}
             {tab === 'password' && <ResetPasswordTab users={users} />}
             {tab === 'feedback' && <FeedbackTab feedback={feedback} users={users} />}
+            {tab === 'signups' && <SignupsTab />}
           </>
         )}
       </div>
@@ -616,6 +617,224 @@ function FeedbackTab({ feedback, users }: { feedback: FeedbackRow[]; users: User
         );
       })}
       {filtered.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No feedback yet.</div>}
+    </div>
+  );
+}
+
+interface SignupRow {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  payment_type: string;
+  status: string;
+  submitted_at: string;
+  reviewed_at: string | null;
+  notes: string;
+}
+
+function SignupsTab() {
+  const [signups, setSignups] = useState<SignupRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [approving, setApproving] = useState<string | null>(null);
+  const [toast, setToast] = useState('');
+
+  useEffect(() => { fetchSignups(); }, []);
+
+  const fetchSignups = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('signup_requests').select('*').order('submitted_at', { ascending: false });
+    setSignups((data || []) as unknown as SignupRow[]);
+    setLoading(false);
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 4000);
+  };
+
+  const pendingCount = signups.filter(s => s.status === 'pending').length;
+  const approvedCount = signups.filter(s => s.status === 'approved').length;
+  const rejectedCount = signups.filter(s => s.status === 'rejected').length;
+
+  const filtered = signups.filter(s => filter === 'all' || s.status === filter);
+
+  const approveSignup = async (request: SignupRow) => {
+    setApproving(request.id);
+    try {
+      const tier = request.payment_type === 'full' ? 'premium' : 'basic';
+      const paymentStatus = request.payment_type === 'full' ? 'paid' : 'reserved';
+      const tempPassword = 'Shk' + Math.random().toString(36).slice(2, 9).toUpperCase();
+
+      const { data, error } = await supabase.functions.invoke('create-user-and-notify', {
+        body: {
+          email: request.email,
+          full_name: request.full_name,
+          phone: request.phone,
+          temp_password: tempPassword,
+          access_tier: tier,
+          payment_status: paymentStatus,
+          payment_amount: 0,
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      await supabase.from('signup_requests').update({
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
+      } as any).eq('id', request.id);
+
+      fetchSignups();
+      showToast(`✅ ${request.full_name} approved! Credentials sent to ${request.email}`);
+    } catch (err: any) {
+      showToast(`❌ Error: ${err.message}`);
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  const rejectSignup = async (requestId: string) => {
+    await supabase.from('signup_requests').update({
+      status: 'rejected',
+      reviewed_at: new Date().toISOString(),
+    } as any).eq('id', requestId);
+    fetchSignups();
+    showToast('Request rejected.');
+  };
+
+  const relativeTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  };
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60 }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
+          background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)',
+          borderRadius: 12, padding: '12px 20px', border: '1px solid #e2e8f0',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)', fontSize: 13, fontWeight: 600, color: '#0f172a',
+          animation: 'popIn 0.3s ease',
+        }}>
+          {toast}
+        </div>
+      )}
+
+      {/* Summary pills */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#fef9c3', color: '#92400e' }}>⏳ {pendingCount} Pending</span>
+        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#dcfce7', color: '#15803d' }}>✅ {approvedCount} Approved</span>
+        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#fee2e2', color: '#991b1b' }}>❌ {rejectedCount} Rejected</span>
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+        {['all', 'pending', 'approved', 'rejected'].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            padding: '6px 16px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+            background: 'transparent', color: filter === f ? '#7c3aed' : '#64748b',
+            borderBottom: filter === f ? '2px solid #7c3aed' : '2px solid transparent',
+            textTransform: 'capitalize',
+          }}>{f}</button>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ ...glassCard, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8fafc' }}>
+              {['Name', 'Email', 'Phone', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(s => (
+              <tr key={s.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                <td style={{ padding: '10px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>{s.full_name}</td>
+                <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.email}</td>
+                <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.phone}</td>
+                <td style={{ padding: '10px 16px' }}>
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
+                    background: s.payment_type === 'full' ? '#ede9fe' : '#fef9c3',
+                    color: s.payment_type === 'full' ? '#7c3aed' : '#92400e',
+                  }}>
+                    {s.payment_type === 'full' ? 'FULL PAYMENT' : 'RESERVE'}
+                  </span>
+                </td>
+                <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{relativeTime(s.submitted_at)}</td>
+                <td style={{ padding: '10px 16px' }}>
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
+                    background: s.status === 'pending' ? '#fef9c3' : s.status === 'approved' ? '#dcfce7' : '#fee2e2',
+                    color: s.status === 'pending' ? '#92400e' : s.status === 'approved' ? '#15803d' : '#991b1b',
+                  }}>
+                    {s.status}
+                  </span>
+                  {s.status !== 'pending' && s.reviewed_at && (
+                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+                      {s.status === 'approved' ? 'Approved' : 'Rejected'} {relativeTime(s.reviewed_at)}
+                    </div>
+                  )}
+                </td>
+                <td style={{ padding: '10px 16px' }}>
+                  {s.status === 'pending' && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => approveSignup(s)} disabled={approving === s.id} style={{
+                        background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0',
+                        borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700,
+                        fontSize: 12, cursor: approving === s.id ? 'wait' : 'pointer', transition: 'all 0.18s',
+                        opacity: approving === s.id ? 0.6 : 1,
+                      }}
+                        onMouseEnter={e => { if (approving !== s.id) { e.currentTarget.style.background = '#059669'; e.currentTarget.style.color = 'white'; } }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.color = '#15803d'; }}
+                      >
+                        {approving === s.id ? '...' : '✅ Approve'}
+                      </button>
+                      <button onClick={() => rejectSignup(s.id)} style={{
+                        background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca',
+                        borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700,
+                        fontSize: 12, cursor: 'pointer', transition: 'all 0.18s',
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = 'white'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#991b1b'; }}
+                      >
+                        ✗ Reject
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No signup requests found.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
