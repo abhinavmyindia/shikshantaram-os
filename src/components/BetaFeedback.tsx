@@ -27,7 +27,7 @@ export default function BetaFeedback({ userId }: { userId: string }) {
     <>
       {/* Floating button */}
       <button onClick={() => setOpen(true)} style={{
-        position: 'fixed', bottom: 24, left: 24, zIndex: 300,
+        position: 'fixed', bottom: 24, right: 24, zIndex: 300,
         background: 'linear-gradient(135deg,#ec4899,#c026d3)', color: 'white', borderRadius: 50,
         padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, border: 'none',
         boxShadow: '0 4px 20px rgba(236,72,153,0.4)', cursor: 'pointer', transition: 'all 0.15s',

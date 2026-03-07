@@ -167,6 +167,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut }: { userName: string; 
       height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 24px', background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(24px) saturate(180%)',
       borderBottom: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 1px 16px rgba(0,0,0,0.06)', flexShrink: 0,
+      position: 'relative' as const, zIndex: 400, overflow: 'visible',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <LogoSvg />
