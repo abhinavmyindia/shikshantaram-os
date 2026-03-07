@@ -142,8 +142,8 @@ function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
 }
 
 // ─── EDIT USER MODAL ─────────────────────────────────────────
-function EditUserModal({ user, email, onClose, onSave, onDelete, showToast }: {
-  user: UserRow; email: string; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void;
+function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logActivity }: {
+  user: UserRow; email: string; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
   const [form, setForm] = useState({
     fullName: user.full_name, email, phone: user.phone || '', accessTier: user.access_tier,
@@ -191,6 +191,10 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast }: {
         if (data?.error) throw new Error(data.error);
       }
 
+      await logActivity('user_edited', user.id, form.fullName, {
+        tier: form.accessTier, payment: form.paymentStatus,
+        ...(form.email !== originalEmail ? { email_changed: form.email } : {}),
+      });
       onSave();
       showToast(`✅ ${form.fullName} updated successfully.`);
     } catch (err: any) {
@@ -228,6 +232,7 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast }: {
       const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { userId: user.id } });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
+      await logActivity('user_deleted', user.id, user.full_name);
       setShowDelete(false);
       onClose();
       onDelete(user.id, user.full_name);
@@ -408,8 +413,8 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast }: {
 }
 
 // ─── APPROVE ACCESS MODAL ────────────────────────────────────
-function ApproveAccessModal({ request, onClose, onApproved, showToast }: {
-  request: SignupRow; onClose: () => void; onApproved: () => void; showToast: (msg: string, type?: string) => void;
+function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivity }: {
+  request: SignupRow; onClose: () => void; onApproved: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
   const defaultTier = request.payment_type === 'full' ? 'premium' : 'basic';
   const [selectedTier, setSelectedTier] = useState(defaultTier);
@@ -442,6 +447,7 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast }: {
         reviewed_at: new Date().toISOString(),
       } as any).eq('id', request.id);
 
+      await logActivity('signup_approved', null, request.full_name, { email: request.email, tier: selectedTier, payment: paymentAmount });
       onClose();
       onApproved();
       showToast(`🎉 ${request.full_name} approved as ${selectedTier}! Email sent to ${request.email}`);
@@ -586,7 +592,18 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
-  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups'];
+  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups', '📋 Activity Log'];
+
+  const logActivity = async (action_type: string, target_user_id: string | null, target_user_name: string | null, details: Record<string, any> = {}) => {
+    if (!user) return;
+    await supabase.from('admin_activity_log').insert({
+      admin_id: user.id,
+      action_type,
+      target_user_id,
+      target_user_name,
+      details,
+    } as any);
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}>
@@ -617,7 +634,7 @@ export default function AdminPanel() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, padding: '12px 24px', background: 'rgba(255,255,255,0.8)', borderBottom: '1px solid #f1f5f9' }}>
         {tabs.map(t => {
-          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : t.includes('Signups') ? 'signups' : 'feedback';
+          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : t.includes('Signups') ? 'signups' : t.includes('Activity') ? 'activity' : 'feedback';
           return (
             <button key={t} onClick={() => setTab(tabId)} style={{
               padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
@@ -639,11 +656,12 @@ export default function AdminPanel() {
         ) : (
           <>
             {tab === 'overview' && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
-            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} />}
-            {tab === 'add' && <AddUserTab onSuccess={loadData} />}
-            {tab === 'password' && <ResetPasswordTab users={users} />}
+            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+            {tab === 'add' && <AddUserTab onSuccess={loadData} logActivity={logActivity} />}
+            {tab === 'password' && <ResetPasswordTab users={users} logActivity={logActivity} />}
             {tab === 'feedback' && <FeedbackTab feedback={feedback} users={users} />}
-            {tab === 'signups' && <SignupsTab onRefresh={loadData} showToast={showAdminToast} />}
+            {tab === 'signups' && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+            {tab === 'activity' && <ActivityLogTab users={users} emailMap={emailMap} />}
           </>
         )}
       </div>
@@ -707,7 +725,7 @@ function OverviewTab({ stats, users, emailMap }: { stats: any; users: UserRow[];
 }
 
 // ─── USERS TAB ───────────────────────────────────────────────
-function UsersTab({ users, emailMap, onRefresh, showToast }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void; showToast: (msg: string, type?: string) => void }) {
+function UsersTab({ users, emailMap, onRefresh, showToast, logActivity }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [editUser, setEditUser] = useState<UserRow | null>(null);
@@ -727,6 +745,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast }: { users: UserRow[];
       const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { userId: deleteUser.id } });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
+      await logActivity('user_deleted', deleteUser.id, deleteUser.full_name);
       setDeleteUser(null);
       onRefresh();
       showToast(`🗑 ${deleteUser.full_name}'s account has been permanently deleted.`, 'warning');
@@ -810,6 +829,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast }: { users: UserRow[];
           onSave={() => { setEditUser(null); onRefresh(); }}
           onDelete={(id, name) => { onRefresh(); showToast(`🗑 ${name}'s account has been permanently deleted.`, 'warning'); }}
           showToast={showToast}
+          logActivity={logActivity}
         />
       )}
 
@@ -826,7 +846,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast }: { users: UserRow[];
 }
 
 // ─── ADD USER TAB (unchanged) ────────────────────────────────
-function AddUserTab({ onSuccess }: { onSuccess: () => void }) {
+function AddUserTab({ onSuccess, logActivity }: { onSuccess: () => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', tier: 'basic', paymentAmount: 0, notes: '', isBeta: false });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -849,6 +869,7 @@ function AddUserTab({ onSuccess }: { onSuccess: () => void }) {
           body: { email: normalizedEmail, full_name: form.fullName, access_tier: form.tier, temp_password: data.temp_password, login_url: 'https://app.shikshantaram.in' },
         });
         setResult({ success: true, message: `User added! Welcome email sent to ${normalizedEmail}` });
+        await logActivity('user_created', null, form.fullName, { email: normalizedEmail, tier: form.tier });
         onSuccess();
       }
     } catch (err: any) {
@@ -937,7 +958,7 @@ function AddUserTab({ onSuccess }: { onSuccess: () => void }) {
 }
 
 // ─── RESET PASSWORD TAB (unchanged) ──────────────────────────
-function ResetPasswordTab({ users }: { users: UserRow[] }) {
+function ResetPasswordTab({ users, logActivity }: { users: UserRow[]; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
   const [selectedUser, setSelectedUser] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -955,6 +976,7 @@ function ResetPasswordTab({ users }: { users: UserRow[] }) {
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
       const userName = users.find(u => u.id === selectedUser)?.full_name || 'User';
+      await logActivity('password_reset', selectedUser, userName);
       setResult({ success: true, message: `Password updated for ${userName}` });
       setNewPassword(''); setSelectedUser(''); setSearch('');
     } catch (err: any) {
@@ -1091,7 +1113,7 @@ function FeedbackTab({ feedback, users }: { feedback: FeedbackRow[]; users: User
 }
 
 // ─── SIGNUPS TAB ─────────────────────────────────────────────
-function SignupsTab({ onRefresh, showToast }: { onRefresh: () => void; showToast: (msg: string, type?: string) => void }) {
+function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
   const [signups, setSignups] = useState<SignupRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -1112,7 +1134,9 @@ function SignupsTab({ onRefresh, showToast }: { onRefresh: () => void; showToast
   const filtered = signups.filter(s => filter === 'all' || s.status === filter);
 
   const rejectSignup = async (requestId: string) => {
+    const req = signups.find(s => s.id === requestId);
     await supabase.from('signup_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString() } as any).eq('id', requestId);
+    await logActivity('signup_rejected', null, req?.full_name || null, { email: req?.email });
     fetchSignups();
     showToast('Request rejected.', 'warning');
   };
@@ -1219,8 +1243,117 @@ function SignupsTab({ onRefresh, showToast }: { onRefresh: () => void; showToast
           onClose={() => setApproveRequest(null)}
           onApproved={() => { fetchSignups(); onRefresh(); }}
           showToast={showToast}
+          logActivity={logActivity}
         />
       )}
+    </div>
+  );
+}
+
+// ─── ACTIVITY LOG TAB ────────────────────────────────────────
+function ActivityLogTab({ users, emailMap }: { users: UserRow[]; emailMap: Record<string, string> }) {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => { fetchLogs(); }, []);
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('admin_activity_log').select('*').order('created_at', { ascending: false }).limit(200);
+    setLogs((data || []) as any[]);
+    setLoading(false);
+  };
+
+  const actionIcons: Record<string, string> = {
+    user_edited: '✏️', user_deleted: '🗑', signup_approved: '✅', signup_rejected: '❌',
+    user_created: '➕', password_reset: '🔑', email_sent: '📧',
+  };
+  const actionColors: Record<string, { bg: string; color: string }> = {
+    user_edited: { bg: '#ede9fe', color: '#7c3aed' },
+    user_deleted: { bg: '#fee2e2', color: '#991b1b' },
+    signup_approved: { bg: '#dcfce7', color: '#15803d' },
+    signup_rejected: { bg: '#fef9c3', color: '#92400e' },
+    user_created: { bg: '#dcfce7', color: '#059669' },
+    password_reset: { bg: '#fef9c3', color: '#92400e' },
+    email_sent: { bg: '#f0f9ff', color: '#0891b2' },
+  };
+
+  const actionTypes = ['all', 'user_edited', 'user_deleted', 'signup_approved', 'signup_rejected', 'user_created', 'password_reset'];
+  const filtered = filter === 'all' ? logs : logs.filter(l => l.action_type === filter);
+
+  const relativeTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const getAdminName = (adminId: string) => {
+    const u = users.find(x => x.id === adminId);
+    return u?.full_name || emailMap[adminId] || 'Admin';
+  };
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 2 }}>Activity Log</h2>
+          <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' }}>All admin actions tracked with timestamps</p>
+        </div>
+        <button onClick={fetchLogs} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b' }}>🔄 Refresh</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
+        {actionTypes.map(a => (
+          <button key={a} onClick={() => setFilter(a)} style={{
+            padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+            background: filter === a ? '#7c3aed' : '#f1f5f9', color: filter === a ? 'white' : '#64748b',
+            textTransform: 'capitalize',
+          }}>{a === 'all' ? 'All' : a.replace(/_/g, ' ')}</button>
+        ))}
+      </div>
+
+      <div style={{ ...glassCard, overflow: 'hidden' }}>
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No activity logged yet.</div>
+        ) : (
+          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+            {filtered.map((log: any) => {
+              const ac = actionColors[log.action_type] || { bg: '#f1f5f9', color: '#64748b' };
+              const icon = actionIcons[log.action_type] || '📋';
+              return (
+                <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 8, background: ac.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{icon}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, background: ac.bg, color: ac.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{log.action_type.replace(/_/g, ' ')}</span>
+                      {log.target_user_name && <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{log.target_user_name}</span>}
+                    </div>
+                    {log.details && Object.keys(log.details).length > 0 && (
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.6 }}>
+                        {Object.entries(log.details).map(([k, v]) => (
+                          <span key={k} style={{ marginRight: 12 }}><strong style={{ color: '#94a3b8' }}>{k}:</strong> {String(v)}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                      by {getAdminName(log.admin_id)} · {relativeTime(log.created_at)} · {new Date(log.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
