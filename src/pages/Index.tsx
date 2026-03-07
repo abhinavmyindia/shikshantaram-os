@@ -5,6 +5,7 @@ import { productCategories, ProductCategory } from '@/data/products';
 import { useAuth } from '@/hooks/useAuth';
 import { useTracking } from '@/hooks/useTracking';
 import BetaFeedback from '@/components/BetaFeedback';
+import ProfilePage from '@/components/ProfilePage';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
@@ -164,7 +165,7 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 );
 
 /* ───────── Types ───────── */
-type PageId = 'dashboard' | 'niche' | 'product' | 'settings' | 'help';
+type PageId = 'dashboard' | 'niche' | 'product' | 'settings' | 'help' | 'profile';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
 const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product'];
@@ -213,7 +214,7 @@ const TOOL_CARDS = [
 ];
 
 /* ───────── Navbar ───────── */
-function Navbar({ userName, userTier, isAdmin, onSignOut }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void }) {
+function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
@@ -273,7 +274,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut }: { userName: string; 
               </div>
               <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
               {[
-                { emoji: '👤', label: 'My Profile', action: () => {} },
+                { emoji: '👤', label: 'My Profile', action: () => onProfileClick() },
                 { emoji: '❓', label: 'Help & Docs', action: () => {} },
               ].map(m => (
                 <div key={m.label} onClick={() => { m.action(); setMenuOpen(false); }}
