@@ -142,8 +142,8 @@ function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
 }
 
 // ─── EDIT USER MODAL ─────────────────────────────────────────
-function EditUserModal({ user, email, onClose, onSave, onDelete, showToast }: {
-  user: UserRow; email: string; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void;
+function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logActivity }: {
+  user: UserRow; email: string; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
   const [form, setForm] = useState({
     fullName: user.full_name, email, phone: user.phone || '', accessTier: user.access_tier,
