@@ -349,7 +349,7 @@ export default function ProfilePage({
           <Pulse w={140} h={26} mt={8} />
           <Pulse w={320} h={14} mt={6} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24 }}>
+        <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24 }}>
           <SkeletonLeft />
           <SkeletonRight />
         </div>
@@ -432,7 +432,7 @@ export default function ProfilePage({
       </div>
 
       {/* ═══ TWO COLUMN LAYOUT ═══ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24 }}>
+      <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24 }}>
         {/* ── LEFT COLUMN ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Card A — Identity */}
@@ -648,11 +648,9 @@ export default function ProfilePage({
         </div>
       </div>
 
-      {/* Mobile responsive styles */}
       <style>{`
         @media (max-width: 768px) {
-          div[style*="gridTemplateColumns: '340px 1fr'"],
-          div[style*="grid-template-columns"] {
+          .profile-grid {
             grid-template-columns: 1fr !important;
           }
         }
