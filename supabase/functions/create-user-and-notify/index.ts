@@ -91,16 +91,20 @@ serve(async (req) => {
         <div style="padding:28px;">
           <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 12px;">You're in, ${full_name}! 🎉</h2>
           <p style="font-size:14px;color:#475569;line-height:1.7;">Your payment has been verified and your Shikshantaram OS account is now live. Here are your login credentials:</p>
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:20px 0;">
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;">
-              <span style="font-size:13px;color:#64748b;font-weight:600;">Email</span>
-              <span style="font-size:13px;color:#0f172a;font-weight:700;">${email}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:8px 0;">
-              <span style="font-size:13px;color:#64748b;font-weight:600;">Password</span>
-              <span style="font-size:13px;color:#0f172a;font-weight:700;">${temp_password}</span>
-            </div>
-          </div>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin:20px 0;">
+            <tr>
+              <td style="padding:14px 16px 10px 16px;border-bottom:1px solid #f1f5f9;">
+                <span style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Email</span><br/>
+                <span style="font-size:15px;color:#0f172a;font-weight:700;">${email}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:10px 16px 14px 16px;">
+                <span style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Password</span><br/>
+                <span style="font-size:15px;color:#0f172a;font-weight:700;">${temp_password}</span>
+              </td>
+            </tr>
+          </table>
           <div style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15);border-radius:10px;padding:14px 16px;margin:16px 0;">
             <div style="font-size:13px;font-weight:700;color:#7c3aed;">🔓 Your Access</div>
             <div style="font-size:13px;color:#475569;margin-top:4px;">${toolsLine}</div>
