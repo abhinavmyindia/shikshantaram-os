@@ -104,41 +104,68 @@ export type Database = {
         Row: {
           access_tier: string
           added_by: string | null
+          avatar_gradient: string | null
+          avatar_initials: string | null
+          bio: string | null
           created_at: string | null
+          facebook: string | null
           full_name: string
           id: string
+          instagram: string | null
           is_beta_user: boolean | null
+          linkedin: string | null
           notes: string | null
           payment_amount: number | null
           payment_status: string
           phone: string | null
+          twitter: string | null
           updated_at: string | null
+          username: string | null
+          website: string | null
         }
         Insert: {
           access_tier?: string
           added_by?: string | null
+          avatar_gradient?: string | null
+          avatar_initials?: string | null
+          bio?: string | null
           created_at?: string | null
+          facebook?: string | null
           full_name?: string
           id: string
+          instagram?: string | null
           is_beta_user?: boolean | null
+          linkedin?: string | null
           notes?: string | null
           payment_amount?: number | null
           payment_status?: string
           phone?: string | null
+          twitter?: string | null
           updated_at?: string | null
+          username?: string | null
+          website?: string | null
         }
         Update: {
           access_tier?: string
           added_by?: string | null
+          avatar_gradient?: string | null
+          avatar_initials?: string | null
+          bio?: string | null
           created_at?: string | null
+          facebook?: string | null
           full_name?: string
           id?: string
+          instagram?: string | null
           is_beta_user?: boolean | null
+          linkedin?: string | null
           notes?: string | null
           payment_amount?: number | null
           payment_status?: string
           phone?: string | null
+          twitter?: string | null
           updated_at?: string | null
+          username?: string | null
+          website?: string | null
         }
         Relationships: []
       }
