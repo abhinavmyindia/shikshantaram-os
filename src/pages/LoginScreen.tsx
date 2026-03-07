@@ -1,5 +1,6 @@
-import { useState, CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const bg: CSSProperties = {
   minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -13,12 +14,60 @@ const card: CSSProperties = {
   boxShadow: '0 8px 40px rgba(0,0,0,0.1)', animation: 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
 };
 
+const signupCard: CSSProperties = {
+  ...card, maxWidth: 440,
+};
+
 const inputStyle: CSSProperties = {
   width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0',
   fontSize: 14, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box',
+  background: '#f8fafc', transition: 'all 0.18s',
 };
 
+const labelStyle: CSSProperties = {
+  display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b',
+  textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6,
+};
+
+const focusInput = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  e.currentTarget.style.borderColor = '#7c3aed';
+  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.1)';
+  e.currentTarget.style.background = 'white';
+};
+const blurInput = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  e.currentTarget.style.borderColor = '#e2e8f0';
+  e.currentTarget.style.boxShadow = 'none';
+  e.currentTarget.style.background = '#f8fafc';
+};
+
+const LogoBlock = () => (
+  <div style={{ textAlign: 'center' }}>
+    <svg width="36" height="36" viewBox="0 0 50 50" fill="none" style={{ margin: '0 auto' }}>
+      <path d="M25 4C16 4 11 10 11 16c0 3.5 1.5 6 4.5 7.5L9 28c-3 1.5-4 4.5-2 6.5L12 33l2 4.5 5-5c1.5 1.5 3.5 2.5 6 2.5s4.5-1 6-2.5l5 5 2-4.5 4.5 1.5c2-2-.8-5-2.8-6.5l-6-9C36.5 22 38 19.5 38 16 38 10 34 4 25 4z" fill="#0f172a"/>
+      <circle cx="21" cy="14" r="2" fill="white"/>
+      <circle cx="29" cy="14" r="2" fill="white"/>
+    </svg>
+    <div style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 20, color: '#0f172a', letterSpacing: '-0.03em', marginTop: 10 }}>Shikshantaram OS</div>
+    <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 4, marginBottom: 28 }}>Your digital product universe</div>
+  </div>
+);
+
 export default function LoginScreen() {
+  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+
+  return (
+    <div style={bg}>
+      {authView === 'login' ? (
+        <LoginForm onSwitchToSignup={() => setAuthView('signup')} />
+      ) : (
+        <SignupForm onSwitchToLogin={() => setAuthView('login')} />
+      )}
+    </div>
+  );
+}
+
+/* ─── LOGIN FORM ─── */
+function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,68 +84,387 @@ export default function LoginScreen() {
   };
 
   return (
-    <div style={bg}>
-      <div style={card}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center' }}>
-          <svg width="36" height="36" viewBox="0 0 50 50" fill="none" style={{ margin: '0 auto' }}>
-            <path d="M25 4C16 4 11 10 11 16c0 3.5 1.5 6 4.5 7.5L9 28c-3 1.5-4 4.5-2 6.5L12 33l2 4.5 5-5c1.5 1.5 3.5 2.5 6 2.5s4.5-1 6-2.5l5 5 2-4.5 4.5 1.5c2-2-.8-5-2.8-6.5l-6-9C36.5 22 38 19.5 38 16 38 10 34 4 25 4z" fill="#0f172a"/>
-            <circle cx="21" cy="14" r="2" fill="white"/>
-            <circle cx="29" cy="14" r="2" fill="white"/>
-          </svg>
-          <div style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 20, color: '#0f172a', letterSpacing: '-0.03em', marginTop: 10 }}>Shikshantaram OS</div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 4, marginBottom: 28 }}>Your digital product universe</div>
+    <div style={card}>
+      <LogoBlock />
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 50, padding: '6px 16px', fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>
+          🔒 Access by invitation only
+        </span>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: 16 }}>
+          <label style={labelStyle}>Email Address</label>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+            style={inputStyle} placeholder="you@example.com" onFocus={focusInput} onBlur={blurInput} />
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <label style={labelStyle}>Password</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
+            style={inputStyle} placeholder="••••••••" onFocus={focusInput} onBlur={blurInput} />
+        </div>
+        <div style={{ textAlign: 'right', marginBottom: 20 }}>
+          <span style={{ fontSize: 12, color: '#7c3aed', cursor: 'pointer' }}>Forgot password?</span>
         </div>
 
-        {/* Access notice */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 50, padding: '6px 16px', fontSize: 11, fontWeight: 700, color: '#7c3aed' }}>
-            🔒 Access by invitation only
-          </span>
+        <button type="submit" disabled={loading} style={{
+          width: '100%', padding: 13, borderRadius: 12, border: 'none', cursor: loading ? 'wait' : 'pointer',
+          background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', fontFamily: 'Sora', fontWeight: 700, fontSize: 14,
+          boxShadow: '0 4px 16px rgba(124,58,237,0.4)', transition: 'all 0.18s', opacity: loading ? 0.7 : 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
+          {loading && <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
+          {loading ? 'Signing in...' : 'Sign In →'}
+        </button>
+
+        {error && (
+          <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#991b1b', marginTop: 12 }}>
+            {error}
+          </div>
+        )}
+      </form>
+
+      <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: '#94a3b8' }}>
+        Don't have access? Contact us<br />
+        <span style={{ color: '#7c3aed', fontWeight: 600 }}>shikshantaram@gmail.com</span>
+      </div>
+
+      {/* Divider + Signup CTA */}
+      <div style={{ height: 1, background: '#f1f5f9', margin: '20px 0' }} />
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b' }}>New to Shikshantaram OS?</span>
+        <button onClick={onSwitchToSignup} style={{
+          background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)',
+          borderRadius: 50, padding: '6px 16px', fontFamily: 'DM Sans', fontWeight: 700,
+          fontSize: 12.5, color: '#7c3aed', cursor: 'pointer', transition: 'all 0.18s',
+        }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.14)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.08)')}
+        >Request Access →</button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SIGNUP FORM ─── */
+function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
+  const [capReached, setCapReached] = useState(false);
+  const [spotsLeft, setSpotsLeft] = useState(100);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [paymentType, setPaymentType] = useState<'reserve' | 'full' | ''>('');
+  const [agreed, setAgreed] = useState(false);
+
+  useEffect(() => {
+    checkCap();
+  }, []);
+
+  const checkCap = async () => {
+    setLoading(true);
+    const { data } = await supabase.rpc('get_signup_count');
+    const count = (data as number) || 0;
+    if (count >= 100) setCapReached(true);
+    setSpotsLeft(100 - count);
+    setLoading(false);
+  };
+
+  const isFormValid = fullName.trim().length >= 2 && email.trim().length > 0 && phone.trim().length >= 10 && paymentType !== '' && agreed;
+
+  const handleSignup = async () => {
+    setSubmitting(true);
+    setSubmitError('');
+
+    try {
+      // Re-check cap
+      const { data: countData } = await supabase.rpc('get_signup_count');
+      if ((countData as number) >= 100) {
+        setCapReached(true);
+        return;
+      }
+
+      // Check if email already submitted
+      const { data: existing } = await supabase
+        .from('signup_requests')
+        .select('id, status')
+        .eq('email', email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (existing) {
+        if ((existing as any).status === 'pending') {
+          setSubmitError('This email has already been registered. We will contact you once verified.');
+        } else if ((existing as any).status === 'approved') {
+          setSubmitError('This email already has access. Please log in instead.');
+          setTimeout(() => onSwitchToLogin(), 2000);
+        }
+        return;
+      }
+
+      // Insert
+      const { error } = await supabase
+        .from('signup_requests')
+        .insert({
+          full_name: fullName.trim(),
+          email: email.toLowerCase().trim(),
+          phone: phone.trim(),
+          payment_type: paymentType as string,
+          status: 'pending',
+        });
+
+      if (error) throw error;
+      setSubmitSuccess(true);
+    } catch (err: any) {
+      setSubmitError('Something went wrong. Please try again or contact support.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={signupCard}>
+        <div style={{ textAlign: 'center', padding: 40 }}>
+          <div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} />
         </div>
+      </div>
+    );
+  }
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Email Address</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-              style={inputStyle} placeholder="you@example.com"
-              onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.1)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}
-            />
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-              style={inputStyle} placeholder="••••••••"
-              onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.1)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none'; }}
-            />
-          </div>
-          <div style={{ textAlign: 'right', marginBottom: 20 }}>
-            <span style={{ fontSize: 12, color: '#7c3aed', cursor: 'pointer' }}>Forgot password?</span>
-          </div>
+  if (capReached) return <CapReachedScreen onSwitchToLogin={onSwitchToLogin} />;
+  if (submitSuccess) return <SuccessScreen fullName={fullName} email={email} paymentType={paymentType as 'reserve' | 'full'} onSwitchToLogin={onSwitchToLogin} />;
 
-          <button type="submit" disabled={loading} style={{
-            width: '100%', padding: 13, borderRadius: 12, border: 'none', cursor: loading ? 'wait' : 'pointer',
-            background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', fontFamily: 'Sora', fontWeight: 700, fontSize: 14,
-            boxShadow: '0 4px 16px rgba(124,58,237,0.4)', transition: 'all 0.18s', opacity: loading ? 0.7 : 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  return (
+    <div style={signupCard}>
+      {/* Back link */}
+      <div onClick={onSwitchToLogin} style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#7c3aed', fontWeight: 600, cursor: 'pointer', marginBottom: 16 }}>
+        ← Back to Login
+      </div>
+
+      <LogoBlock />
+
+      {/* Spots remaining */}
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'rgba(234,88,12,0.08)', border: '1px solid rgba(234,88,12,0.2)',
+          borderRadius: 50, padding: '5px 16px',
+          fontFamily: 'DM Sans', fontSize: 11.5, fontWeight: 700,
+          color: spotsLeft <= 10 ? '#ef4444' : '#ea580c',
+        }}>
+          {spotsLeft <= 10 ? '⚠' : '🔥'} {spotsLeft <= 10 ? `Only ${spotsLeft} spots left!` : `${spotsLeft} spots remaining out of 100`}
+        </span>
+      </div>
+
+      <div style={{ textAlign: 'center', marginBottom: 4 }}>
+        <div style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 20, color: '#0f172a' }}>Request Access</div>
+      </div>
+      <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', textAlign: 'center', marginBottom: 24 }}>
+        Fill in your details. Access will be activated once your payment is verified.
+      </div>
+
+      {/* Form */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={labelStyle}>Full Name *</label>
+        <input type="text" value={fullName} onChange={e => setFullName(e.target.value)} required
+          style={inputStyle} placeholder="e.g. Abhinav Sharma" onFocus={focusInput} onBlur={blurInput} />
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <label style={labelStyle}>Email Address *</label>
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+          style={inputStyle} placeholder="yourname@gmail.com" onFocus={focusInput} onBlur={blurInput} />
+        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Use the email where you want to receive your access credentials.</div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <label style={labelStyle}>Phone Number *</label>
+        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required
+          style={inputStyle} placeholder="+91 98765 43210" onFocus={focusInput} onBlur={blurInput} />
+      </div>
+
+      {/* Payment Type */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={labelStyle}>I Have Paid For *</label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 6 }}>
+          {/* Reserve */}
+          <div onClick={() => setPaymentType('reserve')} style={{
+            borderRadius: 12, padding: '14px 16px', cursor: 'pointer',
+            border: `2px solid ${paymentType === 'reserve' ? '#059669' : '#e2e8f0'}`,
+            background: paymentType === 'reserve' ? 'rgba(5,150,105,0.06)' : '#f8fafc',
+            transition: 'all 0.18s',
           }}>
-            {loading && <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
-            {loading ? 'Signing in...' : 'Sign In →'}
-          </button>
-
-          {error && (
-            <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#991b1b', marginTop: 12 }}>
-              {error}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 14, height: 14, borderRadius: '50%',
+                border: `2px solid ${paymentType === 'reserve' ? '#059669' : '#e2e8f0'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {paymentType === 'reserve' && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#059669' }} />}
+              </div>
+              <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>Reserve Amount</span>
             </div>
-          )}
-        </form>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#059669', marginTop: 4 }}>₹500 – ₹1,000</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b', lineHeight: 1.5, marginTop: 4 }}>Get Basic Access — Niche Clarity + Product Navigator</div>
+          </div>
 
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: '#94a3b8' }}>
-          Don't have access? Contact us<br />
-          <span style={{ color: '#7c3aed', fontWeight: 600 }}>shikshantaram@gmail.com</span>
+          {/* Full */}
+          <div onClick={() => setPaymentType('full')} style={{
+            borderRadius: 12, padding: '14px 16px', cursor: 'pointer',
+            border: `2px solid ${paymentType === 'full' ? '#7c3aed' : '#e2e8f0'}`,
+            background: paymentType === 'full' ? 'rgba(124,58,237,0.06)' : '#f8fafc',
+            transition: 'all 0.18s',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 14, height: 14, borderRadius: '50%',
+                border: `2px solid ${paymentType === 'full' ? '#7c3aed' : '#e2e8f0'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {paymentType === 'full' && <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#7c3aed' }} />}
+              </div>
+              <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>Full Payment</span>
+            </div>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#7c3aed', marginTop: 4 }}>Full Amount</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b', lineHeight: 1.5, marginTop: 4 }}>Get Premium Access — All 8 tools as they unlock</div>
+          </div>
         </div>
+      </div>
+
+      {/* Terms */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 16 }}>
+        <div onClick={() => setAgreed(!agreed)} style={{
+          width: 18, height: 18, borderRadius: 4, flexShrink: 0, cursor: 'pointer', marginTop: 1,
+          border: `1.5px solid ${agreed ? '#7c3aed' : '#e2e8f0'}`,
+          background: agreed ? '#7c3aed' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.18s',
+        }}>
+          {agreed && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )}
+        </div>
+        <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', lineHeight: 1.6 }}>
+          I confirm that I have made the payment and agree to the terms.
+        </span>
+      </div>
+
+      {/* Submit */}
+      <button onClick={handleSignup} disabled={!isFormValid || submitting} style={{
+        width: '100%', padding: 13, borderRadius: 12, border: 'none', marginTop: 20,
+        cursor: (!isFormValid || submitting) ? 'not-allowed' : 'pointer',
+        background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white',
+        fontFamily: 'Sora', fontWeight: 800, fontSize: 14,
+        boxShadow: isFormValid && !submitting ? '0 4px 16px rgba(124,58,237,0.35)' : 'none',
+        opacity: (!isFormValid || submitting) ? 0.5 : 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        transition: 'all 0.18s',
+      }}
+        onMouseEnter={e => { if (isFormValid && !submitting) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+      >
+        {submitting && <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
+        {submitting ? 'Submitting...' : 'Submit Registration Request →'}
+      </button>
+
+      {submitError && (
+        <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#991b1b', marginTop: 12 }}>
+          {submitError}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── SUCCESS SCREEN ─── */
+function SuccessScreen({ fullName, email, paymentType, onSwitchToLogin }: { fullName: string; email: string; paymentType: 'reserve' | 'full'; onSwitchToLogin: () => void }) {
+  return (
+    <div style={{ ...signupCard, textAlign: 'center', padding: '32px 28px' }}>
+      {/* Animated checkmark */}
+      <div style={{ position: 'relative', width: 72, height: 72, margin: '0 auto 20px', animation: 'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: '50%',
+          background: 'linear-gradient(135deg,#059669,#10b981)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 24px rgba(5,150,105,0.35)',
+        }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      </div>
+
+      <div style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 20, color: '#0f172a' }}>Registration Submitted! 🎉</div>
+      <div style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#475569', marginTop: 8, lineHeight: 1.7 }}>
+        Thank you, {fullName}! Your registration has been received.
+      </div>
+
+      {/* Info box */}
+      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: 16, marginTop: 20, textAlign: 'left' }}>
+        <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#15803d', marginBottom: 8 }}>📋 What happens next:</div>
+        {[
+          "We'll verify your payment details (usually within 24 hours).",
+          "Once verified, you'll receive a confirmation email with your login credentials.",
+          "Log in and access your tools based on your payment — Basic or Premium.",
+        ].map((step, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', marginTop: 6, flexShrink: 0 }} />
+            <span style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#374151', lineHeight: 1.6 }}>{step}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Payment type reminder */}
+      <div style={{ marginTop: 16 }}>
+        <span style={{
+          display: 'inline-block', fontSize: 12, fontWeight: 700, padding: '6px 16px', borderRadius: 50,
+          ...(paymentType === 'full'
+            ? { background: '#ede9fe', color: '#7c3aed', border: '1px solid #ddd6fe' }
+            : { background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }),
+        }}>
+          {paymentType === 'full' ? '⚡ Premium Access will be activated' : '📦 Basic Access will be activated'}
+        </span>
+      </div>
+
+      <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 12 }}>Registered email: {email}</div>
+      <div onClick={onSwitchToLogin} style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#7c3aed', fontWeight: 600, cursor: 'pointer', marginTop: 16 }}>
+        Back to Login
+      </div>
+    </div>
+  );
+}
+
+/* ─── CAP REACHED SCREEN ─── */
+function CapReachedScreen({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
+  return (
+    <div style={{ ...signupCard, textAlign: 'center', padding: '40px 28px' }}>
+      <div style={{ fontSize: 56, animation: 'float 3s ease-in-out infinite' }}>🔒</div>
+      <div style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', marginTop: 16 }}>Registration Closed</div>
+      <div style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginTop: 8, lineHeight: 1.7 }}>
+        All 100 founding member spots have been claimed.
+      </div>
+
+      <div style={{
+        background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)',
+        borderRadius: 12, padding: '16px 20px', marginTop: 20,
+      }}>
+        <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#7c3aed', marginBottom: 4 }}>Already paid?</div>
+        <div style={{ fontSize: 12.5, color: '#475569', lineHeight: 1.6 }}>
+          If you've made a payment, contact us directly and we'll get you set up.
+        </div>
+        <a href="mailto:support@shikshantaram.com?subject=Shikshantaram OS Access Request"
+          style={{ display: 'block', fontWeight: 700, color: '#7c3aed', marginTop: 8, fontSize: 13, cursor: 'pointer', textDecoration: 'none' }}>
+          📩 support@shikshantaram.com
+        </a>
+      </div>
+
+      <div onClick={onSwitchToLogin} style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#7c3aed', fontWeight: 600, cursor: 'pointer', marginTop: 20 }}>
+        Back to Login →
       </div>
     </div>
   );
