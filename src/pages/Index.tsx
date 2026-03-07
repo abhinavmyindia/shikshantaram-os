@@ -351,9 +351,8 @@ function Toast({ data, onClose }: { data: ToastData; onClose: () => void }) {
       </div>
     </div>
   );
-}
-  );
-}
+
+
 
 /* ───────── Stat Card ───────── */
 function StatCard({ label, value, iconBg, iconColor, changePill, changeColor, icon, delay }: {
