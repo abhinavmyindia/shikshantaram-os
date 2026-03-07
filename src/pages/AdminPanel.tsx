@@ -838,7 +838,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity }: { user
 }
 
 // ─── ADD USER TAB (unchanged) ────────────────────────────────
-function AddUserTab({ onSuccess }: { onSuccess: () => void }) {
+function AddUserTab({ onSuccess, logActivity }: { onSuccess: () => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', tier: 'basic', paymentAmount: 0, notes: '', isBeta: false });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
