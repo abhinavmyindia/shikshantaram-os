@@ -1,1 +1,10 @@
 project_id = "cjgqtofxqhoubwnzyhlw"
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.send-upgrade-email]
+verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = false
