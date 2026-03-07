@@ -47,6 +47,7 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [emailMap, setEmailMap] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<FeedbackRow[]>([]);
   const [stats, setStats] = useState({ total: 0, activeToday: 0, basic: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
@@ -58,13 +59,15 @@ export default function AdminPanel() {
 
   const loadData = async () => {
     setLoading(true);
-    const [usersRes, feedbackRes, sessionsRes] = await Promise.all([
+    const [usersRes, feedbackRes, sessionsRes, emailsRes] = await Promise.all([
       supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('beta_feedback').select('*').order('created_at', { ascending: false }),
       supabase.from('user_sessions').select('id, session_start').gte('session_start', new Date(Date.now() - 86400000).toISOString()),
+      supabase.functions.invoke('admin-list-emails'),
     ]);
     const u = (usersRes.data || []) as unknown as UserRow[];
     setUsers(u);
+    setEmailMap(emailsRes.data?.emails || {});
     setFeedback((feedbackRes.data || []) as unknown as FeedbackRow[]);
     setStats({
       total: u.length,
@@ -129,8 +132,8 @@ export default function AdminPanel() {
           </div>
         ) : (
           <>
-            {tab === 'overview' && <OverviewTab stats={stats} users={users} />}
-            {tab === 'users' && <UsersTab users={users} onRefresh={loadData} />}
+            {tab === 'overview' && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
+            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} />}
             {tab === 'add' && <AddUserTab onSuccess={loadData} />}
             {tab === 'password' && <ResetPasswordTab users={users} />}
             {tab === 'feedback' && <FeedbackTab feedback={feedback} users={users} />}
@@ -141,7 +144,7 @@ export default function AdminPanel() {
   );
 }
 
-function OverviewTab({ stats, users }: { stats: any; users: UserRow[] }) {
+function OverviewTab({ stats, users, emailMap }: { stats: any; users: UserRow[]; emailMap: Record<string, string> }) {
   const statCards = [
     { label: 'Total Users', value: stats.total, icon: '👥', bg: '#ede9fe' },
     { label: 'Active Today', value: stats.activeToday, icon: '⚡', bg: '#dcfce7' },
@@ -179,7 +182,7 @@ function OverviewTab({ stats, users }: { stats: any; users: UserRow[] }) {
               return (
                 <tr key={u.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{u.full_name || 'Unknown'}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{u.id.slice(0, 8)}...</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{emailMap[u.id] || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
                   </td>
@@ -195,7 +198,7 @@ function OverviewTab({ stats, users }: { stats: any; users: UserRow[] }) {
   );
 }
 
-function UsersTab({ users, onRefresh }: { users: UserRow[]; onRefresh: () => void }) {
+function UsersTab({ users, emailMap, onRefresh }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
 
