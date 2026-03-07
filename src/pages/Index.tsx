@@ -157,39 +157,99 @@ const TOOL_CARDS = [
 ];
 
 /* ───────── Navbar ───────── */
-function Navbar() {
+function Navbar({ userName, userTier, isAdmin, onSignOut }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
+
   return (
     <div style={{
       height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 24px', background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(24px) saturate(180%)',
       borderBottom: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 1px 16px rgba(0,0,0,0.06)', flexShrink: 0,
     }}>
-      {/* Left */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <LogoSvg />
         <span style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 15, color: '#0f172a', letterSpacing: '-0.03em' }}>Shikshantaram OS</span>
         <span style={{ fontSize: 9, fontWeight: 700, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', padding: '2px 7px', borderRadius: 20, letterSpacing: '0.06em' }}>v1.0 BETA</span>
       </div>
-      {/* Center - Search */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '7px 12px', border: '1.5px solid #e2e8f0', width: 320, maxWidth: '100%' }}>
         <SearchIcon />
         <input placeholder="Search tools, features..." style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#0f172a', border: 'none', background: 'transparent', outline: 'none', flex: 1 }} />
         <span style={{ fontSize: 10, color: '#94a3b8', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '1px 6px', borderRadius: 4 }}>⌘K</span>
       </div>
-      {/* Right */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
         <div style={{ position: 'relative', cursor: 'pointer' }}>
           <BellIcon />
           <div style={{ position: 'absolute', top: 0, right: 0, width: 6, height: 6, borderRadius: '50%', background: '#ea580c' }} />
         </div>
         <div style={{ width: 1, height: 20, background: '#e2e8f0' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px 4px 4px', background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', borderRadius: 50, cursor: 'pointer' }}>
+        <div onClick={() => setMenuOpen(!menuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px 4px 4px', background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', borderRadius: 50, cursor: 'pointer' }}>
           <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: 'white' }}>SH</span>
+            <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: 'white' }}>{initials}</span>
           </div>
-          <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12.5, color: '#0f172a' }}>Shiksha</span>
+          <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12.5, color: '#0f172a' }}>{userName.split(' ')[0]}</span>
           <ChevronDown />
         </div>
+
+        {/* Dropdown menu */}
+        {menuOpen && (
+          <>
+            <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 299 }} />
+            <div style={{
+              position: 'absolute', top: 48, right: 0, minWidth: 220, zIndex: 300,
+              background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', borderRadius: 14,
+              border: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              padding: 8, animation: 'popIn 0.2s ease',
+            }}>
+              {/* User info */}
+              <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: 'white' }}>{initials}</span>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{userName}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, background: userTier === 'premium' ? '#ede9fe' : userTier === 'beta' ? '#fce7f3' : '#dcfce7', color: userTier === 'premium' ? '#7c3aed' : userTier === 'beta' ? '#be185d' : '#15803d', padding: '1px 6px', borderRadius: 20, textTransform: 'uppercase' }}>{userTier}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+              {[
+                { emoji: '👤', label: 'My Profile', action: () => {} },
+                { emoji: '❓', label: 'Help & Docs', action: () => {} },
+              ].map(m => (
+                <div key={m.label} onClick={() => { m.action(); setMenuOpen(false); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <span>{m.emoji}</span>
+                  <span style={{ fontSize: 13, color: '#475569' }}>{m.label}</span>
+                </div>
+              ))}
+              {isAdmin && (
+                <>
+                  <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+                  <div onClick={() => { navigate('/admin'); setMenuOpen(false); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <span>⚙️</span>
+                    <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 700 }}>Admin Panel →</span>
+                  </div>
+                </>
+              )}
+              <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+              <div onClick={() => { onSignOut(); setMenuOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <span>🚪</span>
+                <span style={{ fontSize: 13, color: '#ef4444', fontWeight: 600 }}>Sign Out</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
