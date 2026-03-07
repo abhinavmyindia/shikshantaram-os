@@ -685,18 +685,17 @@ function SignupsTab() {
       });
 
       if (error) throw new Error(error.message);
+      if (data?.already_exists) {
+        await supabase.from('signup_requests').update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+        } as any).eq('id', request.id);
+
+        fetchSignups();
+        showToast(`ℹ️ ${request.email} already had an account. Marked as approved.`);
+        return;
+      }
       if (data?.error) throw new Error(data.error);
-
-      await supabase.from('signup_requests').update({
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
-      } as any).eq('id', request.id);
-
-      fetchSignups();
-      showToast(`✅ ${request.full_name} approved! Credentials sent to ${request.email}`);
-    } catch (err: any) {
-      showToast(`❌ Error: ${err.message}`);
-    } finally {
       setApproving(null);
     }
   };
