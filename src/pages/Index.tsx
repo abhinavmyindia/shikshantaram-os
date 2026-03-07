@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
+import { useAuth } from '@/hooks/useAuth';
+import { useTracking } from '@/hooks/useTracking';
+import BetaFeedback from '@/components/BetaFeedback';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
@@ -105,9 +109,22 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 
 /* ───────── Types ───────── */
 type PageId = 'dashboard' | 'niche' | 'product' | 'settings' | 'help';
-interface ToastData { toolName: string; }
+interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
 const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product'];
+
+const TOOL_ACCESS: Record<string, string[]> = {
+  dashboard: ['basic','premium','beta'],
+  niche: ['basic','premium','beta'],
+  product: ['basic','premium','beta'],
+  offer: ['premium','beta'],
+  funnel: ['premium','beta'],
+  creator: ['premium','beta'],
+  copy: ['premium','beta'],
+  ads: ['premium','beta'],
+};
+
+const canAccess = (toolId: string, tier: string) => TOOL_ACCESS[toolId]?.includes(tier) ?? false;
 
 interface NavItem {
   id: string;
@@ -140,46 +157,106 @@ const TOOL_CARDS = [
 ];
 
 /* ───────── Navbar ───────── */
-function Navbar() {
+function Navbar({ userName, userTier, isAdmin, onSignOut }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
+
   return (
     <div style={{
       height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 24px', background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(24px) saturate(180%)',
       borderBottom: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 1px 16px rgba(0,0,0,0.06)', flexShrink: 0,
     }}>
-      {/* Left */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <LogoSvg />
         <span style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 15, color: '#0f172a', letterSpacing: '-0.03em' }}>Shikshantaram OS</span>
         <span style={{ fontSize: 9, fontWeight: 700, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', padding: '2px 7px', borderRadius: 20, letterSpacing: '0.06em' }}>v1.0 BETA</span>
       </div>
-      {/* Center - Search */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '7px 12px', border: '1.5px solid #e2e8f0', width: 320, maxWidth: '100%' }}>
         <SearchIcon />
         <input placeholder="Search tools, features..." style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#0f172a', border: 'none', background: 'transparent', outline: 'none', flex: 1 }} />
         <span style={{ fontSize: 10, color: '#94a3b8', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '1px 6px', borderRadius: 4 }}>⌘K</span>
       </div>
-      {/* Right */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
         <div style={{ position: 'relative', cursor: 'pointer' }}>
           <BellIcon />
           <div style={{ position: 'absolute', top: 0, right: 0, width: 6, height: 6, borderRadius: '50%', background: '#ea580c' }} />
         </div>
         <div style={{ width: 1, height: 20, background: '#e2e8f0' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px 4px 4px', background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', borderRadius: 50, cursor: 'pointer' }}>
+        <div onClick={() => setMenuOpen(!menuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px 4px 4px', background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', borderRadius: 50, cursor: 'pointer' }}>
           <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: 'white' }}>SH</span>
+            <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: 'white' }}>{initials}</span>
           </div>
-          <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12.5, color: '#0f172a' }}>Shiksha</span>
+          <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12.5, color: '#0f172a' }}>{userName.split(' ')[0]}</span>
           <ChevronDown />
         </div>
+
+        {/* Dropdown menu */}
+        {menuOpen && (
+          <>
+            <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 299 }} />
+            <div style={{
+              position: 'absolute', top: 48, right: 0, minWidth: 220, zIndex: 300,
+              background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', borderRadius: 14,
+              border: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+              padding: 8, animation: 'popIn 0.2s ease',
+            }}>
+              {/* User info */}
+              <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: 'white' }}>{initials}</span>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{userName}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, background: userTier === 'premium' ? '#ede9fe' : userTier === 'beta' ? '#fce7f3' : '#dcfce7', color: userTier === 'premium' ? '#7c3aed' : userTier === 'beta' ? '#be185d' : '#15803d', padding: '1px 6px', borderRadius: 20, textTransform: 'uppercase' }}>{userTier}</span>
+                  </div>
+                </div>
+              </div>
+              <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+              {[
+                { emoji: '👤', label: 'My Profile', action: () => {} },
+                { emoji: '❓', label: 'Help & Docs', action: () => {} },
+              ].map(m => (
+                <div key={m.label} onClick={() => { m.action(); setMenuOpen(false); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <span>{m.emoji}</span>
+                  <span style={{ fontSize: 13, color: '#475569' }}>{m.label}</span>
+                </div>
+              ))}
+              {isAdmin && (
+                <>
+                  <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+                  <div onClick={() => { navigate('/admin'); setMenuOpen(false); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                    <span>⚙️</span>
+                    <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 700 }}>Admin Panel →</span>
+                  </div>
+                </>
+              )}
+              <div style={{ height: 1, background: '#f1f5f9', margin: '4px 0' }} />
+              <div onClick={() => { onSignOut(); setMenuOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                <span>🚪</span>
+                <span style={{ fontSize: 13, color: '#ef4444', fontWeight: 600 }}>Sign Out</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 /* ───────── Sidebar ───────── */
-function Sidebar({ activePage, onNavigate, onLockedClick }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void }) {
+function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic' }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string }) {
   return (
     <div style={{
       width: 240, flexShrink: 0, height: '100%', overflowY: 'auto', background: 'rgba(255,255,255,0.65)',
@@ -206,7 +283,8 @@ function Sidebar({ activePage, onNavigate, onLockedClick }: { activePage: PageId
             </div>
             <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: active ? 700 : 500, color: item.locked ? '#94a3b8' : active ? '#7c3aed' : '#475569', flex: 1 }}>{item.label}</span>
             {item.badge === 'LIVE' && <span style={{ fontSize: 8, fontWeight: 800, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 20 }}>LIVE</span>}
-            {item.badge === 'SOON' && <span style={{ fontSize: 8, fontWeight: 800, background: '#f1f5f9', color: '#94a3b8', padding: '1px 6px', borderRadius: 20 }}>SOON</span>}
+            {item.badge === 'SOON' && accessTier === 'basic' && <span style={{ fontSize: 8, fontWeight: 800, background: '#fef9c3', color: '#92400e', padding: '1px 6px', borderRadius: 20 }}>PREMIUM</span>}
+            {item.badge === 'SOON' && accessTier !== 'basic' && <span style={{ fontSize: 8, fontWeight: 800, background: '#f1f5f9', color: '#94a3b8', padding: '1px 6px', borderRadius: 20 }}>SOON</span>}
           </div>
         );
       })}
@@ -242,20 +320,30 @@ function Toast({ data, onClose }: { data: ToastData; onClose: () => void }) {
     return () => clearTimeout(t);
   }, [onClose]);
 
+  const isPremium = data.type === 'premium';
+
   return (
     <div style={{
       position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
       animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-      background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', borderRadius: 14, padding: '14px 18px',
-      border: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-      minWidth: 280, maxWidth: 360,
+      background: isPremium ? 'linear-gradient(135deg,rgba(124,58,237,0.05),rgba(168,85,247,0.03))' : 'rgba(255,255,255,0.95)',
+      backdropFilter: 'blur(20px)', borderRadius: 14, padding: '14px 18px',
+      border: isPremium ? '1px solid rgba(124,58,237,0.2)' : '1px solid rgba(255,255,255,0.9)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.12)', minWidth: 280, maxWidth: 360,
     }}>
       <div style={{ position: 'absolute', top: 8, right: 8, cursor: 'pointer' }} onClick={onClose}><CloseIcon /></div>
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🔒</div>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: isPremium ? '#ede9fe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{isPremium ? '⚡' : '🔒'}</div>
         <div>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>Coming Soon 🔒</div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginTop: 2 }}>{data.toolName} is under construction. We're building something incredible — stay tuned!</div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>{isPremium ? '⚡ Premium Feature' : 'Coming Soon 🔒'}</div>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginTop: 2 }}>
+            {isPremium ? 'Upgrade your Shikshantaram OS plan to unlock all 8 tools.' : `${data.toolName} is under construction. We're building something incredible — stay tuned!`}
+          </div>
+          {isPremium && (
+            <a href="mailto:support@shikshantaram.com?subject=Upgrade to Premium" style={{ display: 'inline-block', marginTop: 8, fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none' }}>
+              Contact to Upgrade →
+            </a>
+          )}
         </div>
       </div>
       <div style={{ marginTop: 10, height: 3, borderRadius: 50, overflow: 'hidden', background: '#f1f5f9' }}>
@@ -341,12 +429,12 @@ function ToolCard({ card, onClick, delay }: { card: typeof TOOL_CARDS[0]; onClic
 }
 
 /* ───────── Dashboard Home ───────── */
-function DashboardHome({ onNavigate, onLockedClick }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void }) {
+function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string }) {
   return (
     <div>
       {/* Header */}
       <div style={{ animation: 'fadeUp 0.4s ease', marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 28, color: '#0f172a', letterSpacing: '-0.02em' }}>Good morning, Shiksha 👋</h1>
+        <h1 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 28, color: '#0f172a', letterSpacing: '-0.02em' }}>Good morning, {userName.split(' ')[0]} 👋</h1>
         <p style={{ fontFamily: 'DM Sans', fontSize: 14.5, color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>Your digital product universe is ready. Let's build something legendary.</p>
       </div>
 
@@ -632,7 +720,7 @@ function FilterBar({ search, onSearch, filters, accentColor }: {
 }
 
 /* ───────── Niche Page ───────── */
-function NichePage({ onBack }: { onBack: () => void }) {
+function NichePage({ onBack, onAction }: { onBack: () => void; onAction?: () => void }) {
   const [search, setSearch] = useState('');
   const [growth, setGrowth] = useState('All');
   const [comp, setComp] = useState('All');
@@ -678,7 +766,7 @@ function NichePage({ onBack }: { onBack: () => void }) {
 }
 
 /* ───────── Product Page ───────── */
-function ProductPage({ onBack }: { onBack: () => void }) {
+function ProductPage({ onBack, onAction }: { onBack: () => void; onAction?: () => void }) {
   const [search, setSearch] = useState('');
   const [speed, setSpeed] = useState('All');
   const [price, setPrice] = useState('All');
@@ -736,15 +824,47 @@ function ProductPage({ onBack }: { onBack: () => void }) {
 
 /* ───────── Main Index ───────── */
 const Index = () => {
+  const { user, profile, isAdmin, signOut } = useAuth();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [toast, setToast] = useState<ToastData | null>(null);
+  const tracking = useTracking(user?.id);
+  const sessionStarted = useRef(false);
+
+  const tier = profile?.access_tier || 'basic';
+  const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
+
+  // Start session tracking
+  useEffect(() => {
+    if (user && !sessionStarted.current) {
+      sessionStarted.current = true;
+      tracking.startSession();
+    }
+  }, [user]);
+
+  // Track page visits
+  useEffect(() => {
+    tracking.trackPageVisit(activePage);
+  }, [activePage]);
 
   const showLockedToast = (toolName: string) => {
-    setToast({ toolName });
+    if (tier === 'basic') {
+      setToast({ toolName, type: 'premium' });
+    } else {
+      setToast({ toolName, type: 'locked' });
+    }
   };
 
-  const navigate = (page: PageId) => {
+  const navigateTo = (page: PageId) => {
+    // Close previous tool tracking
+    tracking.closeToolTracking();
     setActivePage(page);
+    if (page !== 'dashboard') {
+      tracking.trackToolOpen(page);
+    }
+  };
+
+  const handleToolAction = () => {
+    tracking.trackToolAction();
   };
 
   return (
@@ -754,17 +874,18 @@ const Index = () => {
         display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden',
         background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)',
       }}>
-        <Navbar />
+        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar activePage={activePage} onNavigate={navigate} onLockedClick={showLockedToast} />
+          <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} />
           <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
-            {activePage === 'dashboard' && <DashboardHome onNavigate={navigate} onLockedClick={showLockedToast} />}
-            {activePage === 'niche' && <NichePage onBack={() => navigate('dashboard')} />}
-            {activePage === 'product' && <ProductPage onBack={() => navigate('dashboard')} />}
+            {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
+            {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
+            {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
           </main>
         </div>
       </div>
       {toast && <Toast data={toast} onClose={() => setToast(null)} />}
+      {profile?.is_beta_user && user && <BetaFeedback userId={user.id} />}
     </>
   );
 };
