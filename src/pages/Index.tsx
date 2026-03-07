@@ -283,7 +283,8 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic' }
             </div>
             <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: active ? 700 : 500, color: item.locked ? '#94a3b8' : active ? '#7c3aed' : '#475569', flex: 1 }}>{item.label}</span>
             {item.badge === 'LIVE' && <span style={{ fontSize: 8, fontWeight: 800, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 20 }}>LIVE</span>}
-            {item.badge === 'SOON' && <span style={{ fontSize: 8, fontWeight: 800, background: '#f1f5f9', color: '#94a3b8', padding: '1px 6px', borderRadius: 20 }}>SOON</span>}
+            {item.badge === 'SOON' && accessTier === 'basic' && <span style={{ fontSize: 8, fontWeight: 800, background: '#fef9c3', color: '#92400e', padding: '1px 6px', borderRadius: 20 }}>PREMIUM</span>}
+            {item.badge === 'SOON' && accessTier !== 'basic' && <span style={{ fontSize: 8, fontWeight: 800, background: '#f1f5f9', color: '#94a3b8', padding: '1px 6px', borderRadius: 20 }}>SOON</span>}
           </div>
         );
       })}
