@@ -21,7 +21,7 @@ export default function RevokedScreen() {
         <p style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 24 }}>
           Your access to Shikshantaram OS has been suspended. Please contact support to resolve this.
         </p>
-        <a href="mailto:support@shikshantaram.com" style={{
+        <a href="mailto:shikshantaram@gmail.com" style={{
           display: 'inline-block', padding: '10px 24px', borderRadius: 10, border: '1.5px solid #e2e8f0',
           color: '#64748b', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, textDecoration: 'none',
           marginBottom: 12,

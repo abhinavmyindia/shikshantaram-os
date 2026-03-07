@@ -341,7 +341,7 @@ function Toast({ data, onClose }: { data: ToastData; onClose: () => void }) {
             {isPremium ? 'Upgrade your Shikshantaram OS plan to unlock all 8 tools.' : `${data.toolName} is under construction. We're building something incredible — stay tuned!`}
           </div>
           {isPremium && (
-            <a href="mailto:support@shikshantaram.com?subject=Upgrade to Premium" style={{ display: 'inline-block', marginTop: 8, fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none' }}>
+            <a href="mailto:shikshantaram@gmail.com?subject=Upgrade to Premium" style={{ display: 'inline-block', marginTop: 8, fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none' }}>
               Contact to Upgrade →
             </a>
           )}
