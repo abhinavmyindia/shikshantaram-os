@@ -144,7 +144,7 @@ export default function AdminPanel() {
   );
 }
 
-function OverviewTab({ stats, users }: { stats: any; users: UserRow[] }) {
+function OverviewTab({ stats, users, emailMap }: { stats: any; users: UserRow[]; emailMap: Record<string, string> }) {
   const statCards = [
     { label: 'Total Users', value: stats.total, icon: '👥', bg: '#ede9fe' },
     { label: 'Active Today', value: stats.activeToday, icon: '⚡', bg: '#dcfce7' },
@@ -182,7 +182,7 @@ function OverviewTab({ stats, users }: { stats: any; users: UserRow[] }) {
               return (
                 <tr key={u.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{u.full_name || 'Unknown'}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{u.id.slice(0, 8)}...</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{emailMap[u.id] || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
                   </td>
@@ -198,7 +198,7 @@ function OverviewTab({ stats, users }: { stats: any; users: UserRow[] }) {
   );
 }
 
-function UsersTab({ users, onRefresh }: { users: UserRow[]; onRefresh: () => void }) {
+function UsersTab({ users, emailMap, onRefresh }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
 
