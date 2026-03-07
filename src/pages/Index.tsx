@@ -813,15 +813,47 @@ function ProductPage({ onBack }: { onBack: () => void }) {
 
 /* ───────── Main Index ───────── */
 const Index = () => {
+  const { user, profile, isAdmin, signOut } = useAuth();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [toast, setToast] = useState<ToastData | null>(null);
+  const tracking = useTracking(user?.id);
+  const sessionStarted = useRef(false);
+
+  const tier = profile?.access_tier || 'basic';
+  const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
+
+  // Start session tracking
+  useEffect(() => {
+    if (user && !sessionStarted.current) {
+      sessionStarted.current = true;
+      tracking.startSession();
+    }
+  }, [user]);
+
+  // Track page visits
+  useEffect(() => {
+    tracking.trackPageVisit(activePage);
+  }, [activePage]);
 
   const showLockedToast = (toolName: string) => {
-    setToast({ toolName });
+    if (tier === 'basic') {
+      setToast({ toolName, type: 'premium' });
+    } else {
+      setToast({ toolName, type: 'locked' });
+    }
   };
 
-  const navigate = (page: PageId) => {
+  const navigateTo = (page: PageId) => {
+    // Close previous tool tracking
+    tracking.closeToolTracking();
     setActivePage(page);
+    if (page !== 'dashboard') {
+      tracking.trackToolOpen(page);
+    }
+  };
+
+  const handleToolAction = () => {
+    tracking.trackToolAction();
   };
 
   return (
@@ -831,17 +863,18 @@ const Index = () => {
         display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden',
         background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)',
       }}>
-        <Navbar />
+        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar activePage={activePage} onNavigate={navigate} onLockedClick={showLockedToast} />
+          <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} />
           <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
-            {activePage === 'dashboard' && <DashboardHome onNavigate={navigate} onLockedClick={showLockedToast} />}
-            {activePage === 'niche' && <NichePage onBack={() => navigate('dashboard')} />}
-            {activePage === 'product' && <ProductPage onBack={() => navigate('dashboard')} />}
+            {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
+            {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
+            {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
           </main>
         </div>
       </div>
       {toast && <Toast data={toast} onClose={() => setToast(null)} />}
+      {profile?.is_beta_user && user && <BetaFeedback userId={user.id} />}
     </>
   );
 };
