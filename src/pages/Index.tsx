@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
+import { useAuth } from '@/hooks/useAuth';
+import { useTracking } from '@/hooks/useTracking';
+import BetaFeedback from '@/components/BetaFeedback';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
