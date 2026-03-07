@@ -14,13 +14,174 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_users: {
+        Row: {
+          created_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      beta_feedback: {
+        Row: {
+          created_at: string | null
+          feedback_text: string
+          id: string
+          rating: number
+          tool_used: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          feedback_text?: string
+          id?: string
+          rating: number
+          tool_used?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          feedback_text?: string
+          id?: string
+          rating?: number
+          tool_used?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tool_usage: {
+        Row: {
+          actions_count: number | null
+          created_at: string | null
+          id: string
+          opened_at: string | null
+          session_id: string | null
+          time_spent_secs: number | null
+          tool_id: string
+          user_id: string
+        }
+        Insert: {
+          actions_count?: number | null
+          created_at?: string | null
+          id?: string
+          opened_at?: string | null
+          session_id?: string | null
+          time_spent_secs?: number | null
+          tool_id: string
+          user_id: string
+        }
+        Update: {
+          actions_count?: number | null
+          created_at?: string | null
+          id?: string
+          opened_at?: string | null
+          session_id?: string | null
+          time_spent_secs?: number | null
+          tool_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_usage_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "user_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          access_tier: string
+          added_by: string | null
+          created_at: string | null
+          full_name: string
+          id: string
+          is_beta_user: boolean | null
+          notes: string | null
+          payment_amount: number | null
+          payment_status: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_tier?: string
+          added_by?: string | null
+          created_at?: string | null
+          full_name?: string
+          id: string
+          is_beta_user?: boolean | null
+          notes?: string | null
+          payment_amount?: number | null
+          payment_status?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_tier?: string
+          added_by?: string | null
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          is_beta_user?: boolean | null
+          notes?: string | null
+          payment_amount?: number | null
+          payment_status?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          created_at: string | null
+          device_type: string | null
+          duration_seconds: number | null
+          id: string
+          pages_visited: Json | null
+          session_end: string | null
+          session_start: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          pages_visited?: Json | null
+          session_end?: string | null
+          session_start?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          pages_visited?: Json | null
+          session_end?: string | null
+          session_start?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_tool_actions: { Args: { row_id: string }; Returns: undefined }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
