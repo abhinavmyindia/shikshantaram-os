@@ -949,7 +949,7 @@ function AddUserTab({ onSuccess, logActivity }: { onSuccess: () => void; logActi
 }
 
 // ─── RESET PASSWORD TAB (unchanged) ──────────────────────────
-function ResetPasswordTab({ users }: { users: UserRow[] }) {
+function ResetPasswordTab({ users, logActivity }: { users: UserRow[]; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
   const [selectedUser, setSelectedUser] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1103,7 +1103,7 @@ function FeedbackTab({ feedback, users }: { feedback: FeedbackRow[]; users: User
 }
 
 // ─── SIGNUPS TAB ─────────────────────────────────────────────
-function SignupsTab({ onRefresh, showToast }: { onRefresh: () => void; showToast: (msg: string, type?: string) => void }) {
+function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
   const [signups, setSignups] = useState<SignupRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
