@@ -32,6 +32,61 @@ button:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 @keyframes float { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-6px);} }
 @keyframes glow { 0%,100%{box-shadow:0 0 20px rgba(124,58,237,0.3);} 50%{box-shadow:0 0 40px rgba(124,58,237,0.6);} }
 @keyframes shrinkBar { from{width:100%;} to{width:0%;} }
+@keyframes cardBounce {
+  0%   { transform: translateY(-4px) scale(1); }
+  15%  { transform: translateY(-4px) scale(0.96) rotate(-1deg); }
+  30%  { transform: translateY(-4px) scale(1.04) rotate(1deg); }
+  45%  { transform: translateY(-4px) scale(0.98) rotate(-0.5deg); }
+  60%  { transform: translateY(-4px) scale(1.01) rotate(0.5deg); }
+  100% { transform: translateY(-4px) scale(1) rotate(0deg); }
+}
+@keyframes lockBreathe {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50%       { transform: scale(1.08); opacity: 1; }
+}
+@keyframes badgeShimmer {
+  0%   { background-position: -100px 0; }
+  100% { background-position: 200px 0; }
+}
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+@keyframes popupFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.95); }
+}
+@keyframes typeChar {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+@keyframes radarPulse {
+  0%   { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+@keyframes sparkleFloat {
+  0%   { opacity: 0; transform: scale(0) translateY(0); }
+  30%  { opacity: 1; transform: scale(1) translateY(-8px); }
+  100% { opacity: 0; transform: scale(0.5) translateY(-20px); }
+}
+@keyframes blockSlide {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(20px, 0); }
+  50%  { transform: translate(20px, 16px); }
+  75%  { transform: translate(0, 16px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes flameUp {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes progressFill {
+  from { width: 0%; }
+}
 `;
 
 function GlobalStyles() {
