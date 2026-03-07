@@ -40,16 +40,26 @@ serve(async (req) => {
     }
 
     const { email, full_name, phone, temp_password, access_tier, payment_status, payment_amount } = await req.json();
+    const normalizedEmail = String(email || '').toLowerCase().trim();
 
     // 1. Create auth user
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password: temp_password,
       email_confirm: true,
       user_metadata: { full_name },
     });
 
     if (authError) {
+      const isDuplicateEmail = authError.message?.toLowerCase().includes('already been registered');
+      if (isDuplicateEmail) {
+        return new Response(JSON.stringify({
+          success: false,
+          already_exists: true,
+          error: 'A user with this email address has already been registered',
+          email: normalizedEmail,
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
       return new Response(JSON.stringify({ error: authError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

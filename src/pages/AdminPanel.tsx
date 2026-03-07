@@ -291,9 +291,10 @@ function AddUserTab({ onSuccess }: { onSuccess: () => void }) {
     setResult(null);
 
     try {
+      const normalizedEmail = form.email.toLowerCase().trim();
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
-          email: form.email,
+          email: normalizedEmail,
           full_name: form.fullName,
           phone: form.phone,
           access_tier: form.tier,
@@ -304,22 +305,26 @@ function AddUserTab({ onSuccess }: { onSuccess: () => void }) {
       });
 
       if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
+      if (data?.already_exists) {
+        setResult({ success: false, message: `${normalizedEmail} already has an account. Use Reset Password if needed.` });
+      } else {
+        if (data?.error) throw new Error(data.error);
 
-      // Send welcome email
-      const appUrl = 'https://app.shikshantaram.in';
-      await supabase.functions.invoke('send-welcome-email', {
-        body: {
-          email: form.email,
-          full_name: form.fullName,
-          access_tier: form.tier,
-          temp_password: data.temp_password,
-          login_url: appUrl,
-        },
-      });
+        // Send welcome email
+        const appUrl = 'https://app.shikshantaram.in';
+        await supabase.functions.invoke('send-welcome-email', {
+          body: {
+            email: normalizedEmail,
+            full_name: form.fullName,
+            access_tier: form.tier,
+            temp_password: data.temp_password,
+            login_url: appUrl,
+          },
+        });
 
-      setResult({ success: true, message: `User added! Welcome email sent to ${form.email}` });
-      onSuccess();
+        setResult({ success: true, message: `User added! Welcome email sent to ${normalizedEmail}` });
+        onSuccess();
+      }
     } catch (err: any) {
       setResult({ success: false, message: err.message || 'Failed to create user' });
     }
@@ -680,7 +685,6 @@ function SignupsTab() {
       });
 
       if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
 
       await supabase.from('signup_requests').update({
         status: 'approved',
@@ -688,6 +692,13 @@ function SignupsTab() {
       } as any).eq('id', request.id);
 
       fetchSignups();
+
+      if (data?.already_exists) {
+        showToast(`ℹ️ ${request.email} already had an account. Marked as approved.`);
+        return;
+      }
+
+      if (data?.error) throw new Error(data.error);
       showToast(`✅ ${request.full_name} approved! Credentials sent to ${request.email}`);
     } catch (err: any) {
       showToast(`❌ Error: ${err.message}`);
