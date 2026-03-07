@@ -822,6 +822,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity }: { user
           onSave={() => { setEditUser(null); onRefresh(); }}
           onDelete={(id, name) => { onRefresh(); showToast(`🗑 ${name}'s account has been permanently deleted.`, 'warning'); }}
           showToast={showToast}
+          logActivity={logActivity}
         />
       )}
 
