@@ -256,7 +256,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut }: { userName: string; 
 }
 
 /* ───────── Sidebar ───────── */
-function Sidebar({ activePage, onNavigate, onLockedClick }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void }) {
+function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic' }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string }) {
   return (
     <div style={{
       width: 240, flexShrink: 0, height: '100%', overflowY: 'auto', background: 'rgba(255,255,255,0.65)',
