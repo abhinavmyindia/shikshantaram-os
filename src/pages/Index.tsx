@@ -320,26 +320,38 @@ function Toast({ data, onClose }: { data: ToastData; onClose: () => void }) {
     return () => clearTimeout(t);
   }, [onClose]);
 
+  const isPremium = data.type === 'premium';
+
   return (
     <div style={{
       position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
       animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-      background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', borderRadius: 14, padding: '14px 18px',
-      border: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-      minWidth: 280, maxWidth: 360,
+      background: isPremium ? 'linear-gradient(135deg,rgba(124,58,237,0.05),rgba(168,85,247,0.03))' : 'rgba(255,255,255,0.95)',
+      backdropFilter: 'blur(20px)', borderRadius: 14, padding: '14px 18px',
+      border: isPremium ? '1px solid rgba(124,58,237,0.2)' : '1px solid rgba(255,255,255,0.9)',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.12)', minWidth: 280, maxWidth: 360,
     }}>
       <div style={{ position: 'absolute', top: 8, right: 8, cursor: 'pointer' }} onClick={onClose}><CloseIcon /></div>
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>🔒</div>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: isPremium ? '#ede9fe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{isPremium ? '⚡' : '🔒'}</div>
         <div>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>Coming Soon 🔒</div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginTop: 2 }}>{data.toolName} is under construction. We're building something incredible — stay tuned!</div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>{isPremium ? '⚡ Premium Feature' : 'Coming Soon 🔒'}</div>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginTop: 2 }}>
+            {isPremium ? 'Upgrade your Shikshantaram OS plan to unlock all 8 tools.' : `${data.toolName} is under construction. We're building something incredible — stay tuned!`}
+          </div>
+          {isPremium && (
+            <a href="mailto:support@shikshantaram.com?subject=Upgrade to Premium" style={{ display: 'inline-block', marginTop: 8, fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none' }}>
+              Contact to Upgrade →
+            </a>
+          )}
         </div>
       </div>
       <div style={{ marginTop: 10, height: 3, borderRadius: 50, overflow: 'hidden', background: '#f1f5f9' }}>
         <div style={{ height: '100%', borderRadius: 50, background: 'linear-gradient(90deg,#e2e8f0,#f1f5f9)', backgroundSize: '400px 100%', animation: 'shrinkBar 3.5s linear forwards, shimmer 1.5s linear infinite' }} />
       </div>
     </div>
+  );
+}
   );
 }
 
