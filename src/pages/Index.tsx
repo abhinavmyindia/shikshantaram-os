@@ -109,9 +109,22 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 
 /* ───────── Types ───────── */
 type PageId = 'dashboard' | 'niche' | 'product' | 'settings' | 'help';
-interface ToastData { toolName: string; }
+interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
 const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product'];
+
+const TOOL_ACCESS: Record<string, string[]> = {
+  dashboard: ['basic','premium','beta'],
+  niche: ['basic','premium','beta'],
+  product: ['basic','premium','beta'],
+  offer: ['premium','beta'],
+  funnel: ['premium','beta'],
+  creator: ['premium','beta'],
+  copy: ['premium','beta'],
+  ads: ['premium','beta'],
+};
+
+const canAccess = (toolId: string, tier: string) => TOOL_ACCESS[toolId]?.includes(tier) ?? false;
 
 interface NavItem {
   id: string;
