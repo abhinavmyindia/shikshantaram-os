@@ -650,11 +650,12 @@ export default function AdminPanel() {
         ) : (
           <>
             {tab === 'overview' && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
-            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} />}
-            {tab === 'add' && <AddUserTab onSuccess={loadData} />}
-            {tab === 'password' && <ResetPasswordTab users={users} />}
+            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+            {tab === 'add' && <AddUserTab onSuccess={loadData} logActivity={logActivity} />}
+            {tab === 'password' && <ResetPasswordTab users={users} logActivity={logActivity} />}
             {tab === 'feedback' && <FeedbackTab feedback={feedback} users={users} />}
-            {tab === 'signups' && <SignupsTab onRefresh={loadData} showToast={showAdminToast} />}
+            {tab === 'signups' && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+            {tab === 'activity' && <ActivityLogTab users={users} emailMap={emailMap} />}
           </>
         )}
       </div>
