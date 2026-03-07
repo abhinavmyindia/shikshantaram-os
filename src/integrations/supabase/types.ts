@@ -59,6 +59,45 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_requests: {
+        Row: {
+          email: string
+          full_name: string
+          id: string
+          notes: string | null
+          payment_type: string
+          phone: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+        }
+        Insert: {
+          email: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          payment_type: string
+          phone: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+        }
+        Update: {
+          email?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          payment_type?: string
+          phone?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+        }
+        Relationships: []
+      }
       tool_usage: {
         Row: {
           actions_count: number | null
@@ -207,6 +246,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_signup_count: { Args: never; Returns: number }
       increment_tool_actions: { Args: { row_id: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
