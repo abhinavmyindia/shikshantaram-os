@@ -24,6 +24,7 @@ input::placeholder { color: #94a3b8; }
 button:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
 @keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
 @keyframes popIn { from { opacity:0; transform:scale(0.88) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
 @keyframes slideRight { from { opacity:0; transform:translateX(-16px); } to { opacity:1; transform:translateX(0); } }
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
