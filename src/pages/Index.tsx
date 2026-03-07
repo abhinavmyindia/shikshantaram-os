@@ -742,11 +742,14 @@ function getGreeting() {
 
 function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string }) {
   const [greeting, setGreeting] = useState(getGreeting());
+  const [popupCard, setPopupCard] = useState<typeof TOOL_CARDS[0] | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setGreeting(getGreeting()), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  let lockedIdx = 0;
 
   return (
     <div>
@@ -772,10 +775,25 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
 
       {/* Tool cards grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-        {TOOL_CARDS.map((card, i) => (
-          <ToolCard key={card.id} card={card} delay={0.14 + i * 0.04}
-            onClick={() => card.locked ? onLockedClick(card.name) : onNavigate(card.id as PageId)} />
-        ))}
+        {TOOL_CARDS.map((card, i) => {
+          const currentLockedIdx = card.locked ? lockedIdx++ : undefined;
+          return (
+            <ToolCard key={card.id} card={card} delay={0.14 + i * 0.04}
+              lockedIndex={currentLockedIdx}
+              onClick={() => card.locked ? setPopupCard(card) : onNavigate(card.id as PageId)} />
+          );
+        })}
+      </div>
+
+      {/* Locked card popup */}
+      {popupCard && (
+        <LockedCardPopup
+          cardId={popupCard.id}
+          gradient={popupCard.gradient}
+          accent={popupCard.accent}
+          onClose={() => setPopupCard(null)}
+        />
+      )}
       </div>
 
       {/* Quick Start */}
