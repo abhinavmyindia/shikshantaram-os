@@ -78,7 +78,7 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
-  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback'];
+  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups'];
 
   return (
     <div style={{
@@ -111,7 +111,7 @@ export default function AdminPanel() {
         {tabs.map(t => {
           const id = t.split(' ').slice(1).join(' ').toLowerCase();
           const active = tab === id || (tab === 'overview' && t.includes('Overview'));
-          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : 'feedback';
+          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : t.includes('Signups') ? 'signups' : 'feedback';
           return (
             <button key={t} onClick={() => setTab(tabId)} style={{
               padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
@@ -137,6 +137,7 @@ export default function AdminPanel() {
             {tab === 'add' && <AddUserTab onSuccess={loadData} />}
             {tab === 'password' && <ResetPasswordTab users={users} />}
             {tab === 'feedback' && <FeedbackTab feedback={feedback} users={users} />}
+            {tab === 'signups' && <SignupsTab />}
           </>
         )}
       </div>
