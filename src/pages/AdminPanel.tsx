@@ -75,7 +75,7 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
-  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '💬 Feedback'];
+  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback'];
 
   return (
     <div style={{
@@ -108,7 +108,7 @@ export default function AdminPanel() {
         {tabs.map(t => {
           const id = t.split(' ').slice(1).join(' ').toLowerCase();
           const active = tab === id || (tab === 'overview' && t.includes('Overview'));
-          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : 'feedback';
+          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : 'feedback';
           return (
             <button key={t} onClick={() => setTab(tabId)} style={{
               padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
@@ -132,6 +132,7 @@ export default function AdminPanel() {
             {tab === 'overview' && <OverviewTab stats={stats} users={users} />}
             {tab === 'users' && <UsersTab users={users} onRefresh={loadData} />}
             {tab === 'add' && <AddUserTab onSuccess={loadData} />}
+            {tab === 'password' && <ResetPasswordTab users={users} />}
             {tab === 'feedback' && <FeedbackTab feedback={feedback} users={users} />}
           </>
         )}
@@ -405,6 +406,143 @@ function AddUserTab({ onSuccess }: { onSuccess: () => void }) {
             </button>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ResetPasswordTab({ users }: { users: UserRow[] }) {
+  const [selectedUser, setSelectedUser] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [search, setSearch] = useState('');
+
+  const filteredUsers = users.filter(u =>
+    u.full_name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser || !newPassword) return;
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { user_id: selectedUser, new_password: newPassword },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      const userName = users.find(u => u.id === selectedUser)?.full_name || 'User';
+      setResult({ success: true, message: `Password updated for ${userName}` });
+      setNewPassword('');
+      setSelectedUser('');
+      setSearch('');
+    } catch (err: any) {
+      setResult({ success: false, message: err.message || 'Failed to reset password' });
+    }
+    setLoading(false);
+  };
+
+  const generatePassword = () => {
+    const pwd = 'Shk' + Math.random().toString(36).slice(2, 9).toUpperCase();
+    setNewPassword(pwd);
+  };
+
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div style={{ ...glassCard, padding: '32px 28px' }}>
+        <h2 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 4 }}>Reset User Password</h2>
+        <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8', marginBottom: 24 }}>Select a user and set a new password for them.</p>
+
+        {result && (
+          <div style={{
+            background: result.success ? '#f0fdf4' : '#fef2f2',
+            border: `1px solid ${result.success ? '#bbf7d0' : '#fecaca'}`,
+            borderRadius: 10, padding: '12px 16px', marginBottom: 20,
+          }}>
+            <div style={{ fontWeight: 700, color: result.success ? '#15803d' : '#991b1b', fontSize: 13 }}>
+              {result.success ? '✅ ' : '❌ '}{result.message}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleReset}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Select User *</label>
+            <input
+              value={search}
+              onChange={e => { setSearch(e.target.value); setSelectedUser(''); }}
+              placeholder="Search by name..."
+              style={inputStyle}
+            />
+            {search && !selectedUser && (
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, marginTop: 4, maxHeight: 180, overflow: 'auto', background: 'white' }}>
+                {filteredUsers.length === 0 ? (
+                  <div style={{ padding: '10px 14px', fontSize: 13, color: '#94a3b8' }}>No users found</div>
+                ) : (
+                  filteredUsers.map(u => {
+                    const tc = tierColors[u.access_tier] || tierColors.basic;
+                    return (
+                      <div
+                        key={u.id}
+                        onClick={() => { setSelectedUser(u.id); setSearch(u.full_name); }}
+                        style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #f1f5f9' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: `linear-gradient(135deg,${tc.color},${tc.bg})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 9, color: 'white', flexShrink: 0 }}>
+                          {(u.full_name || 'U').slice(0, 2).toUpperCase()}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', flex: 1 }}>{u.full_name}</span>
+                        <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>New Password *</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                required
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                style={{ ...inputStyle, flex: 1 }}
+                placeholder="Min 6 characters"
+                minLength={6}
+              />
+              <button type="button" onClick={generatePassword} style={{
+                padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e2e8f0', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, background: '#f8fafc', color: '#7c3aed', whiteSpace: 'nowrap',
+              }}>🎲 Generate</button>
+            </div>
+          </div>
+
+          <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, color: '#92400e', fontSize: 12, marginBottom: 4 }}>⚠️ Important:</div>
+            <div style={{ fontSize: 12, color: '#78350f', lineHeight: 1.8 }}>
+              • The user will need to use this new password to log in<br/>
+              • Make sure to communicate the new password securely
+            </div>
+          </div>
+
+          <button type="submit" disabled={loading || !selectedUser || !newPassword} style={{
+            width: '100%', padding: 13, borderRadius: 12, border: 'none',
+            cursor: (loading || !selectedUser || !newPassword) ? 'not-allowed' : 'pointer',
+            background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', fontFamily: 'Sora',
+            fontWeight: 700, fontSize: 14, opacity: (loading || !selectedUser || !newPassword) ? 0.5 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+            {loading && <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
+            {loading ? 'Updating password...' : '🔑 Reset Password'}
+          </button>
+        </form>
       </div>
     </div>
   );
