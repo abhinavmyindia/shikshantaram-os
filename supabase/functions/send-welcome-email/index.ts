@@ -45,7 +45,7 @@ serve(async (req) => {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Shikshantaram OS <noreply@shikshantaram.com>",
+      from: "Shikshantaram OS <auth@shikshantaram.in>",
       to: [email],
       subject: `🎉 Your Shikshantaram OS Access is Ready — ${tierLabel} Plan`,
       html,
