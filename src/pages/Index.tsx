@@ -794,7 +794,6 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
           onClose={() => setPopupCard(null)}
         />
       )}
-      </div>
 
       {/* Quick Start */}
       <div style={{ marginTop: 32, animation: 'fadeUp 0.4s ease 0.2s both' }}>
