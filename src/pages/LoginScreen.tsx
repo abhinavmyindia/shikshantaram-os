@@ -95,7 +95,7 @@ export default function LoginScreen() {
 
         <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: '#94a3b8' }}>
           Don't have access? Contact us<br />
-          <span style={{ color: '#7c3aed', fontWeight: 600 }}>support@shikshantaram.com</span>
+          <span style={{ color: '#7c3aed', fontWeight: 600 }}>shikshantaram@gmail.com</span>
         </div>
       </div>
     </div>
