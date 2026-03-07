@@ -419,7 +419,7 @@ function ToolCard({ card, onClick, delay }: { card: typeof TOOL_CARDS[0]; onClic
 }
 
 /* ───────── Dashboard Home ───────── */
-function DashboardHome({ onNavigate, onLockedClick }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void }) {
+function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string }) {
   return (
     <div>
       {/* Header */}
@@ -710,7 +710,7 @@ function FilterBar({ search, onSearch, filters, accentColor }: {
 }
 
 /* ───────── Niche Page ───────── */
-function NichePage({ onBack }: { onBack: () => void }) {
+function NichePage({ onBack, onAction }: { onBack: () => void; onAction?: () => void }) {
   const [search, setSearch] = useState('');
   const [growth, setGrowth] = useState('All');
   const [comp, setComp] = useState('All');
@@ -756,7 +756,7 @@ function NichePage({ onBack }: { onBack: () => void }) {
 }
 
 /* ───────── Product Page ───────── */
-function ProductPage({ onBack }: { onBack: () => void }) {
+function ProductPage({ onBack, onAction }: { onBack: () => void; onAction?: () => void }) {
   const [search, setSearch] = useState('');
   const [speed, setSpeed] = useState('All');
   const [price, setPrice] = useState('All');
