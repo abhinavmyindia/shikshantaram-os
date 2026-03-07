@@ -132,8 +132,8 @@ export default function AdminPanel() {
           </div>
         ) : (
           <>
-            {tab === 'overview' && <OverviewTab stats={stats} users={users} />}
-            {tab === 'users' && <UsersTab users={users} onRefresh={loadData} />}
+            {tab === 'overview' && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
+            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} />}
             {tab === 'add' && <AddUserTab onSuccess={loadData} />}
             {tab === 'password' && <ResetPasswordTab users={users} />}
             {tab === 'feedback' && <FeedbackTab feedback={feedback} users={users} />}
