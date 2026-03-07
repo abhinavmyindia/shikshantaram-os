@@ -47,6 +47,7 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [emailMap, setEmailMap] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<FeedbackRow[]>([]);
   const [stats, setStats] = useState({ total: 0, activeToday: 0, basic: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
@@ -58,13 +59,15 @@ export default function AdminPanel() {
 
   const loadData = async () => {
     setLoading(true);
-    const [usersRes, feedbackRes, sessionsRes] = await Promise.all([
+    const [usersRes, feedbackRes, sessionsRes, emailsRes] = await Promise.all([
       supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('beta_feedback').select('*').order('created_at', { ascending: false }),
       supabase.from('user_sessions').select('id, session_start').gte('session_start', new Date(Date.now() - 86400000).toISOString()),
+      supabase.functions.invoke('admin-list-emails'),
     ]);
     const u = (usersRes.data || []) as unknown as UserRow[];
     setUsers(u);
+    setEmailMap(emailsRes.data?.emails || {});
     setFeedback((feedbackRes.data || []) as unknown as FeedbackRow[]);
     setStats({
       total: u.length,
