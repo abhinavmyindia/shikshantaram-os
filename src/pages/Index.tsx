@@ -1376,7 +1376,7 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
 
 /* ───────── Main Index ───────── */
 const Index = () => {
-  const { user, profile, isAdmin, signOut } = useAuth();
+  const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [toast, setToast] = useState<ToastData | null>(null);
   const [showMotivation, setShowMotivation] = useState(false);
@@ -1440,13 +1440,14 @@ const Index = () => {
         display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden',
         background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)',
       }}>
-        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} />
+        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} />
           <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
             {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
             {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
+            {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
           </main>
         </div>
       </div>
