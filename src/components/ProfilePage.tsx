@@ -178,9 +178,9 @@ const PLATFORM_ICONS: Record<string, (s: number) => JSX.Element> = {
 };
 
 function SocialPill({ platform, url }: { platform: string; url: string }) {
+  const [hovered, setHovered] = useState(false);
   const info = PLATFORM_COLORS[platform];
   if (!info) return null;
-  const [hovered, setHovered] = useState(false);
   return (
     <a href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
