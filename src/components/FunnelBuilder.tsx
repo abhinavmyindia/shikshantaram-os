@@ -160,17 +160,17 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
           <div key={label} style={s({ display: 'flex', alignItems: 'center', flex: i < steps.length - 1 ? 1 : undefined })}>
             <div style={s({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 })}>
               <div style={s({
-                width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: 'white',
+                width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'Sora', fontWeight: 900, fontSize: 15, color: 'white',
                 background: isCompleted ? '#dcfce7' : isActive ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : '#f1f5f9',
-                ...(isCompleted ? { color: '#059669' } : isActive ? { boxShadow: '0 0 0 4px rgba(6,182,212,0.2)' } : { color: '#94a3b8' }),
+                ...(isCompleted ? { color: '#059669' } : isActive ? { boxShadow: '0 0 0 5px rgba(6,182,212,0.2)' } : { color: '#94a3b8' }),
               })}>
                 {isCompleted ? '✓' : i + 1}
               </div>
-              <span style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: isCompleted ? '#059669' : isActive ? '#06b6d4' : '#94a3b8' })}>{label}</span>
+              <span style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: isCompleted ? '#059669' : isActive ? '#06b6d4' : '#94a3b8' })}>{label}</span>
             </div>
             {i < steps.length - 1 && (
-              <div style={s({ flex: 1, height: 2, marginLeft: 8, marginRight: 8, marginBottom: 18, background: isCompleted ? '#059669' : isActive ? 'linear-gradient(90deg,#059669,#f1f5f9)' : '#f1f5f9' })} />
+              <div style={s({ flex: 1, height: 3, marginLeft: 8, marginRight: 8, marginBottom: 18, background: isCompleted ? '#059669' : isActive ? 'linear-gradient(90deg,#059669,#f1f5f9)' : '#f1f5f9' })} />
             )}
           </div>
         );
@@ -695,55 +695,57 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
           {/* LEFT — Funnel Flowchart */}
           <div style={s({ width: 420, flexShrink: 0, position: 'sticky', top: 24, maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' })}>
             {/* Funnel header card */}
-            <div style={s({ background: 'linear-gradient(135deg,rgba(6,182,212,0.08),rgba(59,130,246,0.06))', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 16, padding: '16px 18px', marginBottom: 16 })}>
-              <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>{funnelData.funnelName}</div>
-              <p style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', marginTop: 3 })}>{funnelData.funnelTagline}</p>
-              <div style={s({ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' })}>
-                <span style={s({ fontSize: 10, fontWeight: 700, background: 'rgba(6,182,212,0.1)', color: '#0891b2', padding: '4px 10px', borderRadius: 50 })}>🎯 {funnelData.estimatedConversionRate}</span>
-                <span style={s({ fontSize: 10, fontWeight: 700, background: 'rgba(16,185,129,0.1)', color: '#059669', padding: '4px 10px', borderRadius: 50 })}>⏱ {funnelData.estimatedTimeToLaunch}</span>
-                <span style={s({ fontSize: 10, fontWeight: 700, background: 'rgba(245,158,11,0.1)', color: '#b45309', padding: '4px 10px', borderRadius: 50 })}>💰 {funnelData.estimatedMonthlyRevenue}/mo</span>
+            <div style={s({ background: 'linear-gradient(135deg,rgba(6,182,212,0.08),rgba(59,130,246,0.06))', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 16, padding: '20px 22px', marginBottom: 16 })}>
+              <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 6 })}>{funnelData.funnelName}</div>
+              <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.65, marginBottom: 14 })}>{funnelData.funnelTagline}</p>
+              <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
+                <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(6,182,212,0.1)', color: '#0891b2', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>🎯 {funnelData.estimatedConversionRate}</span>
+                <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(16,185,129,0.1)', color: '#059669', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>⏱ {funnelData.estimatedTimeToLaunch}</span>
+                <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.1)', color: '#b45309', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>💰 {funnelData.estimatedMonthlyRevenue}/mo</span>
               </div>
             </div>
 
             {/* Steps */}
             {funnelData.steps.map((step, i) => (
-              <div key={step.stepId}>
+              <div key={step.stepId} style={s({ marginBottom: i < funnelData.steps.length - 1 ? 0 : 0 })}>
                 <div onClick={() => setSelectedStep(selectedStep === step.stepId ? null : step.stepId)}
                   style={s({
-                    width: '100%', borderRadius: 14, padding: '14px 16px', cursor: 'pointer',
+                    width: '100%', borderRadius: 14, padding: '20px 20px 18px 20px', cursor: 'pointer',
                     background: selectedStep === step.stepId ? 'white' : 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)',
                     border: `2px solid ${selectedStep === step.stepId ? step.accentColor : '#e2e8f0'}`,
-                    boxShadow: selectedStep === step.stepId ? `0 0 0 3px ${step.accentColor}18` : 'none',
+                    boxShadow: selectedStep === step.stepId ? `0 4px 20px ${step.accentColor}25` : 'none',
                     transition: 'all 0.2s',
                   })}
                   onMouseEnter={e => { if (selectedStep !== step.stepId) e.currentTarget.style.borderColor = `${step.accentColor}50`; }}
                   onMouseLeave={e => { if (selectedStep !== step.stepId) e.currentTarget.style.borderColor = '#e2e8f0'; }}>
-                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
-                    <div style={s({ display: 'flex', gap: 10, alignItems: 'center' })}>
-                      <div style={s({ width: 26, height: 26, borderRadius: '50%', background: step.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: 'white' })}>{step.stepNumber}</div>
+                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 })}>
+                    <div style={s({ display: 'flex', gap: 12, alignItems: 'center' })}>
+                      <div style={s({ width: 36, height: 36, borderRadius: '50%', background: step.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 900, fontSize: 14, color: 'white', flexShrink: 0, boxShadow: `0 3px 10px ${step.accentColor}50` })}>{step.stepNumber}</div>
                       <span style={s({ fontSize: 16 })}>{step.stepIcon}</span>
-                      <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13.5, color: '#0f172a' })}>{step.stepName}</span>
+                      <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 14.5, color: '#0f172a' })}>{step.stepName}</span>
                     </div>
                     <div style={s({ display: 'flex', gap: 6, alignItems: 'center' })}>
                       {step.emailTriggered && <span style={s({ width: 20, height: 20, borderRadius: '50%', background: '#ede9fe', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' })}>📧</span>}
                       <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: step.accentColor, background: `${step.accentColor}12`, padding: '2px 7px', borderRadius: 50 })}>{step.conversionBenchmark}</span>
                     </div>
                   </div>
-                  <p style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{step.goal}</p>
-                  <p style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: step.accentColor, marginTop: 4 })}>CTA: {step.primaryCTA}</p>
+                  <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.65, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{step.goal}</p>
+                  <div style={s({ paddingTop: 10, borderTop: '1px solid rgba(0,0,0,0.06)' })}>
+                    <p style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 800, color: step.accentColor })}>CTA: {step.primaryCTA}</p>
+                  </div>
                 </div>
                 {/* Connecting arrow */}
                 {i < funnelData.steps.length - 1 && (
-                  <div style={s({ display: 'flex', flexDirection: 'column', alignItems: 'center', height: 32, justifyContent: 'center' })}>
-                    <svg height="24" width="2"><line x1="1" y1="0" x2="1" y2="24" stroke={step.accentColor} strokeWidth="2" strokeDasharray="4 4" opacity="0.4" /></svg>
-                    <span style={s({ fontSize: 10, color: funnelData.steps[i + 1]?.accentColor || '#94a3b8', lineHeight: 1 })}>▼</span>
+                  <div style={s({ display: 'flex', flexDirection: 'column', alignItems: 'center', height: 40, justifyContent: 'center' })}>
+                    <svg height="28" width="3"><line x1="1.5" y1="0" x2="1.5" y2="28" stroke={step.accentColor} strokeWidth="3" strokeDasharray="6 4" opacity="0.4" /></svg>
+                    <span style={s({ fontSize: 13, color: funnelData.steps[i + 1]?.accentColor || '#94a3b8', lineHeight: 1, marginTop: -4 })}>▼</span>
                   </div>
                 )}
               </div>
             ))}
 
             {/* Actions */}
-            <div style={s({ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 })}>
+            <div style={s({ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 })}>
               <div onClick={() => setShowAddStep(true)} style={s({ border: '2px dashed #e2e8f0', borderRadius: 12, padding: 10, textAlign: 'center', cursor: 'pointer', fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' })}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#06b6d4'; e.currentTarget.style.color = '#06b6d4'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#94a3b8'; }}>
@@ -754,7 +756,8 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
           </div>
 
           {/* RIGHT — Detail Panel */}
-          <div style={s({ flex: 1, minWidth: 0 })}>
+          <div style={s({ flex: 1, minWidth: 0, padding: 28, background: 'rgba(255,255,255,0.5)', borderRadius: 20, maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' })}
+            className="funnel-detail-scroll">
             {!selStep ? (
               /* Default — Funnel Summary */
               <div style={s({ animation: 'fadeUp 0.3s ease' })}>
@@ -792,63 +795,68 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
             ) : (
               /* Step Detail */
               <div style={s({ animation: 'fadeUp 0.3s ease' })}>
-                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 })}>
+                {/* Panel Header */}
+                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #f1f5f9' })}>
                   <div style={s({ display: 'flex', gap: 10, alignItems: 'center' })}>
                     <span style={s({ fontSize: 28 })}>{selStep.stepIcon}</span>
-                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a' })}>{selStep.stepName}</span>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 20, color: '#0f172a' })}>{selStep.stepName}</span>
                     <span style={s({ fontSize: 10, fontWeight: 700, background: `${selStep.accentColor}15`, color: selStep.accentColor, padding: '3px 10px', borderRadius: 50 })}>{selStep.stepType}</span>
                   </div>
                   <span onClick={() => setSelectedStep(null)} style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>✕ Close</span>
                 </div>
 
                 {/* 4 info cards */}
-                <div style={s({ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 })}>
+                <div style={s({ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 })}>
                   {[
                     { icon: '🎯', label: 'GOAL', value: selStep.goal },
                     { icon: '📊', label: 'CONVERSION', value: selStep.conversionBenchmark },
                     { icon: '⏱', label: 'TIME ON PAGE', value: selStep.timeOnStep },
                     { icon: '✍️', label: 'FRAMEWORK', value: selStep.copyFramework },
                   ].map(card => (
-                    <div key={card.label} style={s({ background: `${selStep.accentColor}08`, border: `1px solid ${selStep.accentColor}20`, borderRadius: 12, padding: 12 })}>
-                      <div style={s({ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, color: selStep.accentColor, textTransform: 'uppercase', marginBottom: 4 })}>{card.icon} {card.label}</div>
-                      <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#0f172a', lineHeight: 1.6 })}>{card.value}</div>
+                    <div key={card.label} style={s({ background: `${selStep.accentColor}08`, border: `1px solid ${selStep.accentColor}20`, borderRadius: 14, padding: '16px 18px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', borderBottom: `3px solid ${selStep.accentColor}` })}>
+                      <div style={s({ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, color: selStep.accentColor, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 8 })}>{card.icon} {card.label}</div>
+                      <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#0f172a', lineHeight: 1.65 })}>{card.value}</div>
                     </div>
                   ))}
                 </div>
 
                 {/* What happens here */}
-                <div style={s({ background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.15)', borderRadius: 12, padding: '14px 16px', marginBottom: 16 })}>
-                  <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#0891b2', textTransform: 'uppercase', marginBottom: 6 })}>WHAT HAPPENS AT THIS STEP</div>
-                  <p style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#334155', lineHeight: 1.75 })}>{selStep.whatHappensHere}</p>
+                <div style={s({ background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.15)', borderRadius: 16, padding: '18px 20px', marginBottom: 22 })}>
+                  <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#0891b2', textTransform: 'uppercase', marginBottom: 10 })}>WHAT HAPPENS AT THIS STEP</div>
+                  <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#334155', lineHeight: 1.85 })}>{selStep.whatHappensHere}</p>
                 </div>
 
                 {/* Email trigger */}
                 {selStep.emailTriggered && (
-                  <div style={s({ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center' })}>
-                    <span style={s({ width: 28, height: 28, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 })}>📧</span>
-                    <div>
-                      <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#7c3aed' })}>Automated Email Triggered</span>
-                      {selStep.emailSubject && <p style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#475569', marginTop: 2 })}>{selStep.emailSubject}</p>}
+                  <div style={s({ background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(168,85,247,0.05))', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 14, padding: '14px 18px', marginBottom: 22, display: 'flex', gap: 12, alignItems: 'center' })}>
+                    <span style={s({ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 })}>📧</span>
+                    <div style={s({ marginLeft: 0 })}>
+                      <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13.5, color: '#7c3aed', display: 'block', marginBottom: 4 })}>Automated Email Triggered</span>
+                      {selStep.emailSubject && <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#475569', lineHeight: 1.6 })}>{selStep.emailSubject}</p>}
                     </div>
                   </div>
                 )}
 
                 {/* Mistakes */}
                 {selStep.mistakesToAvoid?.length > 0 && (
-                  <div style={s({ marginBottom: 16 })}>
-                    <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 })}>⚠ COMMON MISTAKES AT THIS STEP</div>
+                  <div style={s({ marginBottom: 22 })}>
+                    <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 12 })}>⚠ COMMON MISTAKES AT THIS STEP</div>
                     {selStep.mistakesToAvoid.map((m, i) => (
-                      <div key={i} style={s({ display: 'flex', gap: 8, marginBottom: 6 })}>
-                        <span style={s({ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', marginTop: 7, flexShrink: 0 })} />
-                        <span style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#334155', lineHeight: 1.6 })}>{m}</span>
+                      <div key={i} style={s({ display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' })}>
+                        <span style={s({ width: 20, height: 20, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: 'Sora', fontSize: 10, fontWeight: 900, color: '#ef4444' })}>!</span>
+                        <span style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#334155', lineHeight: 1.7 })}>{m}</span>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {/* Platform */}
-                <div style={s({ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', marginBottom: 16 })}>
-                  <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0891b2' })}>🛠 Build with: {selStep.platformRecommendation}</span>
+                <div style={s({ background: 'linear-gradient(135deg, rgba(8,145,178,0.08), rgba(6,182,212,0.05))', border: '1px solid rgba(6,182,212,0.25)', borderRadius: 14, padding: '14px 18px', marginBottom: 22, display: 'flex', gap: 12, alignItems: 'center' })}>
+                  <span style={s({ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#06b6d4,#0891b2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 })}>🛠</span>
+                  <div>
+                    <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#0891b2', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 })}>Build with:</div>
+                    <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13.5, color: '#0f172a', lineHeight: 1.6 })}>{selStep.platformRecommendation}</div>
+                  </div>
                 </div>
 
                 {/* Generate Copy Button */}
@@ -868,7 +876,9 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
                   </div>
                 ) : (
                   <button onClick={() => generateStepCopy(selStep)} disabled={generatingCopy === selStep.stepId}
-                    style={s({ width: '100%', background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: 'white', border: 'none', borderRadius: 12, padding: 11, fontFamily: 'Sora', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', opacity: generatingCopy === selStep.stepId ? 0.6 : 1 })}>
+                    style={s({ width: '100%', background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: 'white', border: 'none', borderRadius: 14, padding: '14px 20px', fontFamily: 'Sora', fontWeight: 800, fontSize: 15, cursor: 'pointer', opacity: generatingCopy === selStep.stepId ? 0.6 : 1, boxShadow: '0 5px 22px rgba(6,182,212,0.4)', marginTop: 4, transition: 'all 0.15s' })}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(6,182,212,0.5)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 5px 22px rgba(6,182,212,0.4)'; }}>
                     {generatingCopy === selStep.stepId ? '⟳ Writing copy...' : '✍️ Generate Copy for This Step →'}
                   </button>
                 )}
