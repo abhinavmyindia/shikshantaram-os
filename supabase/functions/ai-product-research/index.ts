@@ -446,7 +446,7 @@ serve(async (req) => {
       const { product, inputData } = body;
       prompt = buildDeepResearchPrompt(product, inputData);
       model = "google/gemini-2.5-flash";
-      maxTokens = 8000;
+      maxTokens = 16000;
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
