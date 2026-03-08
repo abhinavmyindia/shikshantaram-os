@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
 import AIResearchEngine from '@/components/AIResearchEngine';
 import OfferCreation from '@/components/OfferCreation';
+import FunnelBuilder from '@/components/FunnelBuilder';
 import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
@@ -167,17 +168,17 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 );
 
 /* ───────── Types ───────── */
-type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'settings' | 'help' | 'profile';
+type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'settings' | 'help' | 'profile';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
-const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer'];
+const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel'];
 
 const TOOL_ACCESS: Record<string, string[]> = {
   dashboard: ['basic','premium','beta'],
   niche: ['basic','premium','beta'],
   product: ['basic','premium','beta'],
   offer: ['basic','premium','beta'],
-  funnel: ['premium','beta'],
+  funnel: ['basic','premium','beta'],
   creator: ['premium','beta'],
   copy: ['premium','beta'],
   ads: ['premium','beta'],
@@ -198,7 +199,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'niche', label: 'Niche Clarity', icon: (c) => <TargetIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'product', label: 'Product Navigator', icon: (c) => <CompassIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'offer', label: 'Offer Creation', icon: (c) => <GiftIcon color={c} />, badge: 'LIVE', locked: false },
-  { id: 'funnel', label: 'Funnel Builder', icon: () => <FunnelIcon />, badge: 'SOON', locked: true },
+  { id: 'funnel', label: 'Funnel Builder', icon: (c) => <FunnelIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'creator', label: 'Product Creator', icon: () => <WandIcon />, badge: 'SOON', locked: true },
   { id: 'copy', label: 'Copy Suite', icon: () => <PenIcon />, badge: 'SOON', locked: true },
   { id: 'ads', label: 'AI Ad Suite', icon: () => <MegaphoneIcon />, badge: 'SOON', locked: true },
@@ -208,7 +209,7 @@ const TOOL_CARDS = [
   { id: 'niche', num: '01', name: 'Niche Clarity', desc: 'Discover 594+ profitable niches with market data, growth signals & ideal buyer personas.', tags: ['594 Niches', 'Market Data'], gradient: 'linear-gradient(135deg, #7c3aed, #c026d3)', accent: '#7c3aed', accentLight: 'rgba(124,58,237,0.08)', locked: false },
   { id: 'product', num: '02', name: 'Product Navigator', desc: '500+ digital product ideas with launch timelines, price points & full ascension paths.', tags: ['500+ Ideas', 'Launch Fast'], gradient: 'linear-gradient(135deg, #ea580c, #f59e0b)', accent: '#ea580c', accentLight: 'rgba(234,88,12,0.08)', locked: false },
   { id: 'offer', num: '03', name: 'Offer Creation', desc: 'Build irresistible offers with pricing psychology, bonuses & positioning frameworks.', tags: ['Offers', 'Pricing'], gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)', accent: '#f59e0b', accentLight: 'rgba(245,158,11,0.08)', locked: false },
-  { id: 'funnel', num: '04', name: 'Funnel Builder', desc: 'Design your complete sales funnel — from lead magnet to high-ticket back-end.', tags: ['Funnels', 'Automation'], gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)', accent: '#06b6d4', accentLight: 'rgba(6,182,212,0.08)', locked: true },
+  { id: 'funnel', num: '04', name: 'Funnel Builder', desc: 'Design your complete sales funnel — from lead magnet to high-ticket back-end.', tags: ['Funnels', 'Automation'], gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)', accent: '#06b6d4', accentLight: 'rgba(6,182,212,0.08)', locked: false },
   { id: 'creator', num: '05', name: 'Product Creator', desc: 'AI-powered suite to create ebooks, templates, prompt packs & micro-courses inside the app.', tags: ['AI Creator', 'Auto-build'], gradient: 'linear-gradient(135deg, #10b981, #06b6d4)', accent: '#10b981', accentLight: 'rgba(16,185,129,0.08)', locked: true },
   { id: 'copy', num: '06', name: 'Copy Suite', desc: 'Write sales pages, email sequences, ad copy & hooks in minutes with AI-powered copywriting.', tags: ['Copywriting', 'AI Writing'], gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)', accent: '#8b5cf6', accentLight: 'rgba(139,92,246,0.08)', locked: true },
   { id: 'ads', num: '07', name: 'AI Ad Suite', desc: 'Generate Meta, Google & YouTube ads with AI — creatives, copy, targeting & budgets.', tags: ['Paid Ads', 'Ad Creatives'], gradient: 'linear-gradient(135deg, #f97316, #ec4899)', accent: '#f97316', accentLight: 'rgba(249,115,22,0.08)', locked: true },
@@ -363,9 +364,9 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic' }
       {/* Progress card */}
       <div style={{ marginTop: 'auto', background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.06))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 12, padding: 12 }}>
         <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#7c3aed', marginBottom: 4 }}>🚀 72-Hour Launch</div>
-        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>3 of 8 tools unlocked</div>
+        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>4 of 8 tools unlocked</div>
         <div style={{ width: '100%', height: 5, background: '#f1f5f9', borderRadius: 50 }}>
-          <div style={{ width: '37.5%', height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
+          <div style={{ width: '50%', height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
         </div>
         <div style={{ fontSize: 9.5, color: '#7c3aed', fontWeight: 600, marginTop: 6 }}>More tools dropping soon →</div>
       </div>
@@ -765,7 +766,7 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 32 }}>
-        <StatCard label="Tools Unlocked" value="3 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+3 live now" changeColor="#15803d" delay={0.06} />
+        <StatCard label="Tools Unlocked" value="4 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+3 live now" changeColor="#15803d" delay={0.06} />
         <StatCard label="Product Ideas" value="500+" iconBg="#fff7ed" iconColor="#ea580c" icon="💡" changePill="Explore →" changeColor="#ea580c" delay={0.08} />
         <StatCard label="Niches Mapped" value="594" iconBg="#dcfce7" iconColor="#059669" icon="🎯" changePill="Updated" changeColor="#15803d" delay={0.1} />
         <StatCard label="Time to Launch" value="72 hrs" iconBg="#fce7f3" iconColor="#be185d" icon="🚀" changePill="⚡ Fast track" changeColor="#be185d" delay={0.12} />
@@ -1478,6 +1479,7 @@ const Index = () => {
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
             {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
             {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} />}
+            {activePage === 'funnel' && <FunnelBuilder onBack={() => navigateTo('dashboard')} />}
             {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
           </main>
         </div>

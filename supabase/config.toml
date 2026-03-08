@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.offer-creation]
 verify_jwt = false
+
+[functions.funnel-builder]
+verify_jwt = false
