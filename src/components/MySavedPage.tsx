@@ -38,10 +38,12 @@ interface SavedItem {
   created_at: string;
 }
 
-export default function MySavedPage({ userId, onNavigate, onSavedCountChange }: {
+export default function MySavedPage({ userId, onNavigate, onSavedCountChange, onBuildFunnel }: {
   userId: string;
   onNavigate: (page: any) => void;
   onSavedCountChange: (count: number) => void;
+  onBuildFunnel?: (data: any) => void;
+}) {
 }) {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +96,18 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange }: 
 
   const handleBuildFunnel = (item: SavedItem) => {
     setSelectedItem(null);
-    onNavigate('funnel');
+    if (onBuildFunnel) {
+      const prefillData = {
+        productName: item.full_data?.brief?.productName || item.title,
+        offerDescription: item.full_data?.offerData?.oneLinerPitch || item.full_data?.offerData?.offerHeadline || '',
+        targetBuyer: item.full_data?.brief?.audience || '',
+        priceRange: item.full_data?.brief?.priceRange || '',
+        sourceProduct: item.full_data?.brief?.productName || item.title,
+      };
+      onBuildFunnel(prefillData);
+    } else {
+      onNavigate('funnel');
+    }
   };
 
   const handleCopyFunnelSummary = (item: SavedItem) => {
