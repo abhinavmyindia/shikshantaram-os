@@ -324,9 +324,16 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick }: { us
 
 /* ───────── Sidebar ───────── */
 function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', savedCount = 0 }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string; savedCount?: number }) {
+  const [hoveredSoon, setHoveredSoon] = useState<string | null>(null);
+
   const BookmarkIcon = ({ filled, color = '#64748b' }: { filled?: boolean; color?: string }) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? color : 'none'} stroke={color} strokeWidth="2" strokeLinecap="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill={filled ? color : 'none'} stroke={color} strokeWidth="2" strokeLinecap="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
   );
+
+  const liveItems = NAV_ITEMS.filter(i => !i.locked);
+  const soonItems = NAV_ITEMS.filter(i => i.locked);
+  const liveCount = liveItems.length - 1; // subtract dashboard
+  const totalTools = NAV_ITEMS.length - 1; // subtract dashboard
 
   return (
     <div style={{
@@ -334,70 +341,129 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', 
       backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.85)', padding: '20px 12px',
       boxShadow: '2px 0 16px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginBottom: 6 }}>MY WORKSPACE</div>
-      {NAV_ITEMS.map(item => {
-        const active = activePage === item.id;
-        const iconColor = item.locked ? '#94a3b8' : active ? '#7c3aed' : '#64748b';
-        return (
-          <div key={item.id} onClick={() => item.locked ? onLockedClick(item.label) : onNavigate(item.id as PageId)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer',
-              marginBottom: 2, transition: 'all 0.15s',
-              background: active ? 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(168,85,247,0.08))' : 'transparent',
-              border: active ? '1px solid rgba(124,58,237,0.18)' : '1px solid transparent',
-            }}
-            onMouseEnter={e => { if (!active) (e.currentTarget.style.background = 'rgba(0,0,0,0.04)'); }}
-            onMouseLeave={e => { if (!active) (e.currentTarget.style.background = 'transparent'); }}
-          >
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: active ? 'rgba(124,58,237,0.12)' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {item.icon(iconColor)}
-            </div>
-            <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: active ? 700 : 500, color: item.locked ? '#94a3b8' : active ? '#7c3aed' : '#475569', flex: 1 }}>{item.label}</span>
-            {item.badge === 'LIVE' && <span style={{ fontSize: 8, fontWeight: 800, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 20 }}>LIVE</span>}
-            {item.badge === 'SOON' && accessTier === 'basic' && <span style={{ fontSize: 8, fontWeight: 800, background: '#fef9c3', color: '#92400e', padding: '1px 6px', borderRadius: 20 }}>PREMIUM</span>}
-            {item.badge === 'SOON' && accessTier !== 'basic' && <span style={{ fontSize: 8, fontWeight: 800, background: '#f1f5f9', color: '#94a3b8', padding: '1px 6px', borderRadius: 20 }}>SOON</span>}
-          </div>
-        );
-      })}
+      <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginTop: 4, paddingBottom: 12, fontFamily: 'DM Sans' }}>MY WORKSPACE</div>
 
-      {/* Divider + My Saved */}
-      <div style={{ height: 1, background: '#f1f5f9', margin: '10px 12px' }} />
+      {/* LIVE items */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {liveItems.map(item => {
+          const active = activePage === item.id;
+          const iconColor = active ? 'white' : '#64748b';
+          return (
+            <div key={item.id} onClick={() => onNavigate(item.id as PageId)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                transition: 'all 0.2s', position: 'relative' as const, width: '100%',
+                background: active ? 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(109,40,217,0.06))' : 'transparent',
+              }}
+              onMouseEnter={e => { if (!active) (e.currentTarget.style.background = 'rgba(0,0,0,0.03)'); }}
+              onMouseLeave={e => { if (!active) (e.currentTarget.style.background = 'transparent'); }}
+            >
+              {/* Left accent bar */}
+              {active && <div style={{ position: 'absolute' as const, left: 0, top: '25%', bottom: '25%', width: 3, background: 'linear-gradient(180deg,#7c3aed,#a855f7)', borderRadius: '0 2px 2px 0' }} />}
+              <div style={{
+                width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                background: active ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f1f5f9',
+                boxShadow: active ? '0 3px 10px rgba(124,58,237,0.3)' : 'none',
+              }}>
+                {item.icon(iconColor)}
+              </div>
+              <span style={{ fontFamily: active ? 'Sora' : 'DM Sans', fontSize: 14, fontWeight: active ? 800 : 600, color: active ? '#7c3aed' : '#374151', flex: 1 }}>{item.label}</span>
+              {item.badge === 'LIVE' && (
+                <span style={{ fontSize: 9, fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '2px 7px', borderRadius: 50, fontFamily: 'DM Sans', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>LIVE</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* LIVE/SOON divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 8px' }}>
+        <div style={{ flex: 1, height: 1, background: '#f1f5f9' }} />
+        <span style={{ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.1em', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const, padding: '0 4px' }}>COMING SOON</span>
+        <div style={{ flex: 1, height: 1, background: '#f1f5f9' }} />
+      </div>
+
+      {/* SOON items */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {soonItems.map(item => (
+          <div key={item.id}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12,
+              cursor: 'default', transition: 'all 0.2s', position: 'relative' as const, width: '100%',
+              background: 'transparent',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.05)'; setHoveredSoon(item.id); }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; setHoveredSoon(null); }}
+          >
+            <div style={{
+              width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              background: hoveredSoon === item.id ? 'rgba(245,158,11,0.1)' : '#f8fafc',
+              border: '1px solid #f1f5f9',
+              transition: 'all 0.2s',
+            }}>
+              {item.icon(hoveredSoon === item.id ? '#f59e0b' : '#94a3b8')}
+            </div>
+            <span style={{ fontFamily: 'DM Sans', fontSize: 14, fontWeight: 500, color: hoveredSoon === item.id ? '#64748b' : '#94a3b8', flex: 1, transition: 'color 0.2s' }}>{item.label}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(245,158,11,0.1)', color: '#b45309', padding: '2px 7px', borderRadius: 50, fontFamily: 'DM Sans', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>SOON</span>
+            {/* Tooltip */}
+            {hoveredSoon === item.id && (
+              <div style={{
+                position: 'absolute' as const, left: 'calc(100% + 8px)', top: '50%', transform: 'translateY(-50%)',
+                background: '#0f172a', color: 'white', borderRadius: 8, padding: '5px 10px',
+                fontFamily: 'DM Sans', fontSize: 11, whiteSpace: 'nowrap' as const, zIndex: 100,
+                animation: 'fadeIn 0.15s ease',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              }}>Coming soon! 🚧</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* My Saved divider + item */}
+      <div style={{ height: 1, background: '#f1f5f9', margin: '8px 8px' }} />
       <div onClick={() => onNavigate('saved')}
         style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer',
-          marginBottom: 2, transition: 'all 0.15s',
-          background: activePage === 'saved' ? 'linear-gradient(135deg,rgba(234,88,12,0.12),rgba(245,158,11,0.08))' : 'transparent',
-          border: activePage === 'saved' ? '1px solid rgba(234,88,12,0.18)' : '1px solid transparent',
+          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+          transition: 'all 0.2s', position: 'relative' as const,
+          background: activePage === 'saved' ? 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(109,40,217,0.06))' : 'transparent',
         }}
-        onMouseEnter={e => { if (activePage !== 'saved') (e.currentTarget.style.background = 'rgba(0,0,0,0.04)'); }}
+        onMouseEnter={e => { if (activePage !== 'saved') (e.currentTarget.style.background = 'rgba(0,0,0,0.03)'); }}
         onMouseLeave={e => { if (activePage !== 'saved') (e.currentTarget.style.background = 'transparent'); }}
       >
-        <div style={{ width: 28, height: 28, borderRadius: 7, background: activePage === 'saved' ? 'rgba(234,88,12,0.12)' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <BookmarkIcon filled={savedCount > 0} color={activePage === 'saved' ? '#ea580c' : '#64748b'} />
+        {activePage === 'saved' && <div style={{ position: 'absolute' as const, left: 0, top: '25%', bottom: '25%', width: 3, background: 'linear-gradient(180deg,#7c3aed,#a855f7)', borderRadius: '0 2px 2px 0' }} />}
+        <div style={{
+          width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          background: activePage === 'saved' ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : savedCount > 0 ? 'rgba(234,88,12,0.1)' : '#f8fafc',
+          boxShadow: activePage === 'saved' ? '0 3px 10px rgba(124,58,237,0.3)' : 'none',
+        }}>
+          <BookmarkIcon filled={savedCount > 0} color={activePage === 'saved' ? 'white' : savedCount > 0 ? '#ea580c' : '#64748b'} />
         </div>
-        <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: activePage === 'saved' ? 700 : 500, color: activePage === 'saved' ? '#ea580c' : '#475569', flex: 1 }}>My Saved</span>
+        <span style={{ fontFamily: activePage === 'saved' ? 'Sora' : 'DM Sans', fontSize: 14, fontWeight: activePage === 'saved' ? 800 : 600, color: activePage === 'saved' ? '#7c3aed' : '#374151', flex: 1 }}>My Saved</span>
         {savedCount > 0 && (
-          <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', fontFamily: 'Sora', fontWeight: 800, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{savedCount}</span>
+          <span style={{ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9, padding: '2px 7px', borderRadius: 50 }}>
+            {savedCount <= 9 ? `${savedCount} saved` : '9+ saved'}
+          </span>
         )}
       </div>
 
-      <div style={{ height: 1, background: '#f1f5f9', margin: '10px 12px' }} />
-      <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginBottom: 6 }}>ACCOUNT</div>
+      {/* Settings/Help */}
+      <div style={{ height: 1, background: '#f1f5f9', margin: '8px 8px' }} />
+      <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginBottom: 6, fontFamily: 'DM Sans' }}>ACCOUNT</div>
       {[{ icon: GearIcon, label: 'Settings' }, { icon: HelpIcon, label: 'Help & Docs' }].map(a => (
-        <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer', marginBottom: 2 }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
+        <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.03)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><a.icon /></div>
-          <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 500, color: '#64748b' }}>{a.label}</span>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><a.icon color="#94a3b8" /></div>
+          <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>{a.label}</span>
         </div>
       ))}
 
       {/* Progress card */}
       <div style={{ marginTop: 'auto', background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.06))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 12, padding: 12 }}>
         <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#7c3aed', marginBottom: 4 }}>🚀 72-Hour Launch</div>
-        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>4 of 9 tools unlocked</div>
+        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>{liveCount} of {totalTools} tools unlocked</div>
         <div style={{ width: '100%', height: 5, background: '#f1f5f9', borderRadius: 50 }}>
-          <div style={{ width: '44%', height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
+          <div style={{ width: `${Math.round((liveCount / totalTools) * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
         </div>
         <div style={{ fontSize: 9.5, color: '#7c3aed', fontWeight: 600, marginTop: 6 }}>More tools dropping soon →</div>
       </div>
