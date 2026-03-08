@@ -111,14 +111,14 @@ const FUNNEL_TYPES: FunnelType[] = [
 ];
 
 const TRAFFIC_SOURCES = [
-  { emoji: '📸', name: 'Instagram', accent: '#ec4899' },
-  { emoji: '💼', name: 'LinkedIn', accent: '#0a66c2' },
-  { emoji: '📱', name: 'WhatsApp', accent: '#22c55e' },
-  { emoji: '🎥', name: 'YouTube', accent: '#ef4444' },
-  { emoji: '🐦', name: 'Twitter/X', accent: '#0f172a' },
-  { emoji: '📧', name: 'Email List', accent: '#7c3aed' },
-  { emoji: '🔍', name: 'Google/SEO', accent: '#f59e0b' },
-  { emoji: '👥', name: 'Referrals', accent: '#06b6d4' },
+  { id: 'meta_ads', icon: '📘', name: 'Meta Ads', description: 'Facebook & Instagram paid ads', color: '#1877f2', lightBg: 'rgba(24,119,242,0.06)', lightBorder: 'rgba(24,119,242,0.2)' },
+  { id: 'google_ads', icon: '🔍', name: 'Google Ads', description: 'Search & display advertising', color: '#ea4335', lightBg: 'rgba(234,67,53,0.06)', lightBorder: 'rgba(234,67,53,0.2)' },
+  { id: 'linkedin_ads', icon: '💼', name: 'LinkedIn Ads', description: 'B2B & professional targeting', color: '#0a66c2', lightBg: 'rgba(10,102,194,0.06)', lightBorder: 'rgba(10,102,194,0.2)' },
+  { id: 'youtube', icon: '📺', name: 'YouTube', description: 'Video content & pre-roll ads', color: '#ff0000', lightBg: 'rgba(255,0,0,0.05)', lightBorder: 'rgba(255,0,0,0.15)' },
+  { id: 'organic_social', icon: '🌱', name: 'Organic Social', description: 'Free posts, reels & stories', color: '#059669', lightBg: 'rgba(5,150,105,0.06)', lightBorder: 'rgba(5,150,105,0.2)' },
+  { id: 'email_list', icon: '📧', name: 'Email List', description: 'Existing subscribers & nurture', color: '#7c3aed', lightBg: 'rgba(124,58,237,0.06)', lightBorder: 'rgba(124,58,237,0.2)' },
+  { id: 'google_seo', icon: '🔎', name: 'Google SEO', description: 'Organic search traffic', color: '#0891b2', lightBg: 'rgba(8,145,178,0.06)', lightBorder: 'rgba(8,145,178,0.2)' },
+  { id: 'referrals', icon: '🤝', name: 'Referrals', description: 'Word of mouth & partnerships', color: '#d97706', lightBg: 'rgba(217,119,6,0.06)', lightBorder: 'rgba(217,119,6,0.2)' },
 ];
 
 const GOAL_OPTIONS = [
