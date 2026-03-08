@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, CSSProperties, useCallback } from 'react';
 import { getRetailValue } from '@/utils/calculateResearchValue';
 import { Menu, X } from 'lucide-react';
 import AIResearchEngine from '@/components/AIResearchEngine';
+import CopySuite from '@/components/CopySuite';
 import OfferCreation from '@/components/OfferCreation';
 import FunnelBuilder from '@/components/FunnelBuilder';
 import MySavedPage from '@/components/MySavedPage';
