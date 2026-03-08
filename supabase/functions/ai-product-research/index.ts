@@ -166,10 +166,10 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
 
     // Retry with exponential backoff for rate limits
     let response: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       if (attempt > 0) {
-        const delayMs = Math.pow(2, attempt) * 2000; // 4s, 8s
-        console.log(`Rate limited, retrying in ${delayMs}ms (attempt ${attempt + 1})`);
+        const delayMs = Math.pow(2, attempt) * 3000; // 6s, 12s, 24s, 48s
+        console.log(`Rate limited, waiting ${delayMs}ms before retry (attempt ${attempt + 1}/5)`);
         await new Promise(r => setTimeout(r, delayMs));
       }
 
@@ -190,12 +190,14 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
 
       if (response.status !== 429) break;
       
+      // Consume the response body to prevent resource leak
+      await response.text();
+      
       const retryAfter = response.headers.get("Retry-After");
-      if (retryAfter && attempt < 2) {
-        const waitMs = Math.min(parseInt(retryAfter) * 1000, 30000);
+      if (retryAfter && attempt < 4) {
+        const waitMs = Math.min(parseInt(retryAfter) * 1000, 60000);
         console.log(`Retry-After header: waiting ${waitMs}ms`);
         await new Promise(r => setTimeout(r, waitMs));
-        continue;
       }
     }
 
