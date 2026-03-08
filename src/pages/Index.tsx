@@ -1538,7 +1538,7 @@ const Index = () => {
       const totalCost = (data || []).reduce((sum: number, row: any) => sum + parseFloat(row.estimated_cost_usd || '0'), 0);
       setSessionCostUsd(totalCost);
 
-      if (totalCost >= 0.50 && !usagePopupShown.current) {
+      if (totalCost >= 0.01 && !usagePopupShown.current) {
         usagePopupShown.current = true;
         setUsageMsg(USAGE_MESSAGES[Math.floor(Math.random() * USAGE_MESSAGES.length)]);
         setShowUsagePopup(true);
