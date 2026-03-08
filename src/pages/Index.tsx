@@ -11,7 +11,6 @@ import { useTracking } from '@/hooks/useTracking';
 import BetaFeedback from '@/components/BetaFeedback';
 import ProfilePage from '@/components/ProfilePage';
 import { supabase } from '@/integrations/supabase/client';
-import ProfilePage from '@/components/ProfilePage';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
