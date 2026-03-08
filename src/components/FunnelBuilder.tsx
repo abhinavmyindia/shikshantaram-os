@@ -2,7 +2,14 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSaveItem } from '@/hooks/useSaveItem';
 
-/* ───────── Types ───────── */
+/* ───────── Prefill Types ───────── */
+interface FunnelPrefillData {
+  productName: string;
+  offerDescription: string;
+  targetBuyer: string;
+  priceRange?: string;
+  sourceProduct?: string;
+}
 interface FunnelBrief {
   productName: string;
   offer: string;
