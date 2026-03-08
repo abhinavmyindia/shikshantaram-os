@@ -600,6 +600,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       const order: Record<string, number> = { High: 0, Medium: 1, Low: 2 };
       return (order[a.impulseScore] ?? 1) - (order[b.impulseScore] ?? 1);
     }
+    if (sortBy === 'buildTime') {
+      const getWeeks = (str?: string) => {
+        if (!str) return 99;
+        const match = str.match(/(\d+)/);
+        return match ? parseInt(match[1]) : 99;
+      };
+      return getWeeks(a.buildTime) - getWeeks(b.buildTime);
+    }
     return 0;
   });
 
@@ -1144,7 +1152,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
             </button>
           ))}
           <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginLeft: 8 })}>Sort by:</span>
-          {[{ key: 'demand', label: 'Demand ↓' }, { key: 'competition', label: 'Competition ↑' }, { key: 'impulse', label: 'Impulse ↓' }].map(so => (
+          {[{ key: 'demand', label: 'Demand ↓' }, { key: 'competition', label: 'Competition ↑' }, { key: 'buildTime', label: '🛠 Build Time ↑' }, { key: 'impulse', label: 'Impulse ↓' }].map(so => (
             <button key={so.key} onClick={() => setSortBy(so.key)}
               style={s({ padding: '4px 10px', borderRadius: 50, border: 'none', fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, cursor: 'pointer', background: sortBy === so.key ? '#ea580c' : '#f1f5f9', color: sortBy === so.key ? 'white' : '#64748b' })}>
               {so.label}
