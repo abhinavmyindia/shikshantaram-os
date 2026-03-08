@@ -1118,9 +1118,9 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
             </div>
             <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', marginTop: 4 })}>
               {isRawResultsMode ? (
-                <>30 Ideas Built Around <span style={s({ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>Your Concept</span></>
+                <><span style={s({ display: 'inline-block', transform: countAnimating ? 'scale(1.15)' : 'scale(1)', color: countAnimating ? '#059669' : undefined, transition: 'all 0.3s' } as any)}>{productIdeas.length}</span> Ideas Built Around <span style={s({ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>Your Concept</span></>
               ) : (
-                <>30 Product Ideas for <span style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>{inputData.niche}</span></>
+                <><span style={s({ display: 'inline-block', transform: countAnimating ? 'scale(1.15)' : 'scale(1)', color: countAnimating ? '#059669' : undefined, transition: 'all 0.3s' } as any)}>{productIdeas.length}</span> Product Ideas for <span style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>{inputData.niche}</span></>
               )}
             </h2>
             <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 3 })}>
