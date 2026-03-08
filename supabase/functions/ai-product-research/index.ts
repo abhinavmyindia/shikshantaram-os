@@ -154,7 +154,44 @@ function parseJsonResponse(text: string): any {
   const jsonEnd = Math.max(lastBracket, lastBrace);
   if (jsonEnd >= 0 && jsonEnd < clean.length - 1) clean = clean.substring(0, jsonEnd + 1);
 
-  return JSON.parse(clean);
+  // Fix common issues
+  clean = clean
+    .replace(/,\s*}/g, '}')
+    .replace(/,\s*]/g, ']')
+    .replace(/[\x00-\x1F\x7F]/g, (c) => c === '\n' || c === '\r' || c === '\t' ? c : '');
+
+  try {
+    return JSON.parse(clean);
+  } catch (e) {
+    // Truncated JSON - try to repair by closing open braces/brackets
+    console.log("Initial parse failed, attempting repair...");
+    let repaired = clean;
+    
+    // Remove any trailing incomplete string value (e.g. `"key": "incomplete...`)
+    repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
+    repaired = repaired.replace(/,\s*"[^"]*$/, '');
+    repaired = repaired.replace(/,\s*$/, '');
+    
+    // Count and close unbalanced braces/brackets
+    let braces = 0, brackets = 0;
+    let inString = false, escape = false;
+    for (const c of repaired) {
+      if (escape) { escape = false; continue; }
+      if (c === '\\') { escape = true; continue; }
+      if (c === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (c === '{') braces++;
+      if (c === '}') braces--;
+      if (c === '[') brackets++;
+      if (c === ']') brackets--;
+    }
+    
+    while (brackets > 0) { repaired += ']'; brackets--; }
+    while (braces > 0) { repaired += '}'; braces--; }
+    
+    console.log("Repaired JSON, attempting parse...");
+    return JSON.parse(repaired);
+  }
 }
 
 async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<string> {
