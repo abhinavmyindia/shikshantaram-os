@@ -1,9 +1,59 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+// ─── PRICING for Lovable AI Gateway models (per 1M tokens) ───
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'google/gemini-3-flash-preview':  { input: 0.10, output: 0.40 },
+  'google/gemini-2.5-flash':        { input: 0.15, output: 0.60 },
+  'google/gemini-2.5-flash-lite':   { input: 0.075, output: 0.30 },
+  'google/gemini-2.5-pro':          { input: 1.25, output: 10.00 },
+  'google/gemini-3.1-pro-preview':  { input: 1.25, output: 10.00 },
+  'openai/gpt-5':                   { input: 2.50, output: 10.00 },
+  'openai/gpt-5-mini':              { input: 0.40, output: 1.60 },
+  'openai/gpt-5-nano':              { input: 0.10, output: 0.40 },
+};
+
+async function logAiUsage(
+  supabaseAdmin: any,
+  userId: string | null,
+  userEmail: string | null,
+  userName: string | null,
+  module: string,
+  callType: string,
+  model: string,
+  usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null
+) {
+  try {
+    if (!usage) return;
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
+    const pricing = MODEL_PRICING[model] || { input: 0.50, output: 2.00 };
+    const estimatedCost = (inputTokens / 1_000_000 * pricing.input) + (outputTokens / 1_000_000 * pricing.output);
+
+    await supabaseAdmin.from('ai_usage_logs').insert({
+      user_id: userId,
+      user_email: userEmail || 'anonymous',
+      user_name: userName || 'Unknown',
+      module,
+      call_type: callType,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      total_tokens: totalTokens,
+      estimated_cost_usd: estimatedCost,
+    });
+  } catch (err) {
+    console.warn('Usage logging failed:', err);
+  }
+}
+
+// ─── PROMPTS ─────────────────────────────────────────────────
 
 function buildGenerateIdeasPrompt(niche: string, country: string, productType: string): string {
   return `You are an expert digital product researcher and market analyst.
@@ -177,23 +227,15 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
     {"rank":5,"title":"...","description":"...","emotionalWeight":"...","trigger":"..."}
   ],
   "transformation": {
-    "beforeHeadline": "A short punchy headline capturing the before state (e.g. 'Stuck, Invisible, and Running Out of Time')",
-    "beforeParagraph": "A rich, vivid 3-4 sentence narrative describing the buyer's current reality. Write in second person ('You wake up every morning...'). Capture the emotion, the frustration, the specific daily struggle. Make it feel so real that the buyer thinks 'this is literally me.' Reference the specific country context of ${inputData.country}.",
-    "beforeMoments": [
-      "A specific micro-moment that captures the before state (e.g. 'Refreshing your bank app at 11pm, watching the balance not move')",
-      "Second micro-moment — a different angle of the same pain",
-      "Third micro-moment — the emotional low point"
-    ],
-    "afterHeadline": "A short punchy headline capturing the after state (e.g. 'Confident, In Demand, and Finally Earning What You Deserve')",
-    "afterParagraph": "A rich, vivid 3-4 sentence narrative describing the buyer's life AFTER they've used this product. Same second person voice. Capture the new identity, the specific results, the emotional relief and pride. Paint the exact life they've been wanting. Keep it realistic and believable, not fantasy.",
-    "afterMoments": [
-      "A specific micro-moment of the after state (e.g. 'Seeing a new client inquiry notification while having your morning chai')",
-      "Second after micro-moment — a different dimension of success",
-      "Third after micro-moment — the emotional high point"
-    ],
-    "transformationBridge": "ONE powerful sentence that captures the complete journey. Format: 'From [specific before] to [specific after] — without [common objection/fear].'",
-    "timeToTransformation": "Realistic timeframe e.g. '30 days', '90 days'",
-    "identityShift": "The new identity label e.g. 'from job-seeker to in-demand freelancer'"
+    "beforeHeadline": "A short punchy headline capturing the before state",
+    "beforeParagraph": "A rich, vivid 3-4 sentence narrative describing the buyer's current reality. Write in second person. Capture the emotion, the frustration, the specific daily struggle. Reference ${inputData.country} context.",
+    "beforeMoments": ["Specific micro-moment 1","Micro-moment 2","Micro-moment 3"],
+    "afterHeadline": "A short punchy headline capturing the after state",
+    "afterParagraph": "A rich, vivid 3-4 sentence narrative describing the buyer's life AFTER. Same second person voice. Capture the new identity, the specific results, the emotional relief and pride.",
+    "afterMoments": ["After micro-moment 1","After micro-moment 2","After micro-moment 3"],
+    "transformationBridge": "ONE powerful sentence: 'From [before] to [after] — without [objection].'",
+    "timeToTransformation": "Realistic timeframe",
+    "identityShift": "The new identity label"
   },
   "deepestDesires": [
     {"desire":"What they REALLY want","underlyingBelief":"What they believe","emotionalDriver":"Core emotion"},
@@ -212,7 +254,7 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
     "howProductSolvesIt": "2-3 sentences",
     "uniqueMechanism": "What makes this different",
     "quickWin": "First result within 24 hours",
-    "transformationStatement": "Before → After",
+    "transformationStatement": "Before to After",
     "priceJustification": "Why the price is fair"
   },
   "impulsePurchaseAnalysis": {
@@ -246,11 +288,10 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
 }`;
 }
 
-function sanitizeJsonString(s: string): string {
-  // Remove markdown fences
-  let clean = s.replace(/```json|```/g, '').trim();
+// ─── JSON PARSING ────────────────────────────────────────────
 
-  // Find JSON start
+function sanitizeJsonString(s: string): string {
+  let clean = s.replace(/```json|```/g, '').trim();
   const arrayStart = clean.indexOf('[');
   const objStart = clean.indexOf('{');
   let jsonStart = -1;
@@ -259,48 +300,41 @@ function sanitizeJsonString(s: string): string {
   else if (objStart >= 0) jsonStart = objStart;
   if (jsonStart > 0) clean = clean.substring(jsonStart);
 
-  // Find JSON end
   const lastBracket = clean.lastIndexOf(']');
   const lastBrace = clean.lastIndexOf('}');
   const jsonEnd = Math.max(lastBracket, lastBrace);
   if (jsonEnd >= 0 && jsonEnd < clean.length - 1) clean = clean.substring(0, jsonEnd + 1);
 
-  // Replace control characters inside strings with spaces (preserve \n \r \t)
-  // Process character by character to handle control chars inside JSON strings
+  // Remove control characters
+  clean = clean.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ');
+  clean = clean.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n');
+
   let result = '';
+  let inStr = false;
+  let esc = false;
   for (let i = 0; i < clean.length; i++) {
-    const code = clean.charCodeAt(i);
-    if (code < 32 && code !== 10 && code !== 13 && code !== 9) {
-      result += ' ';
-    } else if (code === 127) {
-      result += ' ';
-    } else {
-      result += clean[i];
-    }
+    const ch = clean[i];
+    if (esc) { result += ch; esc = false; continue; }
+    if (ch === '\\') { result += ch; esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; result += ch; continue; }
+    if (inStr && ch === '\n') { result += '\\n'; continue; }
+    if (inStr && ch === '\t') { result += '\\t'; continue; }
+    result += ch;
   }
-
-  // Fix trailing commas
   result = result.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-
   return result;
 }
 
 function parseJsonResponse(text: string): any {
   const clean = sanitizeJsonString(text);
-
   try {
     return JSON.parse(clean);
   } catch (e) {
     console.log("Initial parse failed, attempting repair...");
-    
-    // For truncated arrays: find last complete object and close the array
     if (clean.trimStart().startsWith('[')) {
       const lastCloseBrace = clean.lastIndexOf('}');
       if (lastCloseBrace > 0) {
-        let candidate = clean.substring(0, lastCloseBrace + 1);
-        // Remove any trailing comma after the last complete object
-        candidate = candidate.replace(/,\s*$/, '');
-        candidate = candidate + ']';
+        let candidate = clean.substring(0, lastCloseBrace + 1).replace(/,\s*$/, '') + ']';
         try {
           const items = JSON.parse(candidate);
           console.warn(`Recovered ${items.length} items from truncated array`);
@@ -308,18 +342,13 @@ function parseJsonResponse(text: string): any {
         } catch { /* fall through */ }
       }
     }
-
-    // For truncated objects
     if (clean.trimStart().startsWith('{')) {
       let repaired = clean;
-      // Remove trailing incomplete key-value
       repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
       repaired = repaired.replace(/,\s*"[^"]*":\s*\[?[^\]]*$/, '');
       repaired = repaired.replace(/,\s*"[^"]*$/, '');
       repaired = repaired.replace(/,\s*$/, '');
       repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-      
-      // Count and close unbalanced braces/brackets
       let braces = 0, brackets = 0, inString = false, escape = false;
       for (const c of repaired) {
         if (escape) { escape = false; continue; }
@@ -334,11 +363,9 @@ function parseJsonResponse(text: string): any {
       if (inString) repaired += '"';
       while (brackets > 0) { repaired += ']'; brackets--; }
       while (braces > 0) { repaired += '}'; braces--; }
-      
       try {
         return JSON.parse(repaired);
       } catch (e2) {
-        // Aggressive: truncate to last complete brace
         const lastGoodBrace = repaired.lastIndexOf('}');
         if (lastGoodBrace > 0) {
           let aggressive = repaired.substring(0, lastGoodBrace + 1);
@@ -361,12 +388,18 @@ function parseJsonResponse(text: string): any {
         throw e2;
       }
     }
-    
     throw e;
   }
 }
 
-async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<string> {
+// ─── AI CALL ─────────────────────────────────────────────────
+
+interface AIResult {
+  content: string;
+  usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null;
+}
+
+async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<AIResult> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -383,41 +416,53 @@ async function callLovableAI(prompt: string, model: string, maxTokens: number): 
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: maxTokens,
-      }),
+      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: maxTokens }),
     });
 
-    if (response.status === 429) {
-      await response.text();
-      console.log("Rate limited by Lovable AI Gateway");
-      continue;
-    }
-
-    if (response.status === 402) {
-      await response.text();
-      throw new Error("AI credits exhausted. Please add credits in your Lovable workspace settings.");
-    }
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Lovable AI error:", response.status, errText);
-      throw new Error(`AI error: ${response.status}`);
-    }
+    if (response.status === 429) { await response.text(); continue; }
+    if (response.status === 402) { await response.text(); throw new Error("AI credits exhausted. Please add credits in your Lovable workspace settings."); }
+    if (!response.ok) { const t = await response.text(); console.error("Lovable AI error:", response.status, t); throw new Error(`AI error: ${response.status}`); }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
+    return {
+      content: data.choices?.[0]?.message?.content || '',
+      usage: data.usage || null,
+    };
   }
-
   throw new Error("AI is busy right now. Please wait a moment and try again.");
 }
+
+// ─── Extract user info from auth header ──────────────────────
+
+function extractUserFromAuth(authHeader: string | null): { userId: string | null; userEmail: string | null; userName: string | null } {
+  if (!authHeader) return { userId: null, userEmail: null, userName: null };
+  try {
+    const token = authHeader.replace('Bearer ', '');
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return {
+      userId: payload.sub || null,
+      userEmail: payload.email || null,
+      userName: payload.user_metadata?.full_name || payload.email?.split('@')[0] || null,
+    };
+  } catch {
+    return { userId: null, userEmail: null, userName: null };
+  }
+}
+
+// ─── MAIN HANDLER ────────────────────────────────────────────
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  const authHeader = req.headers.get('authorization');
+  const userInfo = extractUserFromAuth(authHeader);
 
   try {
     const body = await req.json();
@@ -426,29 +471,33 @@ serve(async (req) => {
     let prompt: string;
     let model: string;
     let maxTokens: number;
+    let callType: string;
 
     if (action === "generate-ideas") {
       const { niche, country, productType } = body;
       prompt = buildGenerateIdeasPrompt(niche, country, productType);
       model = "google/gemini-3-flash-preview";
       maxTokens = 24000;
+      callType = "generate_30_ideas";
     } else if (action === "analyze-idea") {
       const { ideaText, country } = body;
       prompt = buildAnalyzeIdeaPrompt(ideaText, country);
-      model = "google/gemini-3-flash-preview"; // Fast model for analysis
+      model = "google/gemini-3-flash-preview";
       maxTokens = 2000;
+      callType = "idea_analysis";
     } else if (action === "generate-ideas-from-raw") {
       const { ideaText, analysis, chosenAngle, country } = body;
       prompt = buildRawIdeaIdeasPrompt(ideaText, analysis, chosenAngle, country);
       model = "google/gemini-3-flash-preview";
       maxTokens = 24000;
+      callType = "generate_ideas_from_raw";
     } else if (action === "generate-more") {
       const { niche, country, productType, existingNames, moreCount, direction, rawIdea } = body;
       const directionInstructions: Record<string, string> = {
         'different-angle': 'Explore completely different sub-niches, audiences, and angles within this niche. Think laterally.',
         'more-specific': 'Go deeper and more specific within the same niche. Narrower audience, more targeted pain points.',
         'easier-to-build': 'Focus on products that can be created in 1-3 days maximum. Simple formats, low complexity.',
-        'higher-ticket': 'Focus exclusively on premium products priced at the top end of the market. Higher transformation, higher price.',
+        'higher-ticket': 'Focus exclusively on premium products priced at the top end of the market.',
         'impulse-buy': 'Focus on products with high impulse purchase scores. The buyer sees it and wants it immediately.',
         'trending-now': 'Focus on products tied to current trends, viral topics, and rising demand in this market right now.'
       };
@@ -480,11 +529,13 @@ For EACH idea return the EXACT same JSON structure:
 Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No markdown.`;
       model = "google/gemini-3-flash-preview";
       maxTokens = Math.max(4000, Math.ceil(moreCount * 800));
+      callType = "generate_more_ideas";
     } else if (action === "deep-research") {
       const { product, inputData } = body;
       prompt = buildDeepResearchPrompt(product, inputData);
       model = "google/gemini-2.5-flash";
       maxTokens = 16000;
+      callType = "deep_research_report";
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -493,16 +544,19 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
 
     console.log(`AI Product Research: action=${action}, model=${model}`);
 
-    const rawText = await callLovableAI(prompt, model, maxTokens);
+    const aiResult = await callLovableAI(prompt, model, maxTokens);
+
+    // Log usage (fire-and-forget)
+    logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType, model, aiResult.usage);
 
     try {
-      const parsed = parseJsonResponse(rawText);
+      const parsed = parseJsonResponse(aiResult.content);
       return new Response(JSON.stringify({ result: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (parseErr) {
-      console.error("JSON parse error:", parseErr, "Raw:", rawText.substring(0, 500));
-      return new Response(JSON.stringify({ error: "Failed to parse AI response", raw: rawText.substring(0, 200) }), {
+      console.error("JSON parse error:", parseErr, "Raw:", aiResult.content.substring(0, 500));
+      return new Response(JSON.stringify({ error: "Failed to parse AI response", raw: aiResult.content.substring(0, 200) }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

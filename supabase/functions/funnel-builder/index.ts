@@ -1,9 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'google/gemini-3-flash-preview':  { input: 0.10, output: 0.40 },
+  'google/gemini-2.5-flash':        { input: 0.15, output: 0.60 },
+  'google/gemini-2.5-pro':          { input: 1.25, output: 10.00 },
+};
+
+async function logAiUsage(supabaseAdmin: any, userId: string | null, userEmail: string | null, userName: string | null, module: string, callType: string, model: string, usage: any) {
+  try {
+    if (!usage) return;
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    const pricing = MODEL_PRICING[model] || { input: 0.50, output: 2.00 };
+    const estimatedCost = (inputTokens / 1_000_000 * pricing.input) + (outputTokens / 1_000_000 * pricing.output);
+    await supabaseAdmin.from('ai_usage_logs').insert({
+      user_id: userId, user_email: userEmail || 'anonymous', user_name: userName || 'Unknown',
+      module, call_type: callType, model, input_tokens: inputTokens, output_tokens: outputTokens,
+      total_tokens: usage.total_tokens || (inputTokens + outputTokens), estimated_cost_usd: estimatedCost,
+    });
+  } catch (err) { console.warn('Usage logging failed:', err); }
+}
+
+function extractUserFromAuth(authHeader: string | null) {
+  if (!authHeader) return { userId: null, userEmail: null, userName: null };
+  try {
+    const payload = JSON.parse(atob(authHeader.replace('Bearer ', '').split('.')[1]));
+    return { userId: payload.sub || null, userEmail: payload.email || null, userName: payload.user_metadata?.full_name || payload.email?.split('@')[0] || null };
+  } catch { return { userId: null, userEmail: null, userName: null }; }
+}
 
 function sanitizeJsonString(s: string): string {
   let clean = s.replace(/```json|```/g, '').trim();
@@ -18,12 +48,19 @@ function sanitizeJsonString(s: string): string {
   const lastBrace = clean.lastIndexOf('}');
   const jsonEnd = Math.max(lastBracket, lastBrace);
   if (jsonEnd >= 0 && jsonEnd < clean.length - 1) clean = clean.substring(0, jsonEnd + 1);
+  clean = clean.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ');
+  clean = clean.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n');
   let result = '';
+  let inStr = false;
+  let esc = false;
   for (let i = 0; i < clean.length; i++) {
-    const code = clean.charCodeAt(i);
-    if (code < 32 && code !== 10 && code !== 13 && code !== 9) result += ' ';
-    else if (code === 127) result += ' ';
-    else result += clean[i];
+    const ch = clean[i];
+    if (esc) { result += ch; esc = false; continue; }
+    if (ch === '\\') { result += ch; esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; result += ch; continue; }
+    if (inStr && ch === '\n') { result += '\\n'; continue; }
+    if (inStr && ch === '\t') { result += '\\t'; continue; }
+    result += ch;
   }
   result = result.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
   return result;
@@ -31,9 +68,7 @@ function sanitizeJsonString(s: string): string {
 
 function parseJsonResponse(text: string): any {
   const clean = sanitizeJsonString(text);
-  try {
-    return JSON.parse(clean);
-  } catch {
+  try { return JSON.parse(clean); } catch {
     let repaired = clean;
     repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
     repaired = repaired.replace(/,\s*"[^"]*":\s*\[?[^\]]*$/, '');
@@ -46,17 +81,13 @@ function parseJsonResponse(text: string): any {
       if (c === '\\') { escape = true; continue; }
       if (c === '"') { inString = !inString; continue; }
       if (inString) continue;
-      if (c === '{') braces++;
-      if (c === '}') braces--;
-      if (c === '[') brackets++;
-      if (c === ']') brackets--;
+      if (c === '{') braces++; if (c === '}') braces--;
+      if (c === '[') brackets++; if (c === ']') brackets--;
     }
     if (inString) repaired += '"';
     while (brackets > 0) { repaired += ']'; brackets--; }
     while (braces > 0) { repaired += '}'; braces--; }
-    try {
-      return JSON.parse(repaired);
-    } catch (e2) {
+    try { return JSON.parse(repaired); } catch (e2) {
       const lastGoodBrace = repaired.lastIndexOf('}');
       if (lastGoodBrace > 0) {
         let aggressive = repaired.substring(0, lastGoodBrace + 1);
@@ -67,10 +98,8 @@ function parseJsonResponse(text: string): any {
           if (c === '\\') { e3 = true; continue; }
           if (c === '"') { s2 = !s2; continue; }
           if (s2) continue;
-          if (c === '{') b2++;
-          if (c === '}') b2--;
-          if (c === '[') k2++;
-          if (c === ']') k2--;
+          if (c === '{') b2++; if (c === '}') b2--;
+          if (c === '[') k2++; if (c === ']') k2--;
         }
         while (k2 > 0) { aggressive += ']'; k2--; }
         while (b2 > 0) { aggressive += '}'; b2--; }
@@ -81,28 +110,23 @@ function parseJsonResponse(text: string): any {
   }
 }
 
-async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<string> {
+interface AIResult { content: string; usage: any; }
+
+async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<AIResult> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
   for (let attempt = 0; attempt < 3; attempt++) {
-    if (attempt > 0) {
-      const delay = Math.pow(2, attempt) * 2000;
-      await new Promise(r => setTimeout(r, delay));
-    }
+    if (attempt > 0) { await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 2000)); }
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: maxTokens }),
     });
     if (response.status === 429) { await response.text(); continue; }
     if (response.status === 402) { await response.text(); throw new Error("AI credits exhausted. Please add credits."); }
     if (!response.ok) { await response.text(); throw new Error(`AI error: ${response.status}`); }
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || '';
+    return { content: data.choices?.[0]?.message?.content || '', usage: data.usage || null };
   }
   throw new Error("AI is busy. Please try again.");
 }
@@ -146,8 +170,8 @@ Also return a top-level funnel summary:
 {
   "funnelName": "A name for this specific funnel",
   "funnelTagline": "One sentence describing what this funnel does",
-  "estimatedConversionRate": "End-to-end conversion estimate e.g. '2-4% of traffic becomes buyers'",
-  "estimatedTimeToLaunch": "How long to build and launch e.g. '5-7 days'",
+  "estimatedConversionRate": "End-to-end conversion estimate",
+  "estimatedTimeToLaunch": "How long to build and launch",
   "estimatedMonthlyRevenue": "Revenue estimate if 1000 visitors/month at stated price",
   "steps": [ ...all steps... ],
   "quickWins": ["Quick win 1", "Quick win 2", "Quick win 3"],
@@ -221,7 +245,7 @@ For EACH email return:
   "previewText": "Preview text (40 chars)",
   "fromName": "Suggested sender name",
   "headline": "Email headline/opening",
-  "body": "Full email body (use line breaks, keep paragraphs short, conversational tone, India-friendly language)",
+  "body": "Full email body",
   "cta": "CTA button text",
   "ctaUrl": "[YOUR LINK]",
   "ps": "P.S. line",
@@ -242,6 +266,9 @@ Return ONLY valid JSON. No preamble. No markdown.`;
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
+  const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const userInfo = extractUserFromAuth(req.headers.get('authorization'));
+
   try {
     const body = await req.json();
     const { action } = body;
@@ -249,28 +276,35 @@ serve(async (req) => {
     let prompt: string;
     let model: string;
     let maxTokens: number;
+    let callType: string;
 
     if (action === 'generate-funnel') {
       prompt = buildFunnelPrompt(body.brief, body.funnelType);
       model = 'google/gemini-2.5-flash';
       maxTokens = 8000;
+      callType = 'generate_funnel_architecture';
     } else if (action === 'generate-step-copy') {
       prompt = buildStepCopyPrompt(body.step, body.brief);
       model = 'google/gemini-3-flash-preview';
       maxTokens = 4000;
+      callType = 'generate_step_copy';
     } else if (action === 'generate-emails') {
       prompt = buildEmailSequencePrompt(body.brief, body.funnelData);
       model = 'google/gemini-2.5-flash';
       maxTokens = 8000;
+      callType = 'generate_email_sequence';
     } else {
       return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     console.log(`Funnel Builder: action=${action}, model=${model}`);
-    const rawText = await callLovableAI(prompt, model, maxTokens);
+    const aiResult = await callLovableAI(prompt, model, maxTokens);
+
+    // Log usage (fire-and-forget)
+    logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'funnel_builder', callType, model, aiResult.usage);
 
     try {
-      const parsed = parseJsonResponse(rawText);
+      const parsed = parseJsonResponse(aiResult.content);
       return new Response(JSON.stringify({ result: parsed }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } catch (parseErr) {
       console.error('Parse error:', parseErr);

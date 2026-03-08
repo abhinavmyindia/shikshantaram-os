@@ -62,6 +62,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_logs: {
+        Row: {
+          call_type: string
+          created_at: string | null
+          estimated_cost_usd: number
+          id: string
+          input_tokens: number
+          model: string
+          module: string
+          output_tokens: number
+          session_id: string | null
+          total_tokens: number
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          call_type: string
+          created_at?: string | null
+          estimated_cost_usd?: number
+          id?: string
+          input_tokens?: number
+          model: string
+          module: string
+          output_tokens?: number
+          session_id?: string | null
+          total_tokens?: number
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          call_type?: string
+          created_at?: string | null
+          estimated_cost_usd?: number
+          id?: string
+          input_tokens?: number
+          model?: string
+          module?: string
+          output_tokens?: number
+          session_id?: string | null
+          total_tokens?: number
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       beta_feedback: {
         Row: {
           created_at: string | null
