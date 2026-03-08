@@ -14,6 +14,33 @@ interface ProductIdea {
   impulseScore: string;
   primaryPain: string;
   searchKeyword: string;
+  ideaConnection?: string;
+  sourceMode?: 'niche' | 'raw';
+  originalIdea?: string;
+}
+
+interface IdeaAnalysis {
+  ideaSummary: string;
+  detectedNiche: string;
+  detectedCategory: string;
+  coreProblem: string;
+  targetBuyer: string;
+  ideaStrengths: string[];
+  ideaGaps: string[];
+  marketReadiness: string;
+  marketReadinessReason: string;
+  angles: {
+    angleId: string;
+    angleName: string;
+    angleDescription: string;
+    productFormat: string;
+    priceRange: string;
+    buildTime: string;
+    whyThisWorks: string;
+    demandSignal: string;
+  }[];
+  recommendedAngle: string;
+  recommendedAngleReason: string;
 }
 
 interface ResearchReport {
@@ -63,17 +90,32 @@ const PRODUCT_TYPES = [
 
 const STEP_COLORS = ['#7c3aed', '#ea580c', '#059669', '#0891b2', '#ec4899'];
 
+const RAW_EXAMPLES = [
+  { emoji: '💼', text: 'LinkedIn guide for Indian freelancers' },
+  { emoji: '📱', text: 'Instagram templates for small restaurants' },
+  { emoji: '🎓', text: 'AI study tools for CA/MBA students' },
+];
+
+const ANGLE_COLORS: Record<string, string> = { A: '#ea580c', B: '#7c3aed', C: '#059669' };
+
 /* ───────── Helpers ───────── */
 const s = (styles: CSSProperties): CSSProperties => styles;
 
 /* ───────── Loading Screen ───────── */
-function LoadingScreen({ type, data }: { type: 'ideas' | 'report'; data: any }) {
+function LoadingScreen({ type, data }: { type: 'ideas' | 'report' | 'raw-ideas'; data: any }) {
   const steps = type === 'ideas'
     ? [
         `Scanning ${data.country} market trends...`,
         `Identifying high-demand niches in ${data.niche}...`,
         `Analyzing buyer pain points and psychology...`,
         `Generating 30 tailored product ideas...`,
+      ]
+    : type === 'raw-ideas'
+    ? [
+        `Expanding your concept into product variations...`,
+        `Mapping sub-audiences and price points...`,
+        `Identifying adjacent opportunities...`,
+        `Generating 30 ideas built around your concept...`,
       ]
     : [
         `Searching ${data.country} market for ${data.searchKeyword}...`,
@@ -87,15 +129,17 @@ function LoadingScreen({ type, data }: { type: 'ideas' | 'report'; data: any }) 
       <div style={s({ width: 80, height: 80, margin: '0 auto 24px', position: 'relative' })}>
         <div style={s({ width: 80, height: 80, border: '3px solid #f1f5f9', borderTop: '3px solid #ea580c', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' })} />
         <div style={s({ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 })}>
-          {type === 'ideas' ? '🤖' : '🔬'}
+          {type === 'raw-ideas' ? '💡' : type === 'ideas' ? '🤖' : '🔬'}
         </div>
       </div>
       <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 8 })}>
-        {type === 'ideas' ? 'Researching your market...' : `Researching ${data.productName}...`}
+        {type === 'ideas' ? 'Researching your market...' : type === 'raw-ideas' ? 'Building ideas from your concept...' : `Researching ${data.productName}...`}
       </div>
       <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' })}>
         {type === 'ideas'
           ? `Our AI is analyzing ${data.country} market data, buyer psychology, and product opportunities for ${data.niche}.`
+          : type === 'raw-ideas'
+          ? `Generating 30 product ideas anchored to your original concept for ${data.country}...`
           : `Pulling real market data, search trends & buyer psychology for ${data.country}...`}
       </div>
       <div style={s({ marginTop: 28, maxWidth: 360, margin: '28px auto 0' })}>
@@ -105,6 +149,27 @@ function LoadingScreen({ type, data }: { type: 'ideas' | 'report'; data: any }) 
             <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#475569' })}>{step}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ───────── Idea Analyzing Screen ───────── */
+function IdeaAnalyzingScreen() {
+  return (
+    <div style={s({ textAlign: 'center', padding: '40px 20px', animation: 'fadeUp 0.4s ease' })}>
+      <div style={s({ fontSize: 56, marginBottom: 16, animation: 'floatBounce 2s ease-in-out infinite' })}>💡</div>
+      <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a', marginTop: 16 })}>Analyzing your idea...</div>
+      <div style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', marginTop: 6 })}>Breaking down your concept into market opportunities...</div>
+      <div style={s({ marginTop: 24, maxWidth: 320, margin: '24px auto 0' })}>
+        <div style={s({ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', animation: 'fadeUp 0.4s ease 0s both' })}>
+          <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #f1f5f9', borderTop: '2px solid #7c3aed', animation: 'spinSlow 0.8s linear infinite', flexShrink: 0 })} />
+          <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#475569' })}>Understanding your core concept...</span>
+        </div>
+        <div style={s({ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', animation: 'fadeUp 0.4s ease 0.5s both' })}>
+          <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #f1f5f9', borderTop: '2px solid #7c3aed', animation: 'spinSlow 0.8s linear infinite', flexShrink: 0 })} />
+          <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#475569' })}>Identifying market angles & opportunities...</span>
+        </div>
       </div>
     </div>
   );
@@ -138,8 +203,44 @@ function ReportSection({ icon, iconBg, iconColor, title, subtitle, defaultOpen, 
   );
 }
 
+/* ───────── Country Dropdown (shared) ───────── */
+function CountryDropdown({ value, onChange, accentColor }: { value: string; onChange: (v: string) => void; accentColor: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={s({ position: 'relative' })}>
+      <div onClick={() => setOpen(!open)}
+        style={s({ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: value ? '#0f172a' : '#94a3b8', background: '#f8fafc', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box' })}>
+        <span>{value ? `${COUNTRIES.find(c => c.name === value)?.flag} ${value}` : 'Select your target market'}</span>
+        <span style={s({ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 12, color: '#94a3b8' })}>▼</span>
+      </div>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={s({ position: 'fixed', inset: 0, zIndex: 99 })} />
+          <div style={s({ position: 'absolute', width: '100%', background: 'white', borderRadius: 12, border: '1.5px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 100, marginTop: 4, overflow: 'hidden', maxHeight: 300, overflowY: 'auto' })}>
+            {COUNTRIES.map(c => (
+              <div key={c.name} onClick={() => { onChange(c.name); setOpen(false); }}
+                style={s({ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 16px', cursor: 'pointer' })}
+                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <span style={s({ fontSize: 20 })}>{c.flag}</span>
+                <span style={s({ fontFamily: 'DM Sans', fontSize: 13.5, fontWeight: 500, color: '#0f172a' })}>{c.name}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      {value && (
+        <div style={s({ display: 'inline-flex', gap: 6, alignItems: 'center', background: `${accentColor}0a`, border: `1px solid ${accentColor}25`, borderRadius: 8, padding: '6px 14px', marginTop: 8 })}>
+          <span style={s({ fontFamily: 'DM Sans', fontSize: 11.5, fontWeight: 600, color: accentColor })}>✓ Using {value} market data, pricing, and buyer psychology</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ───────── Main Component ───────── */
 export default function AIResearchEngine() {
+  /* ── Shared state ── */
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
   const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
   const [productIdeas, setProductIdeas] = useState<ProductIdea[]>([]);
@@ -149,9 +250,46 @@ export default function AIResearchEngine() {
   const [countryOpen, setCountryOpen] = useState(false);
   const [filter, setFilter] = useState('All');
   const [sortBy, setSortBy] = useState('demand');
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
+  /* ── Raw Idea state ── */
+  const [ideaMode, setIdeaMode] = useState<'niche' | 'raw'>('niche');
+  const [rawIdeaStep, setRawIdeaStep] = useState<'input' | 'analyzing' | 'analysis-result' | 'loading-ideas'>('input');
+  const [rawIdeaData, setRawIdeaData] = useState({ ideaText: '', country: '', productFormat: 'ai-decide' });
+  const [ideaAnalysis, setIdeaAnalysis] = useState<IdeaAnalysis | null>(null);
+  const [selectedAngle, setSelectedAngle] = useState<string | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [expandRecommendReason, setExpandRecommendReason] = useState(false);
+
+  /* ── Tooltip once per session ── */
+  useEffect(() => {
+    if (!sessionStorage.getItem('rawIdeaTipShown')) {
+      const t1 = setTimeout(() => setShowTooltip(true), 1000);
+      const t2 = setTimeout(() => { setShowTooltip(false); sessionStorage.setItem('rawIdeaTipShown', '1'); }, 5000);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+  }, []);
 
   const allFilled = inputData.niche && inputData.country && inputData.productType;
+  const rawValid = rawIdeaData.ideaText.length >= 20 && rawIdeaData.country;
+
+  /* ── Mode switcher handler ── */
+  const switchMode = (mode: 'niche' | 'raw') => {
+    if (mode === ideaMode) return;
+    setIdeaMode(mode);
+    setRawIdeaStep('input');
+    setIdeaAnalysis(null);
+    setSelectedAngle(null);
+    setAiStep('input');
+    setProductIdeas([]);
+    setResearchReport(null);
+    setError('');
+    // Sync country between modes
+    if (mode === 'raw' && inputData.country) {
+      setRawIdeaData(p => ({ ...p, country: inputData.country }));
+    } else if (mode === 'niche' && rawIdeaData.country) {
+      setInputData(p => ({ ...p, country: rawIdeaData.country }));
+    }
+  };
 
   /* ───── API Calls ───── */
   const generateIdeas = async () => {
@@ -163,10 +301,63 @@ export default function AIResearchEngine() {
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
-      setProductIdeas(data.result);
+      setProductIdeas(data.result.map((idea: any) => ({ ...idea, sourceMode: 'niche' })));
       setAiStep('results');
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
+      setAiStep('input');
+    }
+  };
+
+  const runIdeaAnalysis = async () => {
+    setError('');
+    setRawIdeaStep('analyzing');
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+        body: { action: 'analyze-idea', ideaText: rawIdeaData.ideaText, country: rawIdeaData.country },
+      });
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+      setIdeaAnalysis(data.result);
+      setSelectedAngle(data.result.recommendedAngle);
+      setRawIdeaStep('analysis-result');
+    } catch (err: any) {
+      setError(err.message || 'Could not analyze idea. Please try again.');
+      setRawIdeaStep('input');
+    }
+  };
+
+  const generateIdeasFromRawIdea = async () => {
+    if (!ideaAnalysis || !selectedAngle) return;
+    setError('');
+    setRawIdeaStep('loading-ideas');
+    setAiStep('loading-ideas');
+    const chosenAngle = ideaAnalysis.angles.find(a => a.angleId === selectedAngle);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+        body: {
+          action: 'generate-ideas-from-raw',
+          ideaText: rawIdeaData.ideaText,
+          analysis: ideaAnalysis,
+          chosenAngle,
+          country: rawIdeaData.country,
+        },
+      });
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+      const taggedIdeas = data.result.map((idea: any) => ({ ...idea, sourceMode: 'raw', originalIdea: rawIdeaData.ideaText }));
+      setProductIdeas(taggedIdeas);
+      // Set inputData for deep research compatibility
+      setInputData(p => ({
+        ...p,
+        niche: ideaAnalysis.detectedNiche,
+        country: rawIdeaData.country,
+        productType: chosenAngle?.productFormat || 'Digital Product',
+      }));
+      setAiStep('results');
+    } catch (err: any) {
+      setError(err.message || 'Could not generate ideas. Please try again.');
+      setRawIdeaStep('analysis-result');
       setAiStep('input');
     }
   };
@@ -210,19 +401,243 @@ export default function AIResearchEngine() {
     return 0;
   });
 
+  /* ── Idea quality dots ── */
+  const charLen = rawIdeaData.ideaText.length;
+  const qualityLevel = charLen >= 121 ? 3 : charLen >= 51 ? 2 : charLen >= 20 ? 1 : 0;
+  const qualityLabel = qualityLevel === 3 ? 'Great detail — ready to analyze!' : qualityLevel === 2 ? 'Good start!' : 'Add more detail...';
+  const qualityColor = qualityLevel === 3 ? '#059669' : '#f59e0b';
+
+  /* ── Raw validation hint ── */
+  const rawHint = !rawIdeaData.ideaText ? { text: '✏ Paste your idea above to get started', color: '#94a3b8' }
+    : rawIdeaData.ideaText.length < 20 ? { text: 'Add a bit more detail to your idea', color: '#f59e0b' }
+    : !rawIdeaData.country ? { text: 'Select your target country', color: '#f59e0b' }
+    : { text: `✓ Ready to analyze your idea for ${rawIdeaData.country}`, color: '#059669' };
+
+  const isRawResultsMode = productIdeas.length > 0 && productIdeas[0]?.sourceMode === 'raw';
+
+  /* ── Sub-mode switcher component ── */
+  const ModeSwitcher = () => (
+    <div style={s({ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 })}>
+      <div style={s({ display: 'inline-flex', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: 3, gap: 2 })}>
+        <button onClick={() => switchMode('niche')}
+          style={s({
+            padding: '7px 18px', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans', fontSize: 13, transition: 'all 0.2s',
+            ...(ideaMode === 'niche'
+              ? { background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', color: '#0f172a', fontWeight: 700 }
+              : { background: 'transparent', color: '#94a3b8', fontWeight: 500 }),
+          })}>
+          🎯 By Niche
+        </button>
+        <button onClick={() => switchMode('raw')}
+          style={s({
+            padding: '7px 18px', borderRadius: 50, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans', fontSize: 13, transition: 'all 0.2s',
+            ...(ideaMode === 'raw'
+              ? { background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', boxShadow: '0 2px 10px rgba(124,58,237,0.3)', fontWeight: 700 }
+              : { background: 'transparent', color: '#94a3b8', fontWeight: 500 }),
+          })}>
+          💡 Raw Idea
+        </button>
+      </div>
+      {showTooltip && ideaMode === 'niche' && (
+        <div style={s({ marginTop: 10, fontFamily: 'DM Sans', fontSize: 12, color: '#7c3aed', background: 'rgba(124,58,237,0.08)', padding: '6px 14px', borderRadius: 50, border: '1px solid rgba(124,58,237,0.15)', animation: 'fadeUp 0.5s ease both' })}>
+          💡 Have your own idea? Try the Raw Idea mode →
+        </div>
+      )}
+    </div>
+  );
+
+  /* ═══════════════════ RAW IDEA: ANALYZING ═══════════════════ */
+  if (aiStep === 'input' && ideaMode === 'raw' && rawIdeaStep === 'analyzing') {
+    return (
+      <div style={s({ maxWidth: 680, margin: '0 auto' })}>
+        <div style={s({ textAlign: 'center', marginBottom: 32 })}>
+          <div style={s({ display: 'inline-flex', gap: 6, alignItems: 'center', background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 50, padding: '5px 16px', marginBottom: 12 })}>
+            <span>💡</span>
+            <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em' })}>Raw Idea Analysis</span>
+          </div>
+        </div>
+        <div style={s({ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderRadius: 24, padding: 32, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 8px 32px rgba(0,0,0,0.07)' })}>
+          <IdeaAnalyzingScreen />
+        </div>
+      </div>
+    );
+  }
+
+  /* ═══════════════════ RAW IDEA: ANALYSIS RESULT ═══════════════════ */
+  if (aiStep === 'input' && ideaMode === 'raw' && rawIdeaStep === 'analysis-result' && ideaAnalysis) {
+    const a = ideaAnalysis;
+    const chosenAngle = a.angles.find(ang => ang.angleId === selectedAngle);
+    const readinessBadge = a.marketReadiness === 'High'
+      ? { bg: 'linear-gradient(135deg,#059669,#10b981)', label: '🔥 High Demand' }
+      : a.marketReadiness === 'Medium'
+      ? { bg: 'linear-gradient(135deg,#f59e0b,#ea580c)', label: '⚡ Medium Demand' }
+      : { bg: '#f1f5f9', label: '💤 Low Demand' };
+    const readinessColor = a.marketReadiness === 'Low' ? '#64748b' : 'white';
+
+    return (
+      <div style={s({ maxWidth: 680, margin: '0 auto', animation: 'fadeUp 0.4s ease' })}>
+        {error && (
+          <div style={s({ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+            <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#991b1b' })}>{error}</span>
+            <button onClick={() => setError('')} style={s({ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 700 })}>✕</button>
+          </div>
+        )}
+
+        {/* TOP — IDEA VALIDATION HEADER */}
+        <div style={s({ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderRadius: 20, padding: 24, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 8px 32px rgba(0,0,0,0.07)', marginBottom: 16 })}>
+          {/* Row 1 */}
+          <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 })}>
+            <div style={s({ flex: 1, minWidth: 280 })}>
+              <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em' })}>💡 YOUR IDEA</div>
+              <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 16, color: '#0f172a', lineHeight: 1.4, marginTop: 4, maxWidth: 480 })}>{a.ideaSummary}</div>
+            </div>
+            <div style={s({ textAlign: 'right' })}>
+              <div style={s({ background: readinessBadge.bg, color: readinessColor, fontFamily: 'Sora', fontWeight: 800, fontSize: 12, padding: '6px 16px', borderRadius: 50, display: 'inline-block' })}>{readinessBadge.label}</div>
+              <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 4, maxWidth: 180 })}>{a.marketReadinessReason}</div>
+            </div>
+          </div>
+
+          {/* Row 2 — info pills */}
+          <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 })}>
+            <span style={s({ background: '#f0f9ff', color: '#0891b2', border: '1px solid #bae6fd', padding: '5px 12px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 11.5, fontWeight: 700 })}>📂 {a.detectedNiche}</span>
+            <span style={s({ background: '#f0fdf4', color: '#059669', border: '1px solid #bbf7d0', padding: '5px 12px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 11.5, fontWeight: 700 })}>👤 {a.targetBuyer.length > 40 ? a.targetBuyer.substring(0, 40) + '...' : a.targetBuyer}</span>
+            <span style={s({ background: '#ede9fe', color: '#7c3aed', border: '1px solid #ddd6fe', padding: '5px 12px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 11.5, fontWeight: 700 })}>🎯 {a.detectedCategory}</span>
+          </div>
+
+          {/* Row 3 — Strengths & Gaps */}
+          <div style={s({ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap' })}>
+            <div style={s({ flex: 1, minWidth: 200 })}>
+              <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#059669', textTransform: 'uppercase', marginBottom: 6 })}>✅ What's strong about your idea</div>
+              {a.ideaStrengths.map((str, i) => (
+                <div key={i} style={s({ display: 'flex', gap: 6, alignItems: 'flex-start', marginBottom: 4 })}>
+                  <div style={s({ width: 6, height: 6, borderRadius: '50%', background: '#059669', marginTop: 6, flexShrink: 0 })} />
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#334155', lineHeight: 1.6 })}>{str}</span>
+                </div>
+              ))}
+            </div>
+            <div style={s({ flex: 1, minWidth: 200 })}>
+              <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', marginBottom: 6 })}>⚠ Things to keep in mind</div>
+              {a.ideaGaps.map((gap, i) => (
+                <div key={i} style={s({ display: 'flex', gap: 6, alignItems: 'flex-start', marginBottom: 4 })}>
+                  <div style={s({ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', marginTop: 6, flexShrink: 0 })} />
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#334155', lineHeight: 1.6 })}>{gap}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Edit link */}
+          <div style={s({ textAlign: 'right', marginTop: 12 })}>
+            <span onClick={() => setRawIdeaStep('input')} style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontWeight: 600 })}>✏ Edit my idea</span>
+          </div>
+        </div>
+
+        {/* MIDDLE — CORE PROBLEM REFRAME */}
+        <div style={s({ background: 'linear-gradient(135deg,rgba(124,58,237,0.06),rgba(168,85,247,0.04))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 16, padding: '20px 20px 20px 24px', marginBottom: 16, position: 'relative', overflow: 'hidden' })}>
+          <div style={s({ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: '#7c3aed', borderRadius: '4px 0 0 4px' })} />
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 })}>🎯 THE REAL PROBLEM YOU'RE SOLVING</div>
+          <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 15, color: '#0f172a', lineHeight: 1.55 })}>{a.coreProblem}</div>
+        </div>
+
+        {/* BOTTOM — 3 PRODUCT ANGLES */}
+        <div style={s({ marginBottom: 16 })}>
+          <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 4 })}>Choose Your Product Angle</div>
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginBottom: 14 })}>
+            AI recommends Angle <strong style={{ color: '#7c3aed' }}>{a.recommendedAngle}</strong> · You can pick any one
+          </div>
+
+          <div style={s({ display: 'flex', flexDirection: 'column', gap: 12 })}>
+            {a.angles.map((angle) => {
+              const isSelected = selectedAngle === angle.angleId;
+              const isRecommended = a.recommendedAngle === angle.angleId;
+              const dotColor = ANGLE_COLORS[angle.angleId] || '#7c3aed';
+              const demandBg = angle.demandSignal === 'High' ? '#dcfce7' : angle.demandSignal === 'Medium' ? '#fef9c3' : '#f1f5f9';
+              const demandColor = angle.demandSignal === 'High' ? '#059669' : angle.demandSignal === 'Medium' ? '#92400e' : '#64748b';
+
+              return (
+                <div key={angle.angleId} onClick={() => setSelectedAngle(angle.angleId)}
+                  style={s({
+                    borderRadius: 16, padding: '18px 20px', cursor: 'pointer', position: 'relative',
+                    border: `2px solid ${isSelected ? '#7c3aed' : '#e2e8f0'}`,
+                    background: isSelected ? 'rgba(124,58,237,0.04)' : '#f8fafc',
+                    boxShadow: isSelected ? '0 0 0 3px rgba(124,58,237,0.1)' : 'none',
+                    transform: isSelected ? 'scale(1.01)' : 'scale(1)',
+                    transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+                  })}>
+                  {isRecommended && (
+                    <div style={s({ position: 'absolute', top: -1, right: 16, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', padding: '3px 10px', borderRadius: '0 0 8px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 800, letterSpacing: '0.06em' })}>⭐ AI Recommended</div>
+                  )}
+                  {/* Top row */}
+                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+                    <div style={s({ display: 'flex', alignItems: 'center', gap: 10 })}>
+                      <div style={s({ width: 28, height: 28, borderRadius: '50%', background: `linear-gradient(135deg,${dotColor},${dotColor}cc)`, color: 'white', fontFamily: 'Sora', fontWeight: 800, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' })}>{angle.angleId}</div>
+                      <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>{angle.angleName}</span>
+                    </div>
+                    <div style={s({ display: 'flex', gap: 6 })}>
+                      <span style={s({ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 50, background: demandBg, color: demandColor })}>{angle.demandSignal} Demand</span>
+                      <span style={s({ fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 50, background: '#f0f9ff', color: '#0891b2' })}>🛠 {angle.buildTime}</span>
+                    </div>
+                  </div>
+                  {/* Description */}
+                  <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#475569', lineHeight: 1.7, marginTop: 8, marginBottom: 10 })}>{angle.angleDescription}</div>
+                  {/* Bottom row */}
+                  <div style={s({ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' })}>
+                    <span style={s({ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.2)', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 50 })}>{angle.productFormat}</span>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#059669' })}>{angle.priceRange}</span>
+                    <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>Why this works:</span>
+                    <span style={s({ fontFamily: 'DM Sans', fontSize: 11.5, color: '#0f172a', fontWeight: 600 })}>{angle.whyThisWorks}</span>
+                  </div>
+                  {/* Why AI chose this */}
+                  {isRecommended && (
+                    <div style={s({ marginTop: 8 })}>
+                      <span onClick={(e) => { e.stopPropagation(); setExpandRecommendReason(!expandRecommendReason); }}
+                        style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#7c3aed', cursor: 'pointer' })}>
+                        Why AI recommends this angle {expandRecommendReason ? '↑' : '↓'}
+                      </span>
+                      {expandRecommendReason && (
+                        <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#475569', lineHeight: 1.7, background: 'rgba(124,58,237,0.04)', borderRadius: 8, padding: '10px 14px', marginTop: 8 })}>
+                          {a.recommendedAngleReason}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* GENERATE BUTTON */}
+        <div style={s({ marginTop: 20, paddingTop: 20, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 })}>
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: '#059669' })}>
+            {selectedAngle && chosenAngle ? `✓ Generating 30 ideas for Angle ${selectedAngle}: ${chosenAngle.angleName} · ${rawIdeaData.country}` : 'Select an angle to continue'}
+          </div>
+          <button onClick={generateIdeasFromRawIdea} disabled={!selectedAngle}
+            style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 14, padding: '13px 28px', fontFamily: 'Sora', fontWeight: 800, fontSize: 15, cursor: selectedAngle ? 'pointer' : 'not-allowed', opacity: selectedAngle ? 1 : 0.45, boxShadow: selectedAngle ? '0 4px 20px rgba(234,88,12,0.35)' : 'none', transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)' })}
+            onMouseEnter={e => { if (selectedAngle) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(234,88,12,0.45)'; } }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = selectedAngle ? '0 4px 20px rgba(234,88,12,0.35)' : 'none'; }}>
+            🚀 Generate 30 Product Ideas →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   /* ═══════════════════ STEP 1: INPUT FORM ═══════════════════ */
   if (aiStep === 'input') {
     return (
       <div style={s({ maxWidth: 680, margin: '0 auto', animation: 'fadeUp 0.4s ease' })}>
         {/* Hero */}
         <div style={s({ textAlign: 'center', marginBottom: 32 })}>
-          <div style={s({ display: 'inline-flex', gap: 6, alignItems: 'center', background: 'rgba(234,88,12,0.08)', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '5px 16px', marginBottom: 12 })}>
-            <span>🤖</span>
-            <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.08em' })}>AI-Powered Research</span>
+          <div style={s({ display: 'inline-flex', gap: 6, alignItems: 'center', background: ideaMode === 'raw' ? 'rgba(124,58,237,0.08)' : 'rgba(234,88,12,0.08)', border: `1px solid ${ideaMode === 'raw' ? 'rgba(124,58,237,0.2)' : 'rgba(234,88,12,0.2)'}`, borderRadius: 50, padding: '5px 16px', marginBottom: 12 })}>
+            <span>{ideaMode === 'raw' ? '💡' : '🤖'}</span>
+            <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: ideaMode === 'raw' ? '#7c3aed' : '#ea580c', textTransform: 'uppercase', letterSpacing: '0.08em' })}>{ideaMode === 'raw' ? 'Raw Idea Analyzer' : 'AI-Powered Research'}</span>
           </div>
-          <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 'clamp(22px, 4vw, 32px)', color: '#0f172a', letterSpacing: '-0.03em', marginBottom: 8 })}>Find Your Perfect Product Idea</h2>
+          <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 'clamp(22px, 4vw, 32px)', color: '#0f172a', letterSpacing: '-0.03em', marginBottom: 8 })}>
+            {ideaMode === 'raw' ? 'Validate & Expand Your Idea' : 'Find Your Perfect Product Idea'}
+          </h2>
           <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', lineHeight: 1.7, maxWidth: 480, margin: '0 auto' })}>
-            Tell us 3 things. Our AI does the research — real market data, real pain points, real opportunities.
+            {ideaMode === 'raw' ? 'Paste your raw idea. AI analyzes, validates, and generates 30 product ideas built around your concept.' : 'Tell us 3 things. Our AI does the research — real market data, real pain points, real opportunities.'}
           </p>
         </div>
 
@@ -236,110 +651,207 @@ export default function AIResearchEngine() {
         {/* Form Card */}
         <div style={s({ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderRadius: 24, padding: 32, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 8px 32px rgba(0,0,0,0.07)', animation: 'fadeUp 0.4s ease 0.08s both' })}>
 
-          {/* INPUT 1 — NICHE */}
-          <div>
-            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
-              <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
-                <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#ea580c' })}>01</span>
-                <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Your Niche</span>
-              </div>
-              <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>e.g. fitness, finance, parenting, AI tools</span>
-            </div>
-            <input
-              value={inputData.niche}
-              onChange={e => setInputData(p => ({ ...p, niche: e.target.value }))}
-              placeholder="e.g. Personal finance for young professionals in India"
-              style={s({ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' })}
-              onFocus={e => { e.currentTarget.style.borderColor = '#ea580c'; e.currentTarget.style.background = 'white'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234,88,12,0.08)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; }}
-            />
-            <div style={s({ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 })}>
-              {NICHE_PILLS.map(pill => (
-                <button key={pill} onClick={() => setInputData(p => ({ ...p, niche: pill.replace(/^[^\s]+\s/, '') }))}
-                  style={s({ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '5px 12px', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer', transition: 'all 0.15s' })}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(234,88,12,0.06)'; e.currentTarget.style.borderColor = 'rgba(234,88,12,0.25)'; e.currentTarget.style.color = '#ea580c'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }}>
-                  {pill}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* MODE SWITCHER */}
+          <ModeSwitcher />
 
-          {/* INPUT 2 — COUNTRY */}
-          <div style={s({ marginTop: 24 })}>
-            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
-              <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
-                <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#ea580c' })}>02</span>
-                <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Target Country</span>
+          {/* ═══ NICHE MODE ═══ */}
+          {ideaMode === 'niche' && (
+            <div style={s({ animation: 'fadeUp 0.3s ease' })}>
+              {/* INPUT 1 — NICHE */}
+              <div>
+                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+                  <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#ea580c' })}>01</span>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Your Niche</span>
+                  </div>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>e.g. fitness, finance, parenting, AI tools</span>
+                </div>
+                <input
+                  value={inputData.niche}
+                  onChange={e => setInputData(p => ({ ...p, niche: e.target.value }))}
+                  placeholder="e.g. Personal finance for young professionals in India"
+                  style={s({ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' })}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#ea580c'; e.currentTarget.style.background = 'white'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234,88,12,0.08)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; }}
+                />
+                <div style={s({ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 })}>
+                  {NICHE_PILLS.map(pill => (
+                    <button key={pill} onClick={() => setInputData(p => ({ ...p, niche: pill.replace(/^[^\s]+\s/, '') }))}
+                      style={s({ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '5px 12px', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer', transition: 'all 0.15s' })}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(234,88,12,0.06)'; e.currentTarget.style.borderColor = 'rgba(234,88,12,0.25)'; e.currentTarget.style.color = '#ea580c'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }}>
+                      {pill}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>Where will you sell this product?</span>
-            </div>
-            <div style={s({ position: 'relative' })}>
-              <div onClick={() => setCountryOpen(!countryOpen)}
-                style={s({ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: inputData.country ? '#0f172a' : '#94a3b8', background: '#f8fafc', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxSizing: 'border-box' })}>
-                <span>{inputData.country ? `${COUNTRIES.find(c => c.name === inputData.country)?.flag} ${inputData.country}` : 'Select your target market'}</span>
-                <span style={s({ transform: countryOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 12, color: '#94a3b8' })}>▼</span>
+
+              {/* INPUT 2 — COUNTRY */}
+              <div style={s({ marginTop: 24 })}>
+                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+                  <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#ea580c' })}>02</span>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Target Country</span>
+                  </div>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>Where will you sell this product?</span>
+                </div>
+                <CountryDropdown value={inputData.country} onChange={v => setInputData(p => ({ ...p, country: v }))} accentColor="#059669" />
               </div>
-              {countryOpen && (
-                <>
-                  <div onClick={() => setCountryOpen(false)} style={s({ position: 'fixed', inset: 0, zIndex: 99 })} />
-                  <div style={s({ position: 'absolute', width: '100%', background: 'white', borderRadius: 12, border: '1.5px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 100, marginTop: 4, overflow: 'hidden', maxHeight: 300, overflowY: 'auto' })}>
-                    {COUNTRIES.map(c => (
-                      <div key={c.name} onClick={() => { setInputData(p => ({ ...p, country: c.name })); setCountryOpen(false); }}
-                        style={s({ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 16px', cursor: 'pointer' })}
-                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        <span style={s({ fontSize: 20 })}>{c.flag}</span>
-                        <span style={s({ fontFamily: 'DM Sans', fontSize: 13.5, fontWeight: 500, color: '#0f172a' })}>{c.name}</span>
+
+              {/* INPUT 3 — PRODUCT TYPE */}
+              <div style={s({ marginTop: 24 })}>
+                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+                  <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#ea580c' })}>03</span>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Product Type</span>
+                  </div>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>What format do you want to create?</span>
+                </div>
+                <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginTop: 8 })}>
+                  {PRODUCT_TYPES.map(pt => {
+                    const selected = inputData.productType === pt.name;
+                    return (
+                      <div key={pt.name} onClick={() => setInputData(p => ({ ...p, productType: pt.name }))}
+                        style={s({ borderRadius: 12, padding: '12px 10px', cursor: 'pointer', border: `2px solid ${selected ? pt.accent : '#e2e8f0'}`, background: selected ? `${pt.accent}08` : '#f8fafc', textAlign: 'center', transition: 'all 0.18s', boxShadow: selected ? `0 0 0 3px ${pt.accent}15` : 'none' })}>
+                        <span style={s({ fontSize: 22, display: 'block', marginBottom: 6 })}>{pt.emoji}</span>
+                        <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#0f172a' })}>{pt.name}</div>
+                        <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', marginTop: 2 })}>{pt.price}</div>
                       </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* GENERATE BUTTON */}
+              <div style={s({ marginTop: 28, paddingTop: 24, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 })}>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: allFilled ? '#059669' : '#94a3b8' })}>
+                  {allFilled ? `✓ Ready to research ${inputData.niche} ${inputData.productType} for ${inputData.country}` : 'Fill all 3 fields to continue'}
+                </div>
+                <button onClick={generateIdeas} disabled={!allFilled}
+                  style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 14, padding: '13px 28px', fontFamily: 'Sora', fontWeight: 800, fontSize: 15, cursor: allFilled ? 'pointer' : 'not-allowed', opacity: allFilled ? 1 : 0.45, boxShadow: allFilled ? '0 4px 20px rgba(234,88,12,0.35)' : 'none', transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)' })}
+                  onMouseEnter={e => { if (allFilled) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(234,88,12,0.45)'; } }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = allFilled ? '0 4px 20px rgba(234,88,12,0.35)' : 'none'; }}>
+                  🤖 Generate 30 Product Ideas →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ RAW IDEA MODE ═══ */}
+          {ideaMode === 'raw' && rawIdeaStep === 'input' && (
+            <div style={s({ animation: 'fadeUp 0.3s ease' })}>
+              {/* FIELD 1 — RAW IDEA INPUT */}
+              <div>
+                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+                  <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#7c3aed' })}>01</span>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Your Raw Idea</span>
+                  </div>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>{charLen}/300</span>
+                </div>
+                <textarea
+                  value={rawIdeaData.ideaText}
+                  onChange={e => { if (e.target.value.length <= 300) setRawIdeaData(p => ({ ...p, ideaText: e.target.value })); }}
+                  placeholder={`Describe your idea in your own words...\n\nExamples:\n- 'I want to create a guide for Indian freelancers on how to get clients from LinkedIn'\n- 'A template system for small restaurant owners to manage their Instagram content without hiring an agency'\n- 'An AI prompt pack for CA students to summarize lengthy ICAI study material faster'`}
+                  style={s({ width: '100%', minHeight: 120, maxHeight: 200, padding: '14px 16px', borderRadius: 14, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', boxSizing: 'border-box', resize: 'vertical', lineHeight: 1.75, transition: 'all 0.18s' })}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.background = 'white'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.08)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; }}
+                />
+
+                {/* Quality indicator */}
+                {charLen >= 20 && (
+                  <div style={s({ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6 })}>
+                    {[1, 2, 3].map(dot => (
+                      <div key={dot} style={s({ width: 8, height: 8, borderRadius: '50%', background: dot <= qualityLevel ? qualityColor : '#e2e8f0', transition: 'background 0.3s' })} />
+                    ))}
+                    <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: qualityColor })}>{qualityLabel}</span>
+                  </div>
+                )}
+
+                {/* Example pills */}
+                <div style={s({ marginTop: 10 })}>
+                  <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 })}>✨ Try an example:</div>
+                  <div style={s({ display: 'flex', flexWrap: 'wrap', gap: 6 })}>
+                    {RAW_EXAMPLES.map((ex, i) => (
+                      <button key={i} onClick={() => setRawIdeaData(p => ({ ...p, ideaText: ex.text }))}
+                        style={s({ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '7px 12px', fontFamily: 'DM Sans', fontSize: 12, color: '#475569', cursor: 'pointer', lineHeight: 1.5, display: 'inline-block', transition: 'all 0.15s' })}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.borderColor = 'rgba(124,58,237,0.25)'; e.currentTarget.style.color = '#7c3aed'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#475569'; }}>
+                        {ex.emoji} {ex.text}
+                      </button>
                     ))}
                   </div>
-                </>
-              )}
-            </div>
-            {inputData.country && (
-              <div style={s({ display: 'inline-flex', gap: 6, alignItems: 'center', background: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)', borderRadius: 8, padding: '6px 14px', marginTop: 8 })}>
-                <span style={s({ fontFamily: 'DM Sans', fontSize: 11.5, fontWeight: 600, color: '#059669' })}>✓ Using {inputData.country} market data, pricing, and buyer psychology</span>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* INPUT 3 — PRODUCT TYPE */}
-          <div style={s({ marginTop: 24 })}>
-            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
-              <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
-                <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#ea580c' })}>03</span>
-                <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Product Type</span>
-              </div>
-              <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>What format do you want to create?</span>
-            </div>
-            <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginTop: 8 })}>
-              {PRODUCT_TYPES.map(pt => {
-                const selected = inputData.productType === pt.name;
-                return (
-                  <div key={pt.name} onClick={() => setInputData(p => ({ ...p, productType: pt.name }))}
-                    style={s({ borderRadius: 12, padding: '12px 10px', cursor: 'pointer', border: `2px solid ${selected ? pt.accent : '#e2e8f0'}`, background: selected ? `${pt.accent}08` : '#f8fafc', textAlign: 'center', transition: 'all 0.18s', boxShadow: selected ? `0 0 0 3px ${pt.accent}15` : 'none' })}>
-                    <span style={s({ fontSize: 22, display: 'block', marginBottom: 6 })}>{pt.emoji}</span>
-                    <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#0f172a' })}>{pt.name}</div>
-                    <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', marginTop: 2 })}>{pt.price}</div>
+              {/* FIELD 2 — COUNTRY */}
+              <div style={s({ marginTop: 20 })}>
+                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+                  <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#7c3aed' })}>02</span>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Target Country</span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>Where will you sell this?</span>
+                </div>
+                <CountryDropdown value={rawIdeaData.country} onChange={v => setRawIdeaData(p => ({ ...p, country: v }))} accentColor="#7c3aed" />
+              </div>
 
-          {/* GENERATE BUTTON */}
-          <div style={s({ marginTop: 28, paddingTop: 24, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 })}>
-            <div style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: allFilled ? '#059669' : '#94a3b8' })}>
-              {allFilled ? `✓ Ready to research ${inputData.niche} ${inputData.productType} for ${inputData.country}` : 'Fill all 3 fields to continue'}
+              {/* FIELD 3 — FORMAT PREFERENCE */}
+              <div style={s({ marginTop: 20 })}>
+                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+                  <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#7c3aed' })}>03</span>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Format Preference</span>
+                  </div>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>Optional — AI will suggest if left blank</span>
+                </div>
+
+                {/* Let AI Decide card */}
+                <div onClick={() => setRawIdeaData(p => ({ ...p, productFormat: 'ai-decide' }))}
+                  style={s({
+                    background: rawIdeaData.productFormat === 'ai-decide' ? 'linear-gradient(135deg,rgba(124,58,237,0.06),rgba(168,85,247,0.04))' : '#f8fafc',
+                    border: `1.5px solid ${rawIdeaData.productFormat === 'ai-decide' ? 'rgba(124,58,237,0.2)' : '#e2e8f0'}`,
+                    borderRadius: 12, padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                  })}>
+                  <span style={s({ fontSize: 20 })}>🤖</span>
+                  <div style={s({ flex: 1 })}>
+                    <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13.5, color: '#7c3aed' })}>Let AI Decide Best Format</div>
+                    <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 })}>AI will pick the format that best fits your idea</div>
+                  </div>
+                  <div style={s({ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${rawIdeaData.productFormat === 'ai-decide' ? '#7c3aed' : '#d1d5db'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
+                    {rawIdeaData.productFormat === 'ai-decide' && <div style={s({ width: 8, height: 8, borderRadius: '50%', background: '#7c3aed' })} />}
+                  </div>
+                </div>
+
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 10, marginBottom: 8 })}>Or choose a specific format:</div>
+                <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 6 })}>
+                  {PRODUCT_TYPES.map(pt => {
+                    const selected = rawIdeaData.productFormat === pt.name;
+                    return (
+                      <div key={pt.name} onClick={() => setRawIdeaData(p => ({ ...p, productFormat: pt.name }))}
+                        style={s({ borderRadius: 10, padding: '8px 6px', cursor: 'pointer', border: `1.5px solid ${selected ? pt.accent : '#e2e8f0'}`, background: selected ? `${pt.accent}08` : '#f8fafc', textAlign: 'center', transition: 'all 0.18s' })}>
+                        <span style={s({ fontSize: 18, display: 'block', marginBottom: 4 })}>{pt.emoji}</span>
+                        <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 10.5, color: '#0f172a' })}>{pt.name}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ANALYZE BUTTON */}
+              <div style={s({ marginTop: 28, paddingTop: 24, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 })}>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: rawHint.color })}>
+                  {rawHint.text}
+                </div>
+                <button onClick={runIdeaAnalysis} disabled={!rawValid}
+                  style={s({ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 14, padding: '13px 28px', fontFamily: 'Sora', fontWeight: 800, fontSize: 15, cursor: rawValid ? 'pointer' : 'not-allowed', opacity: rawValid ? 1 : 0.45, boxShadow: rawValid ? '0 4px 20px rgba(124,58,237,0.35)' : 'none', transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)' })}
+                  onMouseEnter={e => { if (rawValid) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(124,58,237,0.45)'; } }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = rawValid ? '0 4px 20px rgba(124,58,237,0.35)' : 'none'; }}>
+                  🔍 Analyze My Idea →
+                </button>
+              </div>
             </div>
-            <button onClick={generateIdeas} disabled={!allFilled}
-              style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 14, padding: '13px 28px', fontFamily: 'Sora', fontWeight: 800, fontSize: 15, cursor: allFilled ? 'pointer' : 'not-allowed', opacity: allFilled ? 1 : 0.45, boxShadow: allFilled ? '0 4px 20px rgba(234,88,12,0.35)' : 'none', transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)' })}
-              onMouseEnter={e => { if (allFilled) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(234,88,12,0.45)'; } }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = allFilled ? '0 4px 20px rgba(234,88,12,0.35)' : 'none'; }}>
-              🤖 Generate 30 Product Ideas →
-            </button>
-          </div>
+          )}
         </div>
       </div>
     );
@@ -347,7 +859,7 @@ export default function AIResearchEngine() {
 
   /* ═══════════════════ LOADING IDEAS ═══════════════════ */
   if (aiStep === 'loading-ideas') {
-    return <LoadingScreen type="ideas" data={inputData} />;
+    return <LoadingScreen type={isRawResultsMode || rawIdeaStep === 'loading-ideas' ? 'raw-ideas' : 'ideas'} data={{ ...inputData, country: rawIdeaData.country || inputData.country }} />;
   }
 
   /* ═══════════════════ LOADING REPORT ═══════════════════ */
@@ -372,15 +884,41 @@ export default function AIResearchEngine() {
         <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 })}>
           <div>
             <div style={s({ fontFamily: 'DM Sans', fontSize: 11.5, color: '#94a3b8', marginBottom: 4 })}>
-              <span onClick={() => { setAiStep('input'); setProductIdeas([]); }} style={s({ cursor: 'pointer' })}>AI Research</span> → <span style={s({ fontWeight: 700, color: '#0f172a' })}>Results</span>
+              <span onClick={() => {
+                if (isRawResultsMode) {
+                  setAiStep('input');
+                  setRawIdeaStep('analysis-result');
+                } else {
+                  setAiStep('input');
+                  setProductIdeas([]);
+                }
+              }} style={s({ cursor: 'pointer' })}>AI Research</span> → <span style={s({ fontWeight: 700, color: '#0f172a' })}>Results</span>
             </div>
             <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', marginTop: 4 })}>
-              30 Product Ideas for <span style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>{inputData.niche}</span>
+              {isRawResultsMode ? (
+                <>30 Ideas Built Around <span style={s({ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>Your Concept</span></>
+              ) : (
+                <>30 Product Ideas for <span style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>{inputData.niche}</span></>
+              )}
             </h2>
-            <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 3 })}>{inputData.productType} products for {inputData.country} market · Click any idea for deep research →</p>
+            <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 3 })}>
+              {isRawResultsMode
+                ? `Based on: '${(productIdeas[0]?.originalIdea || '').substring(0, 60)}${(productIdeas[0]?.originalIdea || '').length > 60 ? '...' : ''}' · ${ideaAnalysis?.angles.find(a => a.angleId === selectedAngle)?.angleName || ''} · ${inputData.country}`
+                : `${inputData.productType} products for ${inputData.country} market · Click any idea for deep research →`}
+            </p>
           </div>
           <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
-            <button onClick={() => { setAiStep('input'); setProductIdeas([]); }} style={s({ background: 'none', border: '1px solid #e2e8f0', borderRadius: 50, padding: '5px 14px', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' })}>← New Search</button>
+            <button onClick={() => {
+              if (isRawResultsMode) {
+                setAiStep('input');
+                setRawIdeaStep('analysis-result');
+              } else {
+                setAiStep('input');
+                setProductIdeas([]);
+              }
+            }} style={s({ background: 'none', border: '1px solid #e2e8f0', borderRadius: 50, padding: '5px 14px', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer' })}>
+              {isRawResultsMode ? '← Back to Idea Analysis' : '← New Search'}
+            </button>
           </div>
         </div>
 
@@ -415,10 +953,10 @@ export default function AIResearchEngine() {
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(234,88,12,0.12)'; e.currentTarget.style.borderColor = 'rgba(234,88,12,0.2)'; }}
               onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.95)'; }}>
               {/* Top accent bar */}
-              <div style={s({ height: 4, background: 'linear-gradient(90deg,#ea580c,#f59e0b)', width: `${(idea.demandScore / 10) * 100}%` })} />
+              <div style={s({ height: 4, background: isRawResultsMode ? 'linear-gradient(90deg,#7c3aed,#a855f7)' : 'linear-gradient(90deg,#ea580c,#f59e0b)', width: `${(idea.demandScore / 10) * 100}%` })} />
               <div style={s({ padding: '16px 18px 18px' })}>
                 <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 })}>
-                  <div style={s({ width: 22, height: 22, borderRadius: '50%', background: 'rgba(234,88,12,0.1)', color: '#ea580c', fontFamily: 'Sora', fontWeight: 800, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>#{i + 1}</div>
+                  <div style={s({ width: 22, height: 22, borderRadius: '50%', background: isRawResultsMode ? 'rgba(124,58,237,0.1)' : 'rgba(234,88,12,0.1)', color: isRawResultsMode ? '#7c3aed' : '#ea580c', fontFamily: 'Sora', fontWeight: 800, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>#{i + 1}</div>
                   <span style={s({ fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 50, background: idea.impulseScore === 'High' ? '#dcfce7' : idea.impulseScore === 'Medium' ? '#fef9c3' : '#f1f5f9', color: idea.impulseScore === 'High' ? '#15803d' : idea.impulseScore === 'Medium' ? '#92400e' : '#64748b' })}>
                     {idea.impulseScore === 'High' ? '🔥 High Impulse' : idea.impulseScore === 'Medium' ? '⚡ Mid Impulse' : '💤 Low Impulse'}
                   </span>
@@ -428,6 +966,14 @@ export default function AIResearchEngine() {
                 <div style={s({ background: 'rgba(234,88,12,0.05)', borderLeft: '3px solid #ea580c', borderRadius: '0 8px 8px 0', padding: '8px 12px', marginBottom: 12 })}>
                   <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>😤 {idea.primaryPain}</span>
                 </div>
+
+                {/* Idea Connection (raw mode only) */}
+                {idea.sourceMode === 'raw' && idea.ideaConnection && (
+                  <div style={s({ background: 'rgba(124,58,237,0.04)', borderLeft: '2px solid #7c3aed', borderRadius: '0 6px 6px 0', padding: '6px 10px', marginBottom: 12 })}>
+                    <span style={s({ fontFamily: 'DM Sans', fontSize: 11.5, color: '#7c3aed', fontWeight: 600, fontStyle: 'italic' })}>💡 {idea.ideaConnection}</span>
+                  </div>
+                )}
+
                 <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 })}>
                   <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: idea.demandScore >= 8 ? '#dcfce7' : idea.demandScore >= 5 ? '#fef9c3' : '#fee2e2', color: idea.demandScore >= 8 ? '#059669' : idea.demandScore >= 5 ? '#92400e' : '#991b1b' })}>🔍 {idea.demandScore}/10</span>
                   <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: idea.competitionLevel === 'Low' ? '#dcfce7' : idea.competitionLevel === 'Medium' ? '#fef9c3' : '#fee2e2', color: idea.competitionLevel === 'Low' ? '#059669' : idea.competitionLevel === 'Medium' ? '#92400e' : '#991b1b' })}>⚔ {idea.competitionLevel}</span>
@@ -448,6 +994,9 @@ export default function AIResearchEngine() {
   /* ═══════════════════ STEP 3: DEEP RESEARCH REPORT ═══════════════════ */
   if (aiStep === 'report' && researchReport && selectedProduct) {
     const r = researchReport;
+    const isRawReport = selectedProduct.sourceMode === 'raw';
+    const chosenAngle = ideaAnalysis?.angles.find(a => a.angleId === selectedAngle);
+
     return (
       <div style={s({ animation: 'fadeUp 0.4s ease', paddingBottom: 80 })}>
         {/* Breadcrumb & Header */}
@@ -488,6 +1037,46 @@ export default function AIResearchEngine() {
             </div>
           ))}
         </div>
+
+        {/* ── SECTION 0: YOUR IDEA vs THE MARKET (raw mode only) ── */}
+        {isRawReport && selectedProduct.originalIdea && (
+          <ReportSection icon="✨" iconBg="linear-gradient(135deg,#7c3aed,#a855f7)" iconColor="white" title="Your Idea vs The Market" subtitle="How your original concept maps to real market demand" defaultOpen>
+            <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 })}>
+              {/* Left — Original Idea */}
+              <div style={s({ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 12, padding: 16 })}>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', marginBottom: 6 })}>💡 What You Described</div>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#334155', lineHeight: 1.7, fontStyle: 'italic' })}>{selectedProduct.originalIdea}</div>
+              </div>
+              {/* Right — Market Reality */}
+              <div style={s({ background: 'rgba(5,150,105,0.05)', border: '1px solid rgba(5,150,105,0.15)', borderRadius: 12, padding: 16 })}>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#059669', textTransform: 'uppercase', marginBottom: 6 })}>📊 Market Reality</div>
+                <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 4 })}>{selectedProduct.productName}</div>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b' })}>{selectedProduct.tagline}</div>
+              </div>
+            </div>
+
+            {/* Alignment bar */}
+            <div style={s({ marginTop: 16 })}>
+              <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 })}>
+                <span style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#64748b' })}>Idea-Market Alignment</span>
+                <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#7c3aed', fontWeight: 700 })}>{(selectedProduct.demandScore || 7) * 10}% aligned</span>
+              </div>
+              <div style={s({ width: '100%', height: 8, background: '#f1f5f9', borderRadius: 50, overflow: 'hidden' })}>
+                <div style={s({ width: `${(selectedProduct.demandScore || 7) * 10}%`, height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50, transition: 'width 0.8s ease' })} />
+              </div>
+            </div>
+
+            {/* Monetization bridge */}
+            {(ideaAnalysis?.recommendedAngleReason || chosenAngle?.whyThisWorks) && (
+              <div style={s({ marginTop: 14, background: 'linear-gradient(135deg,rgba(234,88,12,0.06),rgba(245,158,11,0.04))', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 12, padding: '14px 16px' })}>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#ea580c', textTransform: 'uppercase', marginBottom: 6 })}>🚀 How to Bridge Your Idea to Income:</div>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#334155', lineHeight: 1.7 })}>
+                  {ideaAnalysis?.recommendedAngleReason}{chosenAngle?.whyThisWorks ? ` ${chosenAngle.whyThisWorks}` : ''}
+                </div>
+              </div>
+            )}
+          </ReportSection>
+        )}
 
         {/* SECTIONS */}
         <ReportSection icon="🌍" iconBg="#dcfce7" iconColor="#059669" title="Market Overview" subtitle="Total addressable market & audience" defaultOpen>
