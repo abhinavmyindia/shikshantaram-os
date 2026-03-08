@@ -207,7 +207,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 }
 
 /* ───────── Main Component ───────── */
-export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { onBack: () => void; prefill?: any; onPrefillConsumed?: () => void }) {
+export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBuildFunnel }: { onBack: () => void; prefill?: any; onPrefillConsumed?: () => void; onBuildFunnel?: (data: any) => void }) {
   const { saveItem, isSaved, isSaving } = useSaveItem();
   const [offerStep, setOfferStep] = useState<OfferStep>('brief');
   const [offerBrief, setOfferBrief] = useState<OfferBrief>({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
@@ -958,14 +958,34 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
           </div>
 
           {/* Next Steps Footer */}
-          <div style={s({ background: 'linear-gradient(135deg,rgba(124,58,237,0.06),rgba(168,85,247,0.04))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 16, padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 })}>
+          <div style={s({ background: 'linear-gradient(135deg,rgba(124,58,237,0.06),rgba(168,85,247,0.04))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 16, padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 })}>
             <div>
               <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a' })}>🚀 Offer Complete! What's next?</div>
               <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 4 })}>Take your offer to the next module and build your sales funnel.</div>
             </div>
-            <div style={s({ display: 'flex', gap: 10 })}>
+            <div style={s({ display: 'flex', gap: 10, flexWrap: 'wrap' })}>
               <button onClick={resetOffer} style={s({ border: '1px solid #e2e8f0', background: 'white', color: '#64748b', borderRadius: 12, padding: '10px 20px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' })}>🔄 Build New Offer</button>
-              <button onClick={() => { /* coming soon toast */ }} style={s({ background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 14px rgba(6,182,212,0.3)' })}>→ Funnel Builder</button>
+              <button onClick={() => {
+                if (onBuildFunnel) {
+                  const prefillData = {
+                    productName: offerBrief.productName,
+                    offerDescription: offerData?.oneLinerPitch || offerData?.offerHeadline || offerBrief.productName,
+                    targetBuyer: offerBrief.audience,
+                    priceRange: offerBrief.priceRange,
+                    sourceProduct: offerBrief.productName,
+                  };
+                  onBuildFunnel(prefillData);
+                }
+              }} style={s({
+                background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: 'white', border: 'none',
+                borderRadius: 14, padding: '14px 28px', fontFamily: 'Sora', fontWeight: 800, fontSize: 15,
+                cursor: 'pointer', boxShadow: '0 4px 20px rgba(6,182,212,0.35)',
+                transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)', display: 'flex', alignItems: 'center', gap: 8,
+              })}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(6,182,212,0.45)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(6,182,212,0.35)'; }}>
+                🔀 Build a Funnel for This Offer →
+              </button>
             </div>
           </div>
         </div>
