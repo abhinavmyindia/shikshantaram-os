@@ -78,14 +78,11 @@ const PRICE_RANGES_USD = [
 ];
 
 const PLATFORMS = [
-  { emoji: '🟠', name: 'Gumroad', accent: '#f97316' },
-  { emoji: '🟣', name: 'Instagram DMs', accent: '#ec4899' },
-  { emoji: '💬', name: 'WhatsApp', accent: '#22c55e' },
-  { emoji: '🔵', name: 'LinkedIn', accent: '#0a66c2' },
-  { emoji: '🟡', name: 'Lemon Squeezy', accent: '#f59e0b' },
-  { emoji: '⚫', name: 'Your Website', accent: '#0f172a' },
-  { emoji: '📧', name: 'Email List', accent: '#7c3aed' },
-  { emoji: '🛒', name: 'Razorpay/UPI', accent: '#0891b2' },
+  { emoji: '🌐', name: 'Your Website', subtitle: 'Custom domain, full control', accent: '#0f172a' },
+  { emoji: '📱', name: 'Social Media', subtitle: 'Instagram · LinkedIn · Twitter', accent: '#ec4899' },
+  { emoji: '🛒', name: 'Marketplace', subtitle: 'Gumroad · Lemon Squeezy · Instamojo', accent: '#f59e0b' },
+  { emoji: '💳', name: 'Direct Payment', subtitle: 'Razorpay · UPI · PayPal', accent: '#22c55e' },
+  { emoji: '📧', name: 'Email List', subtitle: 'Newsletter · ConvertKit · Mailchimp', accent: '#7c3aed' },
 ];
 
 const STEP_LABELS = ['Brief', 'Structure', 'Builder', 'Output'];
