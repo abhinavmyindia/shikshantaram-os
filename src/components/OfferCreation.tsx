@@ -1,4 +1,4 @@
-import { useState, useEffect, CSSProperties } from 'react';
+import { useState, useEffect, useRef, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 /* ───────── Types ───────── */
@@ -78,14 +78,11 @@ const PRICE_RANGES_USD = [
 ];
 
 const PLATFORMS = [
-  { emoji: '🟠', name: 'Gumroad', accent: '#f97316' },
-  { emoji: '🟣', name: 'Instagram DMs', accent: '#ec4899' },
-  { emoji: '💬', name: 'WhatsApp', accent: '#22c55e' },
-  { emoji: '🔵', name: 'LinkedIn', accent: '#0a66c2' },
-  { emoji: '🟡', name: 'Lemon Squeezy', accent: '#f59e0b' },
-  { emoji: '⚫', name: 'Your Website', accent: '#0f172a' },
-  { emoji: '📧', name: 'Email List', accent: '#7c3aed' },
-  { emoji: '🛒', name: 'Razorpay/UPI', accent: '#0891b2' },
+  { emoji: '🌐', name: 'Your Website', subtitle: 'Custom domain, full control', accent: '#0f172a' },
+  { emoji: '📱', name: 'Social Media', subtitle: 'Instagram · LinkedIn · Twitter', accent: '#ec4899' },
+  { emoji: '🛒', name: 'Marketplace', subtitle: 'Gumroad · Lemon Squeezy · Instamojo', accent: '#f59e0b' },
+  { emoji: '💳', name: 'Direct Payment', subtitle: 'Razorpay · UPI · PayPal', accent: '#22c55e' },
+  { emoji: '📧', name: 'Email List', subtitle: 'Newsletter · ConvertKit · Mailchimp', accent: '#7c3aed' },
 ];
 
 const STEP_LABELS = ['Brief', 'Structure', 'Builder', 'Output'];
@@ -209,27 +206,47 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 }
 
 /* ───────── Main Component ───────── */
-export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { onBack: () => void; prefill?: { beforeState: string; afterState: string } | null; onPrefillConsumed?: () => void }) {
+export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { onBack: () => void; prefill?: any; onPrefillConsumed?: () => void }) {
   const [offerStep, setOfferStep] = useState<OfferStep>('brief');
   const [offerBrief, setOfferBrief] = useState<OfferBrief>({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
   const [showPrefillBanner, setShowPrefillBanner] = useState(false);
+  const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
+  const [autoSelectedPrice, setAutoSelectedPrice] = useState(false);
   const [offerStructures, setOfferStructures] = useState<OfferStructure[]>([]);
   const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
   const [offerData, setOfferData] = useState<OfferData | null>(null);
   const [offerScore, setOfferScore] = useState(0);
   const [error, setError] = useState('');
   const [outputTab, setOutputTab] = useState<'page' | 'dm' | 'social' | 'email'>('page');
-
+  const platformRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (prefill?.beforeState) {
+    if (prefill?.sourceProduct) {
+      // Map price range tier to actual price range string
+      const priceRanges = prefill.sourceCountry === 'United States' || prefill.sourceCountry === 'United Kingdom' || prefill.sourceCountry === 'Canada' || prefill.sourceCountry === 'Australia' ? PRICE_RANGES_USD : PRICE_RANGES_INR;
+      const tierMap: Record<string, number> = { 'impulse': 0, 'low-ticket': 1, 'mid-ticket': 2, 'high-ticket': 3 };
+      const tierIdx = tierMap[prefill.priceRangeTier] ?? 1;
+      const currency = priceRanges === PRICE_RANGES_USD ? 'usd' : 'inr';
+
       setOfferBrief(prev => ({
         ...prev,
-        beforeState: prefill.beforeState.slice(0, 100),
-        afterState: prefill.afterState.slice(0, 100),
+        productName: prefill.productName || '',
+        audience: prefill.audience || '',
+        beforeState: prefill.beforeState || '',
+        afterState: prefill.afterState || '',
+        priceRange: priceRanges[tierIdx]?.range || '',
+        platforms: [],
+        currency,
       }));
+
+      setPrefilledFields(new Set(['productName', 'audience', 'beforeState', 'afterState', 'priceRange']));
+      setAutoSelectedPrice(true);
       setShowPrefillBanner(true);
-      onPrefillConsumed?.();
+
+      // Scroll to platform selector after a brief delay
+      setTimeout(() => {
+        platformRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 600);
     }
   }, [prefill]);
 
@@ -318,6 +335,14 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
     setOfferData(null);
     setOfferScore(0);
     setError('');
+    setPrefilledFields(new Set());
+    setAutoSelectedPrice(false);
+    setShowPrefillBanner(false);
+    onPrefillConsumed?.();
+  };
+
+  const clearPrefillField = (field: string) => {
+    setPrefilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
   };
 
   /* ───────── RENDER ───────── */
@@ -364,54 +389,82 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
             <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginTop: 6 })}>5 quick inputs. AI does the rest.</p>
           </div>
 
-          {showPrefillBanner && (
-            <div style={s({ background: 'linear-gradient(135deg,rgba(234,88,12,0.08),rgba(245,158,11,0.05))', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeUp 0.4s ease' })}>
-              <span style={s({ fontSize: 20 })}>✨</span>
-              <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#92400e', lineHeight: 1.6, flex: 1 })}>Transformation pre-filled from Product Navigator — review and adjust before continuing.</span>
-              <span onClick={() => setShowPrefillBanner(false)} style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#94a3b8', cursor: 'pointer', marginLeft: 'auto' })}>✕</span>
+          {showPrefillBanner && prefill?.sourceProduct && (
+            <div style={s({ background: 'linear-gradient(135deg, rgba(234,88,12,0.07), rgba(245,158,11,0.05))', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 16, padding: '16px 20px', marginBottom: 24, display: 'flex', gap: 14, alignItems: 'flex-start', animation: 'fadeUp 0.4s cubic-bezier(0.34,1.56,0.64,1)' })}>
+              <div style={s({ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#ea580c,#f59e0b)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>
+                <span style={s({ fontSize: 18 })}>🎁</span>
+              </div>
+              <div style={s({ flex: 1 })}>
+                <div style={s({ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 })}>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.08em' })}>From Product Navigator</span>
+                  <span style={s({ background: 'rgba(234,88,12,0.1)', color: '#92400e', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '2px 8px', fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700 })}>{prefill.sourceNiche} · {prefill.sourceCountry}</span>
+                </div>
+                <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 14, color: '#0f172a', lineHeight: 1.4, marginBottom: 8 })}>
+                  4 fields pre-filled from "{prefill.sourceProduct}"
+                </div>
+                <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 })}>
+                  {['Product Name', 'Target Audience', 'Transformation', 'Price Range'].map(f => (
+                    <span key={f} style={s({ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 50, padding: '3px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, display: 'inline-flex', gap: 4, alignItems: 'center' })}>✓ {f}</span>
+                  ))}
+                </div>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6 })}>Only 2 things left: confirm your price range and choose where you'll sell.</div>
+              </div>
+              <span onClick={() => setShowPrefillBanner(false)} style={s({ fontFamily: 'DM Sans', fontSize: 16, color: '#94a3b8', cursor: 'pointer', alignSelf: 'flex-start' })}>✕</span>
             </div>
           )}
           <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20, padding: 32, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' })}>
             {/* Field 1 */}
-            <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b', display: 'block', marginBottom: 8 })}>01 · WHAT ARE YOU SELLING?</label>
-            <input value={offerBrief.productName} onChange={e => setOfferBrief(p => ({ ...p, productName: e.target.value }))}
+            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+              <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b' })}>01 · WHAT ARE YOU SELLING?</label>
+              {prefilledFields.has('productName') && <span style={s({ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Product Navigator</span>}
+            </div>
+            <input value={offerBrief.productName} onChange={e => { setOfferBrief(p => ({ ...p, productName: e.target.value })); clearPrefillField('productName'); }}
               placeholder="e.g. 'LinkedIn Client Acquisition Guide for Indian Freelancers'"
-              style={s({ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' })} />
+              style={s({ width: '100%', padding: '13px 16px', borderRadius: 12, border: prefilledFields.has('productName') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', boxSizing: 'border-box' })} />
             <p style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 4, marginBottom: 20 })}>Be specific — 'freelancer guide' is weak, 'LinkedIn guide for Indian developers' is strong</p>
 
             {/* Field 2 */}
-            <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b', display: 'block', marginBottom: 8 })}>02 · WHO IS THIS FOR?</label>
-            <textarea value={offerBrief.audience} onChange={e => setOfferBrief(p => ({ ...p, audience: e.target.value.slice(0, 200) }))}
+            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+              <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b' })}>02 · WHO IS THIS FOR?</label>
+              {prefilledFields.has('audience') && <span style={s({ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Product Navigator</span>}
+            </div>
+            <textarea value={offerBrief.audience} onChange={e => { setOfferBrief(p => ({ ...p, audience: e.target.value.slice(0, 200) })); clearPrefillField('audience'); }}
               placeholder="e.g. 'Mid-level software engineers in India (3-7 years exp) who want to freelance on the side but don't know how to get clients'"
-              style={s({ width: '100%', minHeight: 70, padding: '13px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', resize: 'vertical', boxSizing: 'border-box' })} />
+              style={s({ width: '100%', minHeight: 70, padding: '13px 16px', borderRadius: 12, border: prefilledFields.has('audience') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', resize: 'vertical', boxSizing: 'border-box' })} />
             <div style={s({ display: 'flex', justifyContent: 'space-between', marginTop: 4, marginBottom: 20 })}>
               <p style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>The more specific, the better your offer will perform</p>
               <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: offerBrief.audience.length > 180 ? '#ef4444' : '#94a3b8' })}>{offerBrief.audience.length}/200</span>
             </div>
 
             {/* Field 3 — Transformation */}
-            <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b', display: 'block', marginBottom: 8 })}>03 · WHAT TRANSFORMATION DOES THIS DELIVER?</label>
+            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+              <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b' })}>03 · WHAT TRANSFORMATION DOES THIS DELIVER?</label>
+              {(prefilledFields.has('beforeState') || prefilledFields.has('afterState')) && <span style={s({ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Product Navigator</span>}
+            </div>
             <div style={s({ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 })}>
               <div style={s({ flex: 1 })}>
                 <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#ef4444', display: 'block', marginBottom: 4 })}>Before 😔</span>
-                <input value={offerBrief.beforeState} onChange={e => setOfferBrief(p => ({ ...p, beforeState: e.target.value }))}
+                <input value={offerBrief.beforeState} onChange={e => { setOfferBrief(p => ({ ...p, beforeState: e.target.value })); clearPrefillField('beforeState'); }}
                   placeholder="e.g. 'Stuck in a 9-5, no freelance clients'"
-                  style={s({ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #fecaca', background: '#fee2e2', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box' })} />
+                  style={s({ width: '100%', padding: '11px 14px', borderRadius: 10, border: prefilledFields.has('beforeState') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #fecaca', background: '#fee2e2', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box' })} />
               </div>
               <div style={s({ width: 28, height: 28, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#64748b', flexShrink: 0 })}>→</div>
               <div style={s({ flex: 1 })}>
                 <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#059669', display: 'block', marginBottom: 4 })}>After 🚀</span>
-                <input value={offerBrief.afterState} onChange={e => setOfferBrief(p => ({ ...p, afterState: e.target.value }))}
+                <input value={offerBrief.afterState} onChange={e => { setOfferBrief(p => ({ ...p, afterState: e.target.value })); clearPrefillField('afterState'); }}
                   placeholder="e.g. 'Earning ₹50,000/month from freelance projects'"
-                  style={s({ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #bbf7d0', background: '#f0fdf4', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box' })} />
+                  style={s({ width: '100%', padding: '11px 14px', borderRadius: 10, border: prefilledFields.has('afterState') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #bbf7d0', background: '#f0fdf4', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box' })} />
               </div>
             </div>
 
             {/* Field 4 — Price Range */}
-            <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b', display: 'block', marginBottom: 8, marginTop: 20 })}>04 · WHAT PRICE RANGE ARE YOU THINKING?</label>
+            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, marginTop: 20 })}>
+              <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b' })}>04 · WHAT PRICE RANGE ARE YOU THINKING?</label>
+              {prefilledFields.has('priceRange') && <span style={s({ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Product Navigator</span>}
+            </div>
             <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 8 })}>
               {priceRanges.map(pr => (
-                <div key={pr.range} onClick={() => setOfferBrief(p => ({ ...p, priceRange: pr.range }))}
+                <div key={pr.range} onClick={() => { setOfferBrief(p => ({ ...p, priceRange: pr.range })); setAutoSelectedPrice(false); clearPrefillField('priceRange'); }}
                   style={s({
                     borderRadius: 10, padding: 10, cursor: 'pointer', textAlign: 'center',
                     border: offerBrief.priceRange === pr.range ? '2px solid #f59e0b' : '2px solid #e2e8f0',
@@ -420,6 +473,9 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
                   })}>
                   <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' })}>{pr.range}</div>
                   <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', marginTop: 2 })}>{pr.type}</div>
+                  {autoSelectedPrice && offerBrief.priceRange === pr.range && (
+                    <div style={s({ fontFamily: 'DM Sans', fontSize: 9, color: '#ea580c', marginTop: 3 })}>auto-selected</div>
+                  )}
                 </div>
               ))}
             </div>
@@ -429,21 +485,23 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
             </span>
 
             {/* Field 5 — Platform */}
+            <style>{`@keyframes highlightPulse { 0%,100%{border-color:#e2e8f0} 50%{border-color:rgba(234,88,12,0.5)} }`}</style>
             <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b', display: 'block', marginBottom: 8, marginTop: 20 })}>05 · WHERE WILL YOU SELL THIS?</label>
-            <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(110px,1fr))', gap: 8 })}>
+            <div ref={platformRef} style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))', gap: 8, ...(prefill?.sourceProduct ? { animation: 'highlightPulse 0.6s ease 0.5s 2' } : {}) })}>
               {PLATFORMS.map(p => {
                 const selected = offerBrief.platforms.includes(p.name);
                 return (
                   <div key={p.name} onClick={() => togglePlatform(p.name)}
                     style={s({
-                      borderRadius: 10, padding: '10px 8px', cursor: 'pointer', textAlign: 'center',
+                      borderRadius: 10, padding: '12px 10px', cursor: 'pointer', textAlign: 'center',
                       border: selected ? `2px solid ${p.accent}` : '2px solid #e2e8f0',
-                      background: selected ? `${p.accent}08` : '#f8fafc',
+                      background: selected ? `${p.accent}0f` : '#f8fafc',
                       boxShadow: selected ? `0 0 0 3px ${p.accent}15` : 'none',
                       transition: 'all 0.15s',
                     })}>
-                    <div style={s({ fontSize: 18, marginBottom: 2 })}>{p.emoji}</div>
-                    <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 600, color: '#0f172a' })}>{p.name}</div>
+                    <div style={s({ fontSize: 24, marginBottom: 8, display: 'block' })}>{p.emoji}</div>
+                    <div style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#0f172a' })}>{p.name}</div>
+                    <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', marginTop: 2, lineHeight: 1.4 })}>{p.subtitle}</div>
                   </div>
                 );
               })}

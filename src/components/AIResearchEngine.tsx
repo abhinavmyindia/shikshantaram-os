@@ -205,10 +205,8 @@ function ReportSection({ icon, iconBg, iconColor, title, subtitle, defaultOpen, 
 }
 
 /* ───────── Buyer Transformation Section ───────── */
-function BuyerTransformationSection({ transformation: t, onUseInOffer }: { transformation: any; onUseInOffer?: (before: string, after: string) => void }) {
+function BuyerTransformationSection({ transformation: t }: { transformation: any }) {
   const [copiedBridge, setCopiedBridge] = useState(false);
-  const [copiedBefore, setCopiedBefore] = useState(false);
-  const [copiedAfter, setCopiedAfter] = useState(false);
   const [open, setOpen] = useState(true);
   const beforeEmojis = ['😰', '😤', '😞'];
   const afterEmojis = ['☀️', '🎯', '🙌'];
@@ -257,7 +255,7 @@ function BuyerTransformationSection({ transformation: t, onUseInOffer }: { trans
               style={s({ marginTop: 12, background: 'rgba(124,58,237,0.1)', color: '#7c3aed', border: '1px solid rgba(124,58,237,0.25)', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'inline-flex', gap: 6, alignItems: 'center' })}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.15)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.1)')}>
-              {copiedBridge ? '✓ Copied!' : '📋 Copy for Offer Creation'}
+              {copiedBridge ? '✓ Copied!' : '📋 Copy'}
             </button>
           </div>
 
@@ -312,26 +310,6 @@ function BuyerTransformationSection({ transformation: t, onUseInOffer }: { trans
               )}
             </div>
           </div>
-
-          {/* BOTTOM ACTION ROW */}
-          <div style={s({ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' })}>
-            <button onClick={() => copyText(t.beforeParagraph, setCopiedBefore)}
-              style={s({ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '7px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'inline-flex', gap: 6 })}>
-              {copiedBefore ? '✓ Copied!' : '📋 Copy Before Statement'}
-            </button>
-            <button onClick={() => copyText(t.afterParagraph, setCopiedAfter)}
-              style={s({ background: 'rgba(16,185,129,0.08)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '7px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'inline-flex', gap: 6 })}>
-              {copiedAfter ? '✓ Copied!' : '📋 Copy After Statement'}
-            </button>
-            {onUseInOffer && (
-              <button onClick={() => onUseInOffer(t.beforeParagraph, t.afterParagraph)}
-                style={s({ marginLeft: 'auto', background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'Sora', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 3px 12px rgba(245,158,11,0.3)' })}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 5px 16px rgba(245,158,11,0.4)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 3px 12px rgba(245,158,11,0.3)'; }}>
-                🎁 Use in Offer Creation →
-              </button>
-            )}
-          </div>
         </div>
       )}
     </div>
@@ -374,7 +352,7 @@ function CountryDropdown({ value, onChange, accentColor }: { value: string; onCh
 }
 
 /* ───────── Main Component ───────── */
-export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (before: string, after: string) => void } = {}) {
+export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (data: any) => void } = {}) {
   /* ── Shared state ── */
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
   const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
@@ -1566,7 +1544,7 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
         </ReportSection>
 
         {/* ── SECTION 4: BUYER TRANSFORMATION ── */}
-        {r.transformation && <BuyerTransformationSection transformation={r.transformation} onUseInOffer={onUseInOffer} />}
+        {r.transformation && <BuyerTransformationSection transformation={r.transformation} />}
 
         <ReportSection icon="💎" iconBg="#ede9fe" iconColor="#7c3aed" title="Deepest Desires" subtitle="What they really want">
           <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 })}>
@@ -1714,7 +1692,39 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
           <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a' })}>Ready to build {selectedProduct.productName}?</span>
           <div style={s({ display: 'flex', gap: 10 })}>
             <button onClick={() => setAiStep('results')} style={s({ background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 50, padding: '10px 22px', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' })}>← Explore Other Ideas</button>
-            <button onClick={() => { /* toast */ }} style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 50, padding: '10px 24px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 16px rgba(234,88,12,0.35)', transition: 'all 0.2s' })}>🚀 Start Building This →</button>
+            <button onClick={() => {
+              if (!onBuildOffer || !selectedProduct) return;
+              const priceStr = selectedProduct.priceRange || '';
+              const firstNum = parseInt(priceStr.replace(/[^0-9]/g, '').slice(0, 6)) || 0;
+              let priceRangeTier = 'low-ticket';
+              if (firstNum <= 499) priceRangeTier = 'impulse';
+              else if (firstNum <= 1999) priceRangeTier = 'low-ticket';
+              else if (firstNum <= 9999) priceRangeTier = 'mid-ticket';
+              else priceRangeTier = 'high-ticket';
+
+              onBuildOffer({
+                productName: `${selectedProduct.productName} — ${selectedProduct.tagline}`,
+                audience: r.marketOverview?.primaryAudience || selectedProduct.targetAudience || '',
+                beforeState: r.transformation?.beforeParagraph
+                  ? r.transformation.beforeParagraph.slice(0, 120)
+                  : `Someone struggling with: ${selectedProduct.primaryPain}`,
+                afterState: r.transformation?.afterParagraph
+                  ? r.transformation.afterParagraph.slice(0, 120)
+                  : `Someone who has solved this with ${selectedProduct.productName}`,
+                transformationBridge: r.transformation?.transformationBridge || '',
+                rawPriceRange: selectedProduct.priceRange,
+                priceRangeTier,
+                sourceProduct: selectedProduct.productName,
+                sourceNiche: inputData.niche || rawIdeaData.ideaText?.slice(0, 40) || '',
+                sourceCountry: inputData.country || rawIdeaData.country || '',
+                sourcedAt: new Date().toISOString(),
+              });
+            }}
+              style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 18px rgba(234,88,12,0.35)', transition: 'all 0.2s' })}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(234,88,12,0.45)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 18px rgba(234,88,12,0.35)'; }}>
+              🎁 Build Offer for This Product →
+            </button>
           </div>
         </div>
       </div>
