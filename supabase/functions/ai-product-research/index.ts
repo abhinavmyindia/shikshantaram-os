@@ -164,25 +164,49 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
 
     console.log(`AI Product Research: action=${action}, niche=${niche || inputData?.niche}`);
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: maxTokens,
-        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+    // Retry with exponential backoff for rate limits
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        const delayMs = Math.pow(2, attempt) * 2000; // 4s, 8s
+        console.log(`Rate limited, retrying in ${delayMs}ms (attempt ${attempt + 1})`);
+        await new Promise(r => setTimeout(r, delayMs));
+      }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Anthropic API error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: `AI API error: ${response.status}` }), {
+      response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: maxTokens,
+          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (response.status !== 429) break;
+      
+      const retryAfter = response.headers.get("Retry-After");
+      if (retryAfter && attempt < 2) {
+        const waitMs = Math.min(parseInt(retryAfter) * 1000, 30000);
+        console.log(`Retry-After header: waiting ${waitMs}ms`);
+        await new Promise(r => setTimeout(r, waitMs));
+        continue;
+      }
+    }
+
+    if (!response || !response.ok) {
+      const errorText = response ? await response.text() : "No response";
+      const status = response?.status || 500;
+      console.error("Anthropic API error:", status, errorText);
+      const userMsg = status === 429 
+        ? "AI is busy right now. Please wait a minute and try again." 
+        : `AI API error: ${status}`;
+      return new Response(JSON.stringify({ error: userMsg }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
