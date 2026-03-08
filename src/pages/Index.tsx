@@ -1522,7 +1522,7 @@ const Index = () => {
 
   // Usage value popup — poll AI cost, trigger at $0.50
   useEffect(() => {
-    if (!user || isAdmin || usagePopupShown.current) return;
+    if (!user || usagePopupShown.current) return;
     if (sessionStorage.getItem('usagePopupShown')) { usagePopupShown.current = true; return; }
 
     const sessionStart = sessionStorage.getItem('session_start') || new Date().toISOString();
