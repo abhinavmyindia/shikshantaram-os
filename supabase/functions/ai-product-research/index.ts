@@ -292,65 +292,77 @@ function parseJsonResponse(text: string): any {
     return JSON.parse(clean);
   } catch (e) {
     console.log("Initial parse failed, attempting repair...");
-    let repaired = clean;
     
-    // Remove trailing incomplete key-value pairs
-    repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
-    repaired = repaired.replace(/,\s*"[^"]*":\s*\[?[^\]]*$/, '');
-    repaired = repaired.replace(/,\s*"[^"]*$/, '');
-    repaired = repaired.replace(/,\s*$/, '');
-    // Fix trailing commas again after truncation
-    repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-    
-    // Count and close unbalanced braces/brackets
-    let braces = 0, brackets = 0;
-    let inString = false, escape = false;
-    for (const c of repaired) {
-      if (escape) { escape = false; continue; }
-      if (c === '\\') { escape = true; continue; }
-      if (c === '"') { inString = !inString; continue; }
-      if (inString) continue;
-      if (c === '{') braces++;
-      if (c === '}') braces--;
-      if (c === '[') brackets++;
-      if (c === ']') brackets--;
-    }
-    
-    // If we're inside a string, close it
-    if (inString) repaired += '"';
-    
-    while (brackets > 0) { repaired += ']'; brackets--; }
-    while (braces > 0) { repaired += '}'; braces--; }
-    
-    console.log("Repaired JSON, attempting parse...");
-    try {
-      return JSON.parse(repaired);
-    } catch (e2) {
-      // Last resort: try to extract valid JSON by removing the last problematic section
-      console.log("Repair failed, trying aggressive cleanup...");
-      // Find the last complete key-value pair ending with a proper value
-      const lastGoodBrace = repaired.lastIndexOf('}');
-      if (lastGoodBrace > 0) {
-        let aggressive = repaired.substring(0, lastGoodBrace + 1);
-        aggressive = aggressive.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-        // Re-count and close
-        let b2 = 0, k2 = 0, s2 = false, e3 = false;
-        for (const c of aggressive) {
-          if (e3) { e3 = false; continue; }
-          if (c === '\\') { e3 = true; continue; }
-          if (c === '"') { s2 = !s2; continue; }
-          if (s2) continue;
-          if (c === '{') b2++;
-          if (c === '}') b2--;
-          if (c === '[') k2++;
-          if (c === ']') k2--;
-        }
-        while (k2 > 0) { aggressive += ']'; k2--; }
-        while (b2 > 0) { aggressive += '}'; b2--; }
-        return JSON.parse(aggressive);
+    // For truncated arrays: find last complete object and close the array
+    if (clean.trimStart().startsWith('[')) {
+      const lastCloseBrace = clean.lastIndexOf('}');
+      if (lastCloseBrace > 0) {
+        let candidate = clean.substring(0, lastCloseBrace + 1);
+        // Remove any trailing comma after the last complete object
+        candidate = candidate.replace(/,\s*$/, '');
+        candidate = candidate + ']';
+        try {
+          const items = JSON.parse(candidate);
+          console.warn(`Recovered ${items.length} items from truncated array`);
+          return items;
+        } catch { /* fall through */ }
       }
-      throw e2;
     }
+
+    // For truncated objects
+    if (clean.trimStart().startsWith('{')) {
+      let repaired = clean;
+      // Remove trailing incomplete key-value
+      repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
+      repaired = repaired.replace(/,\s*"[^"]*":\s*\[?[^\]]*$/, '');
+      repaired = repaired.replace(/,\s*"[^"]*$/, '');
+      repaired = repaired.replace(/,\s*$/, '');
+      repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+      
+      // Count and close unbalanced braces/brackets
+      let braces = 0, brackets = 0, inString = false, escape = false;
+      for (const c of repaired) {
+        if (escape) { escape = false; continue; }
+        if (c === '\\') { escape = true; continue; }
+        if (c === '"') { inString = !inString; continue; }
+        if (inString) continue;
+        if (c === '{') braces++;
+        if (c === '}') braces--;
+        if (c === '[') brackets++;
+        if (c === ']') brackets--;
+      }
+      if (inString) repaired += '"';
+      while (brackets > 0) { repaired += ']'; brackets--; }
+      while (braces > 0) { repaired += '}'; braces--; }
+      
+      try {
+        return JSON.parse(repaired);
+      } catch (e2) {
+        // Aggressive: truncate to last complete brace
+        const lastGoodBrace = repaired.lastIndexOf('}');
+        if (lastGoodBrace > 0) {
+          let aggressive = repaired.substring(0, lastGoodBrace + 1);
+          aggressive = aggressive.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+          let b2 = 0, k2 = 0, s2 = false, e3 = false;
+          for (const c of aggressive) {
+            if (e3) { e3 = false; continue; }
+            if (c === '\\') { e3 = true; continue; }
+            if (c === '"') { s2 = !s2; continue; }
+            if (s2) continue;
+            if (c === '{') b2++;
+            if (c === '}') b2--;
+            if (c === '[') k2++;
+            if (c === ']') k2--;
+          }
+          while (k2 > 0) { aggressive += ']'; k2--; }
+          while (b2 > 0) { aggressive += '}'; b2--; }
+          return JSON.parse(aggressive);
+        }
+        throw e2;
+      }
+    }
+    
+    throw e;
   }
 }
 
@@ -419,7 +431,7 @@ serve(async (req) => {
       const { niche, country, productType } = body;
       prompt = buildGenerateIdeasPrompt(niche, country, productType);
       model = "google/gemini-3-flash-preview";
-      maxTokens = 16000;
+      maxTokens = 24000;
     } else if (action === "analyze-idea") {
       const { ideaText, country } = body;
       prompt = buildAnalyzeIdeaPrompt(ideaText, country);
@@ -429,12 +441,12 @@ serve(async (req) => {
       const { ideaText, analysis, chosenAngle, country } = body;
       prompt = buildRawIdeaIdeasPrompt(ideaText, analysis, chosenAngle, country);
       model = "google/gemini-3-flash-preview";
-      maxTokens = 16000;
+      maxTokens = 24000;
     } else if (action === "deep-research") {
       const { product, inputData } = body;
       prompt = buildDeepResearchPrompt(product, inputData);
       model = "google/gemini-2.5-flash";
-      maxTokens = 8000;
+      maxTokens = 16000;
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
