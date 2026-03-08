@@ -1150,7 +1150,11 @@ function ProductPage({ onBack, onAction }: { onBack: () => void; onAction?: () =
       </div>
 
       {researchMode === 'ai' ? (
-        <AIResearchEngine />
+        <AIResearchEngine onUseInOffer={(before, after) => {
+          setOfferPrefill({ beforeState: before, afterState: after });
+          navigateTo('offer');
+          showToast('✓ Transformation copied to Offer Creation!', 'success');
+        }} />
       ) : (
         <>
           <FilterBar search={search} onSearch={setSearch} accentColor="#ea580c"
@@ -1411,6 +1415,7 @@ const Index = () => {
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [toast, setToast] = useState<ToastData | null>(null);
   const [showMotivation, setShowMotivation] = useState(false);
+  const [offerPrefill, setOfferPrefill] = useState<{ beforeState: string; afterState: string } | null>(null);
   const [motivationMsg, setMotivationMsg] = useState<typeof MOTIVATION_MESSAGES[0] | null>(null);
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
@@ -1478,7 +1483,7 @@ const Index = () => {
             {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
             {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
-            {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} />}
+            {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} prefill={offerPrefill} onPrefillConsumed={() => setOfferPrefill(null)} />}
             {activePage === 'funnel' && <FunnelBuilder onBack={() => navigateTo('dashboard')} />}
             {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
           </main>
