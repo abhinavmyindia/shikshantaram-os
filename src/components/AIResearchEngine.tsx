@@ -1287,7 +1287,7 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
           );
         })()}
 
-
+        <ReportSection icon="💎" iconBg="#ede9fe" iconColor="#7c3aed" title="Deepest Desires" subtitle="What they really want">
           <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 })}>
             {r.deepestDesires?.map((d: any, i: number) => (
               <div key={i} style={s({ background: 'linear-gradient(135deg,rgba(124,58,237,0.05),rgba(168,85,247,0.03))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 14, padding: 16 })}>
