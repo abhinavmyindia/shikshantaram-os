@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, CSSProperties } from 'react';
 import AIResearchEngine from '@/components/AIResearchEngine';
 import OfferCreation from '@/components/OfferCreation';
 import FunnelBuilder from '@/components/FunnelBuilder';
+import MySavedPage from '@/components/MySavedPage';
 import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
@@ -9,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTracking } from '@/hooks/useTracking';
 import BetaFeedback from '@/components/BetaFeedback';
 import ProfilePage from '@/components/ProfilePage';
+import { supabase } from '@/integrations/supabase/client';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
@@ -168,7 +170,7 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 );
 
 /* ───────── Types ───────── */
-type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'settings' | 'help' | 'profile';
+type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'settings' | 'help' | 'profile' | 'saved';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
 const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel'];
@@ -203,6 +205,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'creator', label: 'Product Creator', icon: () => <WandIcon />, badge: 'SOON', locked: true },
   { id: 'copy', label: 'Copy Suite', icon: () => <PenIcon />, badge: 'SOON', locked: true },
   { id: 'ads', label: 'AI Ad Suite', icon: () => <MegaphoneIcon />, badge: 'SOON', locked: true },
+  { id: 'landing', label: 'Landing Page Designer', icon: () => <WandIcon color="#6366f1" />, badge: 'SOON', locked: true },
 ];
 
 const TOOL_CARDS = [
@@ -317,7 +320,11 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick }: { us
 }
 
 /* ───────── Sidebar ───────── */
-function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic' }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string }) {
+function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', savedCount = 0 }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string; savedCount?: number }) {
+  const BookmarkIcon = ({ filled, color = '#64748b' }: { filled?: boolean; color?: string }) => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? color : 'none'} stroke={color} strokeWidth="2" strokeLinecap="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+  );
+
   return (
     <div style={{
       width: 240, flexShrink: 0, height: '100%', overflowY: 'auto', background: 'rgba(255,255,255,0.65)',
@@ -350,7 +357,28 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic' }
         );
       })}
 
-      <div style={{ height: 1, background: '#f1f5f9', margin: '14px 0' }} />
+      {/* Divider + My Saved */}
+      <div style={{ height: 1, background: '#f1f5f9', margin: '10px 12px' }} />
+      <div onClick={() => onNavigate('saved')}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer',
+          marginBottom: 2, transition: 'all 0.15s',
+          background: activePage === 'saved' ? 'linear-gradient(135deg,rgba(234,88,12,0.12),rgba(245,158,11,0.08))' : 'transparent',
+          border: activePage === 'saved' ? '1px solid rgba(234,88,12,0.18)' : '1px solid transparent',
+        }}
+        onMouseEnter={e => { if (activePage !== 'saved') (e.currentTarget.style.background = 'rgba(0,0,0,0.04)'); }}
+        onMouseLeave={e => { if (activePage !== 'saved') (e.currentTarget.style.background = 'transparent'); }}
+      >
+        <div style={{ width: 28, height: 28, borderRadius: 7, background: activePage === 'saved' ? 'rgba(234,88,12,0.12)' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <BookmarkIcon filled={savedCount > 0} color={activePage === 'saved' ? '#ea580c' : '#64748b'} />
+        </div>
+        <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: activePage === 'saved' ? 700 : 500, color: activePage === 'saved' ? '#ea580c' : '#475569', flex: 1 }}>My Saved</span>
+        {savedCount > 0 && (
+          <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', fontFamily: 'Sora', fontWeight: 800, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{savedCount}</span>
+        )}
+      </div>
+
+      <div style={{ height: 1, background: '#f1f5f9', margin: '10px 12px' }} />
       <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginBottom: 6 }}>ACCOUNT</div>
       {[{ icon: GearIcon, label: 'Settings' }, { icon: HelpIcon, label: 'Help & Docs' }].map(a => (
         <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer', marginBottom: 2 }}
@@ -364,9 +392,9 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic' }
       {/* Progress card */}
       <div style={{ marginTop: 'auto', background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.06))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 12, padding: 12 }}>
         <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#7c3aed', marginBottom: 4 }}>🚀 72-Hour Launch</div>
-        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>4 of 8 tools unlocked</div>
+        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>4 of 9 tools unlocked</div>
         <div style={{ width: '100%', height: 5, background: '#f1f5f9', borderRadius: 50 }}>
-          <div style={{ width: '50%', height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
+          <div style={{ width: '44%', height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
         </div>
         <div style={{ fontSize: 9.5, color: '#7c3aed', fontWeight: 600, marginTop: 6 }}>More tools dropping soon →</div>
       </div>
@@ -1413,12 +1441,30 @@ const Index = () => {
   const [showMotivation, setShowMotivation] = useState(false);
   const [offerPrefill, setOfferPrefill] = useState<any>(null);
   const [motivationMsg, setMotivationMsg] = useState<typeof MOTIVATION_MESSAGES[0] | null>(null);
+  const [savedCount, setSavedCount] = useState(0);
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
 
   const tier = profile?.access_tier || 'basic';
   const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
   const journeyDay = getJourneyDay(profile?.created_at);
+
+  // Fetch saved items count
+  useEffect(() => {
+    if (!user) return;
+    const fetchCount = async () => {
+      const { count } = await supabase.from('saved_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+      setSavedCount(count || 0);
+    };
+    fetchCount();
+  }, [user, activePage]);
+
+  // Clear prefill when navigating away from offer
+  useEffect(() => {
+    if (activePage !== 'offer') {
+      setOfferPrefill(null);
+    }
+  }, [activePage]);
 
   // Motivation popup — only on fresh login
   useEffect(() => {
@@ -1474,7 +1520,7 @@ const Index = () => {
       }}>
         <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} />
+          <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} savedCount={savedCount} />
           <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
             {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
@@ -1484,6 +1530,7 @@ const Index = () => {
             }} />}
             {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} prefill={offerPrefill} onPrefillConsumed={() => setOfferPrefill(null)} />}
             {activePage === 'funnel' && <FunnelBuilder onBack={() => navigateTo('dashboard')} />}
+            {activePage === 'saved' && user && <MySavedPage userId={user.id} onNavigate={navigateTo} onSavedCountChange={setSavedCount} />}
             {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
           </main>
         </div>

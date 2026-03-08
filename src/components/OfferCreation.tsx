@@ -222,33 +222,42 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
 
   useEffect(() => {
     if (prefill?.sourceProduct) {
-      // Map price range tier to actual price range string
-      const priceRanges = prefill.sourceCountry === 'United States' || prefill.sourceCountry === 'United Kingdom' || prefill.sourceCountry === 'Canada' || prefill.sourceCountry === 'Australia' ? PRICE_RANGES_USD : PRICE_RANGES_INR;
-      const tierMap: Record<string, number> = { 'impulse': 0, 'low-ticket': 1, 'mid-ticket': 2, 'high-ticket': 3 };
-      const tierIdx = tierMap[prefill.priceRangeTier] ?? 1;
-      const currency = priceRanges === PRICE_RANGES_USD ? 'usd' : 'inr';
-
       setOfferBrief(prev => ({
         ...prev,
         productName: prefill.productName || '',
         audience: prefill.audience || '',
         beforeState: prefill.beforeState || '',
         afterState: prefill.afterState || '',
-        priceRange: priceRanges[tierIdx]?.range || '',
+        priceRange: '',
         platforms: [],
-        currency,
       }));
 
-      setPrefilledFields(new Set(['productName', 'audience', 'beforeState', 'afterState', 'priceRange']));
-      setAutoSelectedPrice(true);
+      setPrefilledFields(new Set(['productName', 'audience', 'beforeState', 'afterState']));
+      setAutoSelectedPrice(false);
       setShowPrefillBanner(true);
 
-      // Scroll to platform selector after a brief delay
+      // Scroll to price range section after a brief delay
       setTimeout(() => {
         platformRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 600);
     }
   }, [prefill]);
+
+  // Fresh start when no prefill
+  useEffect(() => {
+    if (!prefill) {
+      setOfferBrief({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
+      setOfferStep('brief');
+      setOfferStructures([]);
+      setSelectedStructure(null);
+      setOfferData(null);
+      setOfferScore(0);
+      setError('');
+      setPrefilledFields(new Set());
+      setAutoSelectedPrice(false);
+      setShowPrefillBanner(false);
+    }
+  }, []);
 
   const priceRanges = offerBrief.currency === 'inr' ? PRICE_RANGES_INR : PRICE_RANGES_USD;
 
@@ -400,14 +409,14 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
                   <span style={s({ background: 'rgba(234,88,12,0.1)', color: '#92400e', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '2px 8px', fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700 })}>{prefill.sourceNiche} · {prefill.sourceCountry}</span>
                 </div>
                 <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 14, color: '#0f172a', lineHeight: 1.4, marginBottom: 8 })}>
-                  4 fields pre-filled from "{prefill.sourceProduct}"
+                  3 fields pre-filled from "{prefill.sourceProduct}"
                 </div>
                 <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 })}>
-                  {['Product Name', 'Target Audience', 'Transformation', 'Price Range'].map(f => (
+                  {['Product Name', 'Target Audience', 'Transformation'].map(f => (
                     <span key={f} style={s({ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 50, padding: '3px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, display: 'inline-flex', gap: 4, alignItems: 'center' })}>✓ {f}</span>
                   ))}
                 </div>
-                <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6 })}>Only 2 things left: confirm your price range and choose where you'll sell.</div>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6 })}>2 things left to fill: your price range and where you'll sell.</div>
               </div>
               <span onClick={() => setShowPrefillBanner(false)} style={s({ fontFamily: 'DM Sans', fontSize: 16, color: '#94a3b8', cursor: 'pointer', alignSelf: 'flex-start' })}>✕</span>
             </div>
@@ -460,11 +469,10 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
             {/* Field 4 — Price Range */}
             <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, marginTop: 20 })}>
               <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b' })}>04 · WHAT PRICE RANGE ARE YOU THINKING?</label>
-              {prefilledFields.has('priceRange') && <span style={s({ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Product Navigator</span>}
             </div>
             <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 8 })}>
               {priceRanges.map(pr => (
-                <div key={pr.range} onClick={() => { setOfferBrief(p => ({ ...p, priceRange: pr.range })); setAutoSelectedPrice(false); clearPrefillField('priceRange'); }}
+                <div key={pr.range} onClick={() => { setOfferBrief(p => ({ ...p, priceRange: pr.range })); }}
                   style={s({
                     borderRadius: 10, padding: 10, cursor: 'pointer', textAlign: 'center',
                     border: offerBrief.priceRange === pr.range ? '2px solid #f59e0b' : '2px solid #e2e8f0',
@@ -473,9 +481,6 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
                   })}>
                   <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' })}>{pr.range}</div>
                   <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', marginTop: 2 })}>{pr.type}</div>
-                  {autoSelectedPrice && offerBrief.priceRange === pr.range && (
-                    <div style={s({ fontFamily: 'DM Sans', fontSize: 9, color: '#ea580c', marginTop: 3 })}>auto-selected</div>
-                  )}
                 </div>
               ))}
             </div>

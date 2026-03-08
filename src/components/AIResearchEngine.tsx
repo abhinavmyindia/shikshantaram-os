@@ -1694,14 +1694,6 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
             <button onClick={() => setAiStep('results')} style={s({ background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 50, padding: '10px 22px', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' })}>← Explore Other Ideas</button>
             <button onClick={() => {
               if (!onBuildOffer || !selectedProduct) return;
-              const priceStr = selectedProduct.priceRange || '';
-              const firstNum = parseInt(priceStr.replace(/[^0-9]/g, '').slice(0, 6)) || 0;
-              let priceRangeTier = 'low-ticket';
-              if (firstNum <= 499) priceRangeTier = 'impulse';
-              else if (firstNum <= 1999) priceRangeTier = 'low-ticket';
-              else if (firstNum <= 9999) priceRangeTier = 'mid-ticket';
-              else priceRangeTier = 'high-ticket';
-
               onBuildOffer({
                 productName: `${selectedProduct.productName} — ${selectedProduct.tagline}`,
                 audience: r.marketOverview?.primaryAudience || selectedProduct.targetAudience || '',
@@ -1712,8 +1704,6 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
                   ? r.transformation.afterParagraph.slice(0, 120)
                   : `Someone who has solved this with ${selectedProduct.productName}`,
                 transformationBridge: r.transformation?.transformationBridge || '',
-                rawPriceRange: selectedProduct.priceRange,
-                priceRangeTier,
                 sourceProduct: selectedProduct.productName,
                 sourceNiche: inputData.niche || rawIdeaData.ideaText?.slice(0, 40) || '',
                 sourceCountry: inputData.country || rawIdeaData.country || '',
