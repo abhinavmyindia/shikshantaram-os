@@ -492,6 +492,7 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
       if (data?.error) throw new Error(data.error);
       const taggedIdeas = data.result.map((idea: any) => ({ ...idea, sourceMode: 'raw', originalIdea: rawIdeaData.ideaText }));
       setProductIdeas(taggedIdeas);
+      setIdeaBatches([{ batchId: 1, count: taggedIdeas.length, label: 'Original Research', ideas: taggedIdeas }]);
       // Set inputData for deep research compatibility
       setInputData(p => ({
         ...p,
