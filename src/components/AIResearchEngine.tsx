@@ -695,12 +695,12 @@ export default function AIResearchEngine() {
           )}
         </ReportSection>
 
-        {/* Sticky Footer */}
-        <div style={s({ position: 'sticky', bottom: 0, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', borderTop: '1px solid #f1f5f9', padding: '14px 20px', zIndex: 100, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '0 0 20px 20px', marginTop: -16 })}>
-          <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 14, color: '#0f172a' })}>Ready to build {selectedProduct.productName}?</span>
-          <div style={s({ display: 'flex', gap: 8 })}>
-            <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: '1px solid #e2e8f0', borderRadius: 50, padding: '8px 18px', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#64748b', cursor: 'pointer' })}>← Explore Other Ideas</button>
-            <button onClick={() => { /* toast */ }} style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 50, padding: '8px 20px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, cursor: 'pointer' })}>🚀 Start Building This →</button>
+        {/* CTA Footer — separated from report */}
+        <div style={s({ marginTop: 32, background: 'linear-gradient(135deg, #f0fdf4 0%, #fffbeb 50%, #fef2f2 100%)', border: '2px solid #e2e8f0', borderRadius: 20, padding: '24px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' })}>
+          <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a' })}>Ready to build {selectedProduct.productName}?</span>
+          <div style={s({ display: 'flex', gap: 10 })}>
+            <button onClick={() => setAiStep('results')} style={s({ background: 'white', border: '1.5px solid #e2e8f0', borderRadius: 50, padding: '10px 22px', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' })}>← Explore Other Ideas</button>
+            <button onClick={() => { /* toast */ }} style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 50, padding: '10px 24px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 16px rgba(234,88,12,0.35)', transition: 'all 0.2s' })}>🚀 Start Building This →</button>
           </div>
         </div>
       </div>
