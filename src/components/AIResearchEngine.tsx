@@ -1182,11 +1182,7 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
                 : ideaBatches;
               let globalIdx = 0;
               return batchesToRender.map((batch, bIdx) => {
-                const batchIdeas = batch.ideas.filter(idea => {
-                  if (filter === 'high-impulse') return idea.impulseScore === 'High';
-                  if (filter === 'low-comp') return idea.competitionLevel === 'Low';
-                  return true;
-                });
+                const batchIdeas = batch.ideas;
                 // Sort within batch
                 const sorted = [...batchIdeas].sort((a, b) => {
                   if (sortBy === 'demand') return b.demandScore - a.demandScore;
