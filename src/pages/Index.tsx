@@ -176,10 +176,10 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 );
 
 /* ───────── Types ───────── */
-type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'settings' | 'help' | 'profile' | 'saved';
+type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'copy_suite' | 'settings' | 'help' | 'profile' | 'saved';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
-const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel'];
+const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite'];
 
 const TOOL_ACCESS: Record<string, string[]> = {
   dashboard: ['basic','premium','beta'],
@@ -187,6 +187,7 @@ const TOOL_ACCESS: Record<string, string[]> = {
   product: ['basic','premium','beta'],
   offer: ['basic','premium','beta'],
   funnel: ['basic','premium','beta'],
+  copy_suite: ['basic','premium','beta'],
   creator: ['premium','beta'],
   copy: ['premium','beta'],
   ads: ['premium','beta'],
@@ -208,8 +209,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'product', label: 'Product Navigator', icon: (c) => <CompassIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'offer', label: 'Offer Creation', icon: (c) => <GiftIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'funnel', label: 'Funnel Builder', icon: (c) => <GitMergeIcon color={c} />, badge: 'LIVE', locked: false },
+  { id: 'copy_suite', label: 'Copy Suite', icon: (c) => <TypeIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'creator', label: 'Product Creator', icon: (c) => <PackageIcon color={c} />, badge: 'SOON', locked: true },
-  { id: 'copy', label: 'Copy Suite', icon: (c) => <TypeIcon color={c} />, badge: 'SOON', locked: true },
   { id: 'ads', label: 'AI Ad Suite', icon: (c) => <MegaphoneIcon color={c} />, badge: 'SOON', locked: true },
   { id: 'landing', label: 'Landing Page Designer', icon: (c) => <MonitorIcon color={c} />, badge: 'SOON', locked: true },
 ];
@@ -220,7 +221,7 @@ const TOOL_CARDS = [
   { id: 'offer', num: '03', name: 'Offer Creation', desc: 'Build irresistible offers with pricing psychology, bonuses & positioning frameworks.', tags: ['Offers', 'Pricing'], gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)', accent: '#f59e0b', accentLight: 'rgba(245,158,11,0.08)', locked: false },
   { id: 'funnel', num: '04', name: 'Funnel Builder', desc: 'Design your complete sales funnel — from lead magnet to high-ticket back-end.', tags: ['Funnels', 'Automation'], gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)', accent: '#06b6d4', accentLight: 'rgba(6,182,212,0.08)', locked: false },
   { id: 'creator', num: '05', name: 'Product Creator', desc: 'AI-powered suite to create ebooks, templates, prompt packs & micro-courses inside the app.', tags: ['AI Creator', 'Auto-build'], gradient: 'linear-gradient(135deg, #10b981, #06b6d4)', accent: '#10b981', accentLight: 'rgba(16,185,129,0.08)', locked: true },
-  { id: 'copy', num: '06', name: 'Copy Suite', desc: 'Write sales pages, email sequences, ad copy & hooks in minutes with AI-powered copywriting.', tags: ['Copywriting', 'AI Writing'], gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)', accent: '#8b5cf6', accentLight: 'rgba(139,92,246,0.08)', locked: true },
+  { id: 'copy_suite', num: '06', name: 'Copy Suite', desc: 'Write sales pages, email sequences, ad copy & hooks in minutes with AI-powered copywriting.', tags: ['Copywriting', 'AI Writing'], gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)', accent: '#8b5cf6', accentLight: 'rgba(139,92,246,0.08)', locked: false },
   { id: 'ads', num: '07', name: 'AI Ad Suite', desc: 'Generate Meta, Google & YouTube ads with AI — creatives, copy, targeting & budgets.', tags: ['Paid Ads', 'Ad Creatives'], gradient: 'linear-gradient(135deg, #f97316, #ec4899)', accent: '#f97316', accentLight: 'rgba(249,115,22,0.08)', locked: true },
   { id: 'landing', num: '08', name: 'Landing Page Designer', desc: 'Drag-and-drop page builder with conversion-optimized templates for every product type.', tags: ['Pages', 'Conversion'], gradient: 'linear-gradient(135deg, #6366f1, #7c3aed)', accent: '#6366f1', accentLight: 'rgba(99,102,241,0.08)', locked: true },
 ];
@@ -1680,6 +1681,7 @@ const Index = () => {
             }} />}
             {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} prefill={offerPrefill} onPrefillConsumed={() => setOfferPrefill(null)} onBuildFunnel={(data: any) => { setFunnelPrefill(data); navigateTo('funnel'); }} />}
             {activePage === 'funnel' && <FunnelBuilder onBack={() => navigateTo('dashboard')} funnelPrefill={funnelPrefill} />}
+            {activePage === 'copy_suite' && <CopySuite onBack={() => navigateTo('dashboard')} />}
             {activePage === 'saved' && user && <MySavedPage userId={user.id} onNavigate={navigateTo} onSavedCountChange={setSavedCount} onBuildFunnel={(data: any) => { setFunnelPrefill(data); navigateTo('funnel'); }} />}
             {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
           </main>
