@@ -680,7 +680,7 @@ export default function AIResearchEngine() {
             </div>
             <div style={s({ background: '#f8fafc', borderRadius: 12, padding: 14 })}>
               <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 })}>First Sale In</div>
-              <div style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 28, color: '#059669' })}>{r.launchStrategy?.firstSaleIn}</div>
+              <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 14, color: '#059669', lineHeight: 1.6 })}>{r.launchStrategy?.firstSaleIn}</div>
             </div>
           </div>
           {r.launchStrategy?.launchContent && (
