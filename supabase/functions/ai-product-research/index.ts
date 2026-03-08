@@ -5,27 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) {
-      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { action, niche, country, productType, product, inputData } = await req.json();
-
-    let prompt = "";
-    let maxTokens = 8000;
-
-    if (action === "generate-ideas") {
-      maxTokens = 16000;
-      prompt = `You are an expert digital product researcher and market analyst.
+function buildGenerateIdeasPrompt(niche: string, country: string, productType: string): string {
+  return `You are an expert digital product researcher and market analyst.
 
 A creator wants to build a digital product with these parameters:
 - NICHE: ${niche}
@@ -56,13 +37,11 @@ CRITICAL REQUIREMENTS:
 - Vary the demand scores and impulse scores — not everything should be 9/10
 - Make the target audiences extremely specific
 
-Use your web search capability to find current trends, trending topics, and market opportunities in ${country} for ${niche} before generating ideas.
+Return ONLY a valid JSON array of exactly 30 objects. No preamble, no markdown, no explanation.`;
+}
 
-Return ONLY a valid JSON array of exactly 30 objects. No preamble, no markdown, no explanation.
-Format: [{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":8,"competitionLevel":"Low","impulseScore":"High","primaryPain":"...","searchKeyword":"..."},...]`;
-    } else if (action === "deep-research") {
-      maxTokens = 6000;
-      prompt = `You are a world-class product researcher, market analyst, and consumer psychologist.
+function buildDeepResearchPrompt(product: any, inputData: any): string {
+  return `You are a world-class product researcher, market analyst, and consumer psychologist.
 
 Generate a COMPREHENSIVE research report for this digital product:
 
@@ -74,12 +53,12 @@ TAGLINE: ${product.tagline}
 PRIMARY PAIN: ${product.primaryPain}
 SEARCH KEYWORD: ${product.searchKeyword}
 
-Use your web search capability to:
-1. Search for "${product.searchKeyword} ${inputData.country}" to find real demand data
-2. Search for existing products/solutions in this space
-3. Find real competitor examples and pricing
-4. Look for Reddit/Quora/social media discussions about this pain point
-5. Find any available market size data
+Provide deep analysis covering:
+1. Real demand data for "${product.searchKeyword} ${inputData.country}"
+2. Existing products/solutions in this space
+3. Real competitor examples and pricing
+4. Social media discussions about this pain point
+5. Available market size data
 
 Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra text):
 
@@ -156,110 +135,123 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
     "firstSaleIn": "Realistic timeframe to first sale"
   }
 }`;
+}
+
+function parseJsonResponse(text: string): any {
+  let clean = text.replace(/```json|```/g, '').trim();
+
+  const arrayStart = clean.indexOf('[');
+  const objStart = clean.indexOf('{');
+  let jsonStart = -1;
+  if (arrayStart >= 0 && objStart >= 0) jsonStart = Math.min(arrayStart, objStart);
+  else if (arrayStart >= 0) jsonStart = arrayStart;
+  else if (objStart >= 0) jsonStart = objStart;
+
+  if (jsonStart > 0) clean = clean.substring(jsonStart);
+
+  const lastBracket = clean.lastIndexOf(']');
+  const lastBrace = clean.lastIndexOf('}');
+  const jsonEnd = Math.max(lastBracket, lastBrace);
+  if (jsonEnd >= 0 && jsonEnd < clean.length - 1) clean = clean.substring(0, jsonEnd + 1);
+
+  return JSON.parse(clean);
+}
+
+async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      const delay = Math.pow(2, attempt) * 2000;
+      console.log(`Retry attempt ${attempt + 1}, waiting ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: maxTokens,
+      }),
+    });
+
+    if (response.status === 429) {
+      await response.text();
+      console.log("Rate limited by Lovable AI Gateway");
+      continue;
+    }
+
+    if (response.status === 402) {
+      await response.text();
+      throw new Error("AI credits exhausted. Please add credits in your Lovable workspace settings.");
+    }
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("Lovable AI error:", response.status, errText);
+      throw new Error(`AI error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  }
+
+  throw new Error("AI is busy right now. Please wait a moment and try again.");
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { action, niche, country, productType, product, inputData } = await req.json();
+
+    let prompt: string;
+    let model: string;
+    let maxTokens: number;
+
+    if (action === "generate-ideas") {
+      prompt = buildGenerateIdeasPrompt(niche, country, productType);
+      model = "google/gemini-3-flash-preview"; // Fastest model for quick generation
+      maxTokens = 16000;
+    } else if (action === "deep-research") {
+      prompt = buildDeepResearchPrompt(product, inputData);
+      model = "google/gemini-2.5-flash"; // Balanced speed + quality for deep research
+      maxTokens = 8000;
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log(`AI Product Research: action=${action}, niche=${niche || inputData?.niche}`);
+    console.log(`AI Product Research: action=${action}, model=${model}, niche=${niche || inputData?.niche}`);
 
-    // Retry with exponential backoff for rate limits
-    let response: Response | null = null;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      if (attempt > 0) {
-        const delayMs = Math.pow(2, attempt) * 3000; // 6s, 12s, 24s, 48s
-        console.log(`Rate limited, waiting ${delayMs}ms before retry (attempt ${attempt + 1}/5)`);
-        await new Promise(r => setTimeout(r, delayMs));
-      }
+    const rawText = await callLovableAI(prompt, model, maxTokens);
 
-      response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: maxTokens,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-
-      if (response.status !== 429) break;
-      
-      // Consume the response body to prevent resource leak
-      await response.text();
-      
-      const retryAfter = response.headers.get("Retry-After");
-      if (retryAfter && attempt < 4) {
-        const waitMs = Math.min(parseInt(retryAfter) * 1000, 60000);
-        console.log(`Retry-After header: waiting ${waitMs}ms`);
-        await new Promise(r => setTimeout(r, waitMs));
-      }
-    }
-
-    if (!response || !response.ok) {
-      const errorText = response ? await response.text() : "No response";
-      const status = response?.status || 500;
-      console.error("Anthropic API error:", status, errorText);
-      const userMsg = status === 429 
-        ? "AI is busy right now. Please wait a minute and try again." 
-        : `AI API error: ${status}`;
-      return new Response(JSON.stringify({ error: userMsg }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const data = await response.json();
-    console.log("Anthropic response stop_reason:", data.stop_reason);
-
-    // Extract text content from response
-    const textContent = data.content
-      ?.filter((block: any) => block.type === 'text')
-      .map((block: any) => block.text)
-      .join('') || '';
-
-    // Parse JSON — strip any markdown fences and extract JSON portion
-    let clean = textContent.replace(/```json|```/g, '').trim();
-    
-    // Find the first [ or { to skip any preamble text
-    const arrayStart = clean.indexOf('[');
-    const objStart = clean.indexOf('{');
-    let jsonStart = -1;
-    if (arrayStart >= 0 && objStart >= 0) jsonStart = Math.min(arrayStart, objStart);
-    else if (arrayStart >= 0) jsonStart = arrayStart;
-    else if (objStart >= 0) jsonStart = objStart;
-    
-    if (jsonStart > 0) {
-      clean = clean.substring(jsonStart);
-    }
-    
-    // Also trim any trailing text after the last ] or }
-    const lastBracket = clean.lastIndexOf(']');
-    const lastBrace = clean.lastIndexOf('}');
-    const jsonEnd = Math.max(lastBracket, lastBrace);
-    if (jsonEnd >= 0 && jsonEnd < clean.length - 1) {
-      clean = clean.substring(0, jsonEnd + 1);
-    }
-    
     try {
-      const parsed = JSON.parse(clean);
+      const parsed = parseJsonResponse(rawText);
       return new Response(JSON.stringify({ result: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (parseErr) {
-      console.error("JSON parse error:", parseErr, "Raw text:", clean.substring(0, 500));
-      return new Response(JSON.stringify({ error: "Failed to parse AI response", raw: clean.substring(0, 200) }), {
+      console.error("JSON parse error:", parseErr, "Raw:", rawText.substring(0, 500));
+      return new Response(JSON.stringify({ error: "Failed to parse AI response", raw: rawText.substring(0, 200) }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
   } catch (err) {
     console.error("Edge function error:", err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const message = err instanceof Error ? err.message : "Unknown error";
+    const status = message.includes("credits") ? 402 : 500;
+    return new Response(JSON.stringify({ error: message }), {
+      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
