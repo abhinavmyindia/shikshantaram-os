@@ -272,13 +272,13 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
       <div style={s({ fontSize: 11.5, color: '#94a3b8', marginBottom: 4 })}>
         <span onClick={onBack} style={s({ cursor: 'pointer', fontWeight: 500 })}>Dashboard</span>
         <span> / </span>
-        <span style={s({ fontWeight: 700, color: '#0f172a' })}>Copy Suite</span>
+        <span style={s({ fontWeight: 700, color: '#0f172a' })}>Copywriting Suite</span>
       </div>
 
       {/* Header */}
       <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 })}>
         <div>
-          <h1 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 28, color: '#0f172a', letterSpacing: '-0.02em' })}>✍️ Copy Suite</h1>
+          <h1 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 28, color: '#0f172a', letterSpacing: '-0.02em' })}>✍️ Copywriting Suite</h1>
           <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginTop: 4 })}>
             Pick what you need written. Fill the brief. Get copy that converts.
           </p>

@@ -10,7 +10,7 @@ const TOOL_COLORS: Record<string, { gradient: string; light: string; accent: str
   offer_creation: { gradient: 'linear-gradient(90deg,#f59e0b,#ef4444)', light: 'rgba(245,158,11,0.08)', accent: '#f59e0b', label: 'Offer Creation', emoji: '🎁' },
   funnel_builder: { gradient: 'linear-gradient(90deg,#06b6d4,#3b82f6)', light: 'rgba(6,182,212,0.08)', accent: '#06b6d4', label: 'Funnel Builder', emoji: '🔀' },
   niche_clarity: { gradient: 'linear-gradient(90deg,#7c3aed,#a855f7)', light: 'rgba(124,58,237,0.08)', accent: '#7c3aed', label: 'Niche Clarity', emoji: '🎯' },
-  copy_suite: { gradient: 'linear-gradient(90deg,#6366f1,#8b5cf6)', light: 'rgba(99,102,241,0.08)', accent: '#6366f1', label: 'Copy Suite', emoji: '✍️' },
+  copy_suite: { gradient: 'linear-gradient(90deg,#6366f1,#8b5cf6)', light: 'rgba(99,102,241,0.08)', accent: '#6366f1', label: 'Copywriting Suite', emoji: '✍️' },
 };
 
 const TYPE_LABELS: Record<string, string> = {
