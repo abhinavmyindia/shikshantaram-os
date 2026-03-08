@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
+import AIResearchEngine from '@/components/AIResearchEngine';
 import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
@@ -1104,6 +1105,7 @@ function NichePage({ onBack, onAction }: { onBack: () => void; onAction?: () => 
 
 /* ───────── Product Page ───────── */
 function ProductPage({ onBack, onAction }: { onBack: () => void; onAction?: () => void }) {
+  const [researchMode, setResearchMode] = useState<'ai' | 'browse'>('ai');
   const [search, setSearch] = useState('');
   const [speed, setSpeed] = useState('All');
   const [price, setPrice] = useState('All');
@@ -1124,37 +1126,64 @@ function ProductPage({ onBack, onAction }: { onBack: () => void; onAction?: () =
         <span style={{ background: 'rgba(234,88,12,0.08)', border: '1px solid rgba(234,88,12,0.18)', borderRadius: 50, padding: '5px 14px', fontSize: 10, fontWeight: 700, color: '#ea580c', letterSpacing: '0.06em', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const }}>⚡ 500+ Products</span>
       </div>
 
-      <FilterBar search={search} onSearch={setSearch} accentColor="#ea580c"
-        filters={[
-          { label: 'Speed', options: ['All', 'High', 'Medium', 'Low'], value: speed, onChange: setSpeed },
-          { label: 'Price', options: ['All', 'High', 'Medium', 'Low'], value: price, onChange: setPrice },
-        ]}
-      />
+      {/* Mode Switcher */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+        <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', borderRadius: 50, padding: 4, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid rgba(255,255,255,0.9)' }}>
+          {[
+            { key: 'ai' as const, label: '🤖 AI Research' },
+            { key: 'browse' as const, label: '📦 Browse 500+ Ideas' },
+          ].map(tab => (
+            <button key={tab.key} onClick={() => setResearchMode(tab.key)}
+              style={{
+                fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, borderRadius: 50, padding: '8px 22px',
+                border: 'none', cursor: 'pointer', transition: 'all 0.22s',
+                background: researchMode === tab.key ? 'linear-gradient(135deg,#ea580c,#f59e0b)' : 'transparent',
+                color: researchMode === tab.key ? 'white' : '#64748b',
+                boxShadow: researchMode === tab.key ? '0 4px 14px rgba(234,88,12,0.4)' : 'none',
+              }}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      <CategoryAccordion
-        categories={productCategories}
-        getItems={cat => cat.products.filter(p => {
-          if (speed !== 'All') {
-            const r = seedRng(p + 'speed');
-            const s = r > 0.6 ? 'High' : r > 0.3 ? 'Medium' : 'Low';
-            if (s !== speed) return false;
-          }
-          if (price !== 'All') {
-            const r = seedRng(p + 'price');
-            const pr = r > 0.6 ? 'High' : r > 0.3 ? 'Medium' : 'Low';
-            if (pr !== price) return false;
-          }
-          return true;
-        })}
-        searchTerm={search}
-        growthFilter=""
-        compFilter=""
-        renderItem={(item, cat) => (
-          <ProductCardItem key={item} name={item} accent={cat.accent} onClick={() => setModal({ product: item, cat })} />
-        )}
-      />
+      {researchMode === 'ai' ? (
+        <AIResearchEngine />
+      ) : (
+        <>
+          <FilterBar search={search} onSearch={setSearch} accentColor="#ea580c"
+            filters={[
+              { label: 'Speed', options: ['All', 'High', 'Medium', 'Low'], value: speed, onChange: setSpeed },
+              { label: 'Price', options: ['All', 'High', 'Medium', 'Low'], value: price, onChange: setPrice },
+            ]}
+          />
 
-      {modal && <ProductModal product={modal.product} category={modal.cat} onClose={() => setModal(null)} />}
+          <CategoryAccordion
+            categories={productCategories}
+            getItems={cat => cat.products.filter(p => {
+              if (speed !== 'All') {
+                const r = seedRng(p + 'speed');
+                const s = r > 0.6 ? 'High' : r > 0.3 ? 'Medium' : 'Low';
+                if (s !== speed) return false;
+              }
+              if (price !== 'All') {
+                const r = seedRng(p + 'price');
+                const pr = r > 0.6 ? 'High' : r > 0.3 ? 'Medium' : 'Low';
+                if (pr !== price) return false;
+              }
+              return true;
+            })}
+            searchTerm={search}
+            growthFilter=""
+            compFilter=""
+            renderItem={(item, cat) => (
+              <ProductCardItem key={item} name={item} accent={cat.accent} onClick={() => setModal({ product: item, cat })} />
+            )}
+          />
+
+          {modal && <ProductModal product={modal.product} category={modal.cat} onClose={() => setModal(null)} />}
+        </>
+      )}
     </div>
   );
 }
