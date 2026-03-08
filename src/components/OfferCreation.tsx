@@ -268,7 +268,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
   const togglePlatform = (name: string) => {
     setOfferBrief(p => ({
       ...p,
-      platforms: p.platforms.includes(name) ? p.platforms.filter(x => x !== name) : p.platforms.length < 3 ? [...p.platforms, name] : p.platforms,
+      platforms: p.platforms.includes(name) ? p.platforms.filter(x => x !== name) : p.platforms.length < 2 ? [...p.platforms, name] : p.platforms,
     }));
   };
 

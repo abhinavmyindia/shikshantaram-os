@@ -73,6 +73,11 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +86,24 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
     const { error: err } = await signIn(email, password);
     if (err) setError(err);
     setLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail || !resetEmail.includes('@')) {
+      setResetError('Please enter a valid email address.');
+      return;
+    }
+    setResetLoading(true);
+    setResetError('');
+    const { error: err } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+    setResetLoading(false);
+    if (err) {
+      setResetError(err.message);
+    } else {
+      setResetSent(true);
+    }
   };
 
   return (
@@ -104,7 +127,7 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
             style={inputStyle} placeholder="••••••••" onFocus={focusInput} onBlur={blurInput} />
         </div>
         <div style={{ textAlign: 'right', marginBottom: 20 }}>
-          <span style={{ fontSize: 12, color: '#7c3aed', cursor: 'pointer' }}>Forgot password?</span>
+          <span onClick={() => { setShowForgotPassword(true); setResetEmail(email); setResetSent(false); setResetError(''); }} style={{ fontSize: 12, color: '#7c3aed', cursor: 'pointer', fontFamily: 'DM Sans' }}>Forgot password?</span>
         </div>
 
         <button type="submit" disabled={loading} style={{
@@ -123,6 +146,40 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
           </div>
         )}
       </form>
+
+      {/* Forgot Password Panel */}
+      {showForgotPassword && (
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 16, padding: 20, marginTop: 16, animation: 'fadeIn 0.2s ease' }}>
+          {resetSent ? (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>✅</div>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 6 }}>Check your inbox!</div>
+              <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>We sent a reset link to <strong>{resetEmail}</strong></div>
+              <span onClick={() => setShowForgotPassword(false)} style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#7c3aed', cursor: 'pointer', fontWeight: 600, display: 'inline-block', marginTop: 12 }}>← Back to Login</span>
+            </div>
+          ) : (
+            <>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>🔐 Reset Your Password</div>
+              <input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)}
+                placeholder="Enter your email" style={{ ...inputStyle, marginBottom: 12 }} onFocus={focusInput} onBlur={blurInput} />
+              {resetError && <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#ef4444', marginBottom: 8 }}>{resetError}</div>}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={handleForgotPassword} disabled={resetLoading} style={{
+                  flex: 1, padding: '10px 16px', borderRadius: 10, border: 'none', cursor: resetLoading ? 'wait' : 'pointer',
+                  background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
+                  opacity: resetLoading ? 0.7 : 1,
+                }}>
+                  {resetLoading ? 'Sending...' : 'Send Reset Link →'}
+                </button>
+                <button onClick={() => setShowForgotPassword(false)} style={{
+                  background: 'none', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 16px',
+                  fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#64748b', cursor: 'pointer',
+                }}>← Back</button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: '#94a3b8' }}>
         Don't have access? Contact us<br />
@@ -369,7 +426,7 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
         onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
       >
         {submitting && <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
-        {submitting ? 'Submitting...' : 'Submit Registration Request →'}
+        {submitting ? 'Submitting...' : 'Request Access →'}
       </button>
 
       {submitError && (
