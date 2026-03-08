@@ -323,8 +323,13 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
         <StepProgressBar currentStep={0} />
 
         {error && (
-          <div style={s({ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#dc2626' })}>
-            ⚠️ {error}
+          <div style={s({ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#dc2626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+            <span>⚠️ {error}</span>
+            <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <button onClick={() => { setError(null); generateFunnel(); }} style={s({ background: 'white', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 10, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' })}
+                onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')} onMouseLeave={e => (e.currentTarget.style.background = 'white')}>🔄 Try Again</button>
+              <button onClick={() => setError(null)} style={s({ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 700 })}>✕</button>
+            </div>
           </div>
         )}
 
@@ -560,7 +565,16 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
           )}
         </div>
 
-        {error && <div style={s({ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#dc2626' })}>⚠️ {error}</div>}
+        {error && (
+          <div style={s({ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#dc2626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+            <span>⚠️ {error}</span>
+            <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <button onClick={() => { setError(null); generateEmails(); }} style={s({ background: 'white', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 10, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' })}
+                onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')} onMouseLeave={e => (e.currentTarget.style.background = 'white')}>🔄 Try Again</button>
+              <button onClick={() => setError(null)} style={s({ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 700 })}>✕</button>
+            </div>
+          </div>
+        )}
 
         {!emailSequence && !generatingEmails && (
           <div style={s({ textAlign: 'center', padding: '60px 40px', background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.95)' })}>
@@ -694,7 +708,15 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
 
         <StepProgressBar currentStep={1} />
 
-        {error && <div style={s({ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#dc2626' })}>⚠️ {error}</div>}
+        {error && (
+          <div style={s({ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#dc2626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+            <span>⚠️ {error}</span>
+            <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <button onClick={() => setError(null)} style={s({ background: 'white', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 10, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' })}
+                onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')} onMouseLeave={e => (e.currentTarget.style.background = 'white')}>✕ Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {/* Two column layout */}
         <div style={s({ display: 'flex', gap: 24, alignItems: 'flex-start' })}>
