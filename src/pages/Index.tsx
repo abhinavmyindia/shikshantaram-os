@@ -209,9 +209,9 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'product', label: 'Product Navigator', icon: (c) => <CompassIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'offer', label: 'Offer Creation', icon: (c) => <GiftIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'funnel', label: 'Funnel Builder', icon: (c) => <GitMergeIcon color={c} />, badge: 'LIVE', locked: false },
-  { id: 'copy_suite', label: 'Copy Suite', icon: (c) => <TypeIcon color={c} />, badge: 'LIVE', locked: false },
-  { id: 'creator', label: 'Product Creator', icon: (c) => <PackageIcon color={c} />, badge: 'SOON', locked: true },
+  { id: 'copy_suite', label: 'Copywriting Suite', icon: (c) => <TypeIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'ads', label: 'AI Ad Suite', icon: (c) => <MegaphoneIcon color={c} />, badge: 'SOON', locked: true },
+  { id: 'creator', label: 'Product Creator', icon: (c) => <PackageIcon color={c} />, badge: 'SOON', locked: true },
   { id: 'landing', label: 'Landing Page Designer', icon: (c) => <MonitorIcon color={c} />, badge: 'SOON', locked: true },
 ];
 
@@ -220,9 +220,9 @@ const TOOL_CARDS = [
   { id: 'product', num: '02', name: 'Product Navigator', desc: '500+ digital product ideas with launch timelines, price points & full ascension paths.', tags: ['500+ Ideas', 'Launch Fast'], gradient: 'linear-gradient(135deg, #ea580c, #f59e0b)', accent: '#ea580c', accentLight: 'rgba(234,88,12,0.08)', locked: false },
   { id: 'offer', num: '03', name: 'Offer Creation', desc: 'Build irresistible offers with pricing psychology, bonuses & positioning frameworks.', tags: ['Offers', 'Pricing'], gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)', accent: '#f59e0b', accentLight: 'rgba(245,158,11,0.08)', locked: false },
   { id: 'funnel', num: '04', name: 'Funnel Builder', desc: 'Design your complete sales funnel — from lead magnet to high-ticket back-end.', tags: ['Funnels', 'Automation'], gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)', accent: '#06b6d4', accentLight: 'rgba(6,182,212,0.08)', locked: false },
-  { id: 'creator', num: '05', name: 'Product Creator', desc: 'AI-powered suite to create ebooks, templates, prompt packs & micro-courses inside the app.', tags: ['AI Creator', 'Auto-build'], gradient: 'linear-gradient(135deg, #10b981, #06b6d4)', accent: '#10b981', accentLight: 'rgba(16,185,129,0.08)', locked: true },
-  { id: 'copy_suite', num: '06', name: 'Copy Suite', desc: 'Write sales pages, email sequences, ad copy & hooks in minutes with AI-powered copywriting.', tags: ['Copywriting', 'AI Writing'], gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)', accent: '#8b5cf6', accentLight: 'rgba(139,92,246,0.08)', locked: false },
-  { id: 'ads', num: '07', name: 'AI Ad Suite', desc: 'Generate Meta, Google & YouTube ads with AI — creatives, copy, targeting & budgets.', tags: ['Paid Ads', 'Ad Creatives'], gradient: 'linear-gradient(135deg, #f97316, #ec4899)', accent: '#f97316', accentLight: 'rgba(249,115,22,0.08)', locked: true },
+  { id: 'copy_suite', num: '05', name: 'Copywriting Suite', desc: 'Write sales pages, email sequences, ad copy & hooks in minutes with AI-powered copywriting.', tags: ['Copywriting', 'AI Writing'], gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)', accent: '#8b5cf6', accentLight: 'rgba(139,92,246,0.08)', locked: false },
+  { id: 'ads', num: '06', name: 'AI Ad Suite', desc: 'Generate Meta, Google & YouTube ads with AI — creatives, copy, targeting & budgets.', tags: ['Paid Ads', 'Ad Creatives'], gradient: 'linear-gradient(135deg, #f97316, #ec4899)', accent: '#f97316', accentLight: 'rgba(249,115,22,0.08)', locked: true },
+  { id: 'creator', num: '07', name: 'Product Creator', desc: 'AI-powered suite to create ebooks, templates, prompt packs & micro-courses inside the app.', tags: ['AI Creator', 'Auto-build'], gradient: 'linear-gradient(135deg, #10b981, #06b6d4)', accent: '#10b981', accentLight: 'rgba(16,185,129,0.08)', locked: true },
   { id: 'landing', num: '08', name: 'Landing Page Designer', desc: 'Drag-and-drop page builder with conversion-optimized templates for every product type.', tags: ['Pages', 'Conversion'], gradient: 'linear-gradient(135deg, #6366f1, #7c3aed)', accent: '#6366f1', accentLight: 'rgba(99,102,241,0.08)', locked: true },
 ];
 
@@ -907,7 +907,7 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
           {[
             { step: '1', emoji: '🎯', title: 'Find Your Niche', desc: 'Use Niche Clarity to find a proven, low-competition niche with strong buyer demand.', cta: 'Start Niche Clarity →', color: '#7c3aed', bg: '#ede9fe', onClick: () => onNavigate('niche') },
             { step: '2', emoji: '📦', title: 'Pick Your Product', desc: 'Use Product Navigator to choose a fast-launch product idea with a built-in ascension path.', cta: 'Open Product Navigator →', color: '#ea580c', bg: '#fff7ed', onClick: () => onNavigate('product') },
-            { step: '3', emoji: '🚀', title: 'Build & Launch', desc: 'Use Copy Suite to write high-converting sales pages, emails & more. More creator tools dropping soon!', cta: 'Open Copy Suite →', color: '#059669', bg: '#dcfce7', onClick: () => onNavigate('copy_suite') },
+            { step: '3', emoji: '🚀', title: 'Build & Launch', desc: 'Use Copywriting Suite to write high-converting sales pages, emails & more. More creator tools dropping soon!', cta: 'Open Copywriting Suite →', color: '#059669', bg: '#dcfce7', onClick: () => onNavigate('copy_suite') },
           ].map(s => (
             <div key={s.step} style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 16, padding: 20, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>

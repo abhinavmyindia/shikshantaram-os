@@ -221,7 +221,7 @@ Return ONLY a JSON object:
 }`;
 
     const model = 'google/gemini-2.5-flash';
-    console.log(`Copy Suite: type=${copyType}, tone=${tone}, model=${model}`);
+    console.log(`Copywriting Suite: type=${copyType}, tone=${tone}, model=${model}`);
     const aiResult = await callLovableAI(prompt, system, model, 8000);
 
     // Log usage
