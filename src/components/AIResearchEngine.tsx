@@ -1,5 +1,6 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useSaveItem } from '@/hooks/useSaveItem';
 
 /* ───────── Types ───────── */
 interface ProductIdea {
@@ -354,6 +355,7 @@ function CountryDropdown({ value, onChange, accentColor }: { value: string; onCh
 /* ───────── Main Component ───────── */
 export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (data: any) => void } = {}) {
   /* ── Shared state ── */
+  const { saveItem, isSaved, isSaving } = useSaveItem();
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
   const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
   const [productIdeas, setProductIdeas] = useState<ProductIdea[]>([]);
@@ -1213,7 +1215,13 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
                           </div>
                           <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
                             <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#059669' })}>{idea.priceRange}</span>
-                            <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#ea580c', display: 'flex', gap: 4, alignItems: 'center' })}>Deep Research →</span>
+                            <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
+                              <span onClick={(e) => { e.stopPropagation(); saveItem({ tool: 'product_navigator', item_type: 'product_idea', title: idea.productName, summary: idea.tagline, full_data: idea }); }}
+                                style={s({ cursor: 'pointer', opacity: isSaving('product_navigator', 'product_idea', idea.productName) ? 0.5 : 1, transition: 'all 0.2s', display: 'flex', alignItems: 'center' })}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved('product_navigator', 'product_idea', idea.productName) ? '#ea580c' : 'none'} stroke="#ea580c" strokeWidth="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                              </span>
+                              <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#ea580c', display: 'flex', gap: 4, alignItems: 'center' })}>Deep Research →</span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1254,7 +1262,13 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
                   </div>
                   <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
                     <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#059669' })}>{idea.priceRange}</span>
-                    <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#ea580c', display: 'flex', gap: 4, alignItems: 'center' })}>Deep Research →</span>
+                    <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
+                      <span onClick={(e) => { e.stopPropagation(); saveItem({ tool: 'product_navigator', item_type: 'product_idea', title: idea.productName, summary: idea.tagline, full_data: idea }); }}
+                        style={s({ cursor: 'pointer', opacity: isSaving('product_navigator', 'product_idea', idea.productName) ? 0.5 : 1, transition: 'all 0.2s', display: 'flex', alignItems: 'center' })}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved('product_navigator', 'product_idea', idea.productName) ? '#ea580c' : 'none'} stroke="#ea580c" strokeWidth="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                      </span>
+                      <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#ea580c', display: 'flex', gap: 4, alignItems: 'center' })}>Deep Research →</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1419,6 +1433,10 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
             <div style={s({ display: 'flex', gap: 8 })}>
               <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: '1px solid #e2e8f0', borderRadius: 50, padding: '7px 18px', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#64748b', cursor: 'pointer' })}>← Back to 30 Ideas</button>
               <button onClick={() => { setAiStep('input'); setProductIdeas([]); setResearchReport(null); }} style={s({ background: 'none', border: '1px solid #e2e8f0', borderRadius: 50, padding: '7px 18px', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#64748b', cursor: 'pointer' })}>🔄 New Search</button>
+              <button onClick={() => saveItem({ tool: 'product_navigator', item_type: 'deep_research', title: selectedProduct.productName, summary: `Deep research report for ${selectedProduct.productName}`, full_data: { product: selectedProduct, report: researchReport } })}
+                style={s({ background: isSaved('product_navigator', 'deep_research', selectedProduct.productName) ? 'linear-gradient(135deg,#ea580c,#f59e0b)' : 'none', border: isSaved('product_navigator', 'deep_research', selectedProduct.productName) ? 'none' : '1px solid #e2e8f0', borderRadius: 50, padding: '7px 18px', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: isSaved('product_navigator', 'deep_research', selectedProduct.productName) ? 'white' : '#64748b', cursor: 'pointer', opacity: isSaving('product_navigator', 'deep_research', selectedProduct.productName) ? 0.5 : 1, transition: 'all 0.2s' })}>
+                {isSaved('product_navigator', 'deep_research', selectedProduct.productName) ? '🔖 Saved' : '🔖 Save Report'}
+              </button>
             </div>
           </div>
         </div>

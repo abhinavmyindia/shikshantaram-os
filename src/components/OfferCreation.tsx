@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useSaveItem } from '@/hooks/useSaveItem';
 
 /* ───────── Types ───────── */
 interface OfferBrief {
@@ -207,6 +208,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 
 /* ───────── Main Component ───────── */
 export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { onBack: () => void; prefill?: any; onPrefillConsumed?: () => void }) {
+  const { saveItem, isSaved, isSaving } = useSaveItem();
   const [offerStep, setOfferStep] = useState<OfferStep>('brief');
   const [offerBrief, setOfferBrief] = useState<OfferBrief>({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
   const [showPrefillBanner, setShowPrefillBanner] = useState(false);
@@ -816,6 +818,10 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
               <p style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b' })}>Everything ready to copy, paste, and launch</p>
             </div>
             <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <button onClick={() => saveItem({ tool: 'offer_creation', item_type: 'offer_output', title: offerData.offerHeadline, summary: offerData.oneLinerPitch, full_data: { brief: offerBrief, offer: offerData } })}
+                style={s({ background: isSaved('offer_creation', 'offer_output', offerData.offerHeadline) ? 'linear-gradient(135deg,#f59e0b,#ef4444)' : 'none', border: isSaved('offer_creation', 'offer_output', offerData.offerHeadline) ? 'none' : '1px solid #e2e8f0', borderRadius: 50, padding: '6px 14px', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: isSaved('offer_creation', 'offer_output', offerData.offerHeadline) ? 'white' : '#64748b', cursor: 'pointer', opacity: isSaving('offer_creation', 'offer_output', offerData.offerHeadline) ? 0.5 : 1, transition: 'all 0.2s' })}>
+                {isSaved('offer_creation', 'offer_output', offerData.offerHeadline) ? '🔖 Saved' : '🔖 Save Offer'}
+              </button>
               <div style={s({ background: getScoreGradient(offerScore), borderRadius: 50, padding: '6px 14px' })}>
                 <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: 'white' })}>⚡ {offerScore}/100</span>
               </div>
