@@ -96,12 +96,24 @@ function sanitizeJsonString(s: string): string {
   const jsonEnd = Math.max(lastBracket, lastBrace);
   if (jsonEnd >= 0 && jsonEnd < clean.length - 1) clean = clean.substring(0, jsonEnd + 1);
 
+  // Remove ALL control characters (0x00-0x1F except escaped ones, and 0x7F)
+  // This replaces them even inside string values
+  clean = clean.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ');
+  // Replace literal newlines/tabs inside JSON string values with escaped versions
+  // First pass: replace raw newlines and tabs that appear between quotes
+  clean = clean.replace(/\r\n/g, '\\n').replace(/\r/g, '\\n');
+  // Handle unescaped newlines inside string values by tracking quote state
   let result = '';
+  let inStr = false;
+  let esc = false;
   for (let i = 0; i < clean.length; i++) {
-    const code = clean.charCodeAt(i);
-    if (code < 32 && code !== 10 && code !== 13 && code !== 9) result += ' ';
-    else if (code === 127) result += ' ';
-    else result += clean[i];
+    const ch = clean[i];
+    if (esc) { result += ch; esc = false; continue; }
+    if (ch === '\\') { result += ch; esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; result += ch; continue; }
+    if (inStr && ch === '\n') { result += '\\n'; continue; }
+    if (inStr && ch === '\t') { result += '\\t'; continue; }
+    result += ch;
   }
   result = result.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
   return result;
