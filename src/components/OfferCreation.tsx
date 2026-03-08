@@ -439,12 +439,12 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
               <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b' })}>02 · WHO IS THIS FOR?</label>
               {prefilledFields.has('audience') && <span style={s({ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Product Navigator</span>}
             </div>
-            <textarea value={offerBrief.audience} onChange={e => { setOfferBrief(p => ({ ...p, audience: e.target.value.slice(0, 200) })); clearPrefillField('audience'); }}
+            <textarea value={offerBrief.audience} onChange={e => { setOfferBrief(p => ({ ...p, audience: e.target.value.slice(0, 750) })); clearPrefillField('audience'); }}
               placeholder="e.g. 'Mid-level software engineers in India (3-7 years exp) who want to freelance on the side but don't know how to get clients'"
-              style={s({ width: '100%', minHeight: 70, padding: '13px 16px', borderRadius: 12, border: prefilledFields.has('audience') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', resize: 'vertical', boxSizing: 'border-box' })} />
+              style={s({ width: '100%', minHeight: 100, padding: '13px 16px', borderRadius: 12, border: prefilledFields.has('audience') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #e2e8f0', fontSize: 14.5, fontFamily: 'DM Sans', color: '#0f172a', background: '#f8fafc', outline: 'none', resize: 'vertical', boxSizing: 'border-box' })} />
             <div style={s({ display: 'flex', justifyContent: 'space-between', marginTop: 4, marginBottom: 20 })}>
               <p style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>The more specific, the better your offer will perform</p>
-              <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: offerBrief.audience.length > 180 ? '#ef4444' : '#94a3b8' })}>{offerBrief.audience.length}/200</span>
+              <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: offerBrief.audience.length > 700 ? '#ef4444' : '#94a3b8' })}>{offerBrief.audience.length}/750</span>
             </div>
 
             {/* Field 3 — Transformation */}
@@ -455,16 +455,16 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
             <div style={s({ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 })}>
               <div style={s({ flex: 1 })}>
                 <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#ef4444', display: 'block', marginBottom: 4 })}>Before 😔</span>
-                <input value={offerBrief.beforeState} onChange={e => { setOfferBrief(p => ({ ...p, beforeState: e.target.value })); clearPrefillField('beforeState'); }}
+                <textarea value={offerBrief.beforeState} onChange={e => { setOfferBrief(p => ({ ...p, beforeState: e.target.value.slice(0, 400) })); clearPrefillField('beforeState'); }}
                   placeholder="e.g. 'Stuck in a 9-5, no freelance clients'"
-                  style={s({ width: '100%', padding: '11px 14px', borderRadius: 10, border: prefilledFields.has('beforeState') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #fecaca', background: '#fee2e2', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box' })} />
+                  style={s({ width: '100%', minHeight: 80, padding: '11px 14px', borderRadius: 10, border: prefilledFields.has('beforeState') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #fecaca', background: '#fee2e2', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box', resize: 'vertical' })} />
               </div>
               <div style={s({ width: 28, height: 28, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#64748b', flexShrink: 0 })}>→</div>
               <div style={s({ flex: 1 })}>
                 <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#059669', display: 'block', marginBottom: 4 })}>After 🚀</span>
-                <input value={offerBrief.afterState} onChange={e => { setOfferBrief(p => ({ ...p, afterState: e.target.value })); clearPrefillField('afterState'); }}
+                <textarea value={offerBrief.afterState} onChange={e => { setOfferBrief(p => ({ ...p, afterState: e.target.value.slice(0, 400) })); clearPrefillField('afterState'); }}
                   placeholder="e.g. 'Earning ₹50,000/month from freelance projects'"
-                  style={s({ width: '100%', padding: '11px 14px', borderRadius: 10, border: prefilledFields.has('afterState') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #bbf7d0', background: '#f0fdf4', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box' })} />
+                  style={s({ width: '100%', minHeight: 80, padding: '11px 14px', borderRadius: 10, border: prefilledFields.has('afterState') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #bbf7d0', background: '#f0fdf4', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box', resize: 'vertical' })} />
               </div>
             </div>
 
