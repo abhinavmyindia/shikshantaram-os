@@ -962,56 +962,275 @@ export default function AdminPanel() {
   );
 }
 
-// ─── OVERVIEW TAB ────────────────────────────────────────────
+// ─── OVERVIEW TAB (upgraded with live presence + analytics) ──
 function OverviewTab({ stats, users, emailMap }: { stats: any; users: UserRow[]; emailMap: Record<string, string> }) {
-  const statCards = [
-    { label: 'Total Users', value: stats.total, icon: '👥', bg: '#ede9fe' },
-    { label: 'Active Today', value: stats.activeToday, icon: '⚡', bg: '#dcfce7' },
-    { label: 'Basic Tier', value: stats.basic, icon: '🛡️', bg: '#fef9c3' },
-    { label: 'Premium Tier', value: stats.premium, icon: '👑', bg: '#ede9fe' },
-  ];
+  const [presenceData, setPresenceData] = useState<any[]>([]);
+  const [todayStats, setTodayStats] = useState<any>({ activeToday: 0, aiCallsToday: 0, tokensToday: 0, topModule: null });
+  const [hourlyData, setHourlyData] = useState<number[]>(new Array(24).fill(0));
+  const [peakHour, setPeakHour] = useState<{ hour: number; count: number }>({ hour: 0, count: 0 });
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [newUsers, setNewUsers] = useState<UserRow[]>([]);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed' };
+  const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity' };
+  const formatPageName = (p: string) => p?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Dashboard';
+  const formatCallType = (ct: string) => ct?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || '';
+
+  const relativeTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const fetchPresenceData = async () => {
+    const { data } = await supabase.from('user_presence').select('*').order('last_seen', { ascending: false });
+    setPresenceData(data || []);
+    setLastRefresh(new Date());
+  };
+
+  const fetchTodayStats = async () => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { count: activeToday } = await supabase
+      .from('user_presence')
+      .select('*', { count: 'exact', head: true })
+      .gte('last_seen', todayStart.toISOString());
+
+    const { data: tokenData } = await supabase
+      .from('ai_usage_logs')
+      .select('total_tokens, module, created_at, call_type, user_name, user_email, model')
+      .gte('created_at', todayStart.toISOString())
+      .order('created_at', { ascending: false });
+
+    const aiCallsToday = tokenData?.length || 0;
+    const tokensToday = tokenData?.reduce((s: number, l: any) => s + (l.total_tokens || 0), 0) || 0;
+
+    const moduleCounts: Record<string, number> = {};
+    tokenData?.forEach((l: any) => { moduleCounts[l.module] = (moduleCounts[l.module] || 0) + 1; });
+    const topModule = Object.entries(moduleCounts).sort((a, b) => b[1] - a[1])[0] || null;
+
+    // Hourly data
+    const hourly = new Array(24).fill(0);
+    tokenData?.forEach((l: any) => {
+      const h = new Date(l.created_at).getHours();
+      hourly[h]++;
+    });
+    setHourlyData(hourly);
+    const maxHourIdx = hourly.indexOf(Math.max(...hourly));
+    setPeakHour({ hour: maxHourIdx, count: hourly[maxHourIdx] });
+
+    setRecentLogs((tokenData || []).slice(0, 20));
+    setTodayStats({ activeToday: activeToday || 0, aiCallsToday, tokensToday, topModule });
+  };
+
+  useEffect(() => {
+    fetchPresenceData();
+    fetchTodayStats();
+    // New users this week
+    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    setNewUsers(users.filter(u => u.created_at >= weekAgo));
+
+    const interval = setInterval(() => { fetchPresenceData(); fetchTodayStats(); }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const twoMinAgo = new Date(Date.now() - 120000).toISOString();
+  const onlineUsers = presenceData.filter(p => p.last_seen >= twoMinAgo);
+  const onlineCount = onlineUsers.length;
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const activeThisWeek = presenceData.filter(p => p.last_seen >= sevenDaysAgo).length;
+
+  const maxHourly = Math.max(...hourlyData, 1);
+  const currentHour = new Date().getHours();
+  const hourLabels = ['12am', '', '', '', '4am', '', '', '', '8am', '', '', '', '12pm', '', '', '', '4pm', '', '', '', '8pm', '', '', ''];
+
+  const tierColors: Record<string, { bg: string; color: string }> = {
+    basic: { bg: '#dcfce7', color: '#15803d' },
+    premium: { bg: '#ede9fe', color: '#7c3aed' },
+    beta: { bg: '#fce7f3', color: '#be185d' },
+  };
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 32 }}>
-        {statCards.map(s => (
-          <div key={s.label} style={{ ...glassCard, padding: '18px 20px' }}>
+      {/* SECTION 1 — LIVE NOW STRIP */}
+      <div style={{
+        background: 'linear-gradient(135deg,rgba(5,150,105,0.08),rgba(16,185,129,0.05))',
+        border: '1px solid rgba(5,150,105,0.2)', borderRadius: 20, padding: '20px 24px', marginBottom: 20,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', marginRight: 8, animation: 'pulse 2s infinite' }} />
+            <span style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, color: '#059669', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>LIVE NOW</span>
+            <span style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 48, color: '#059669', marginLeft: 12 }}>{onlineCount}</span>
+            <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginLeft: 8, alignSelf: 'flex-end', marginBottom: 8 }}>users currently active</span>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {[
+              { value: todayStats.activeToday, label: 'Active Today' },
+              { value: activeThisWeek, label: 'This Week' },
+              { value: stats.total, label: 'All Time' },
+            ].map(m => (
+              <div key={m.label} style={{ textAlign: 'center' as const }}>
+                <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 22, color: '#0f172a' }}>{m.value}</div>
+                <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' as const, marginTop: 8 }}>
+          <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>🔄 Live · refreshes every 30s · {lastRefresh.toLocaleTimeString()}</span>
+        </div>
+      </div>
+
+      {/* SECTION 2 — WHO'S ONLINE */}
+      {onlineCount > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>👥 Who's Online Right Now</div>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto' as const, paddingBottom: 4 }}>
+            {onlineUsers.slice(0, 8).map(u => (
+              <div key={u.user_id} style={{
+                background: 'white', border: '1px solid #e2e8f0', borderRadius: 50, padding: '6px 14px 6px 8px',
+                display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0,
+              }}>
+                <div style={{ position: 'relative' as const }}>
+                  <div style={{
+                    width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: 'Sora', fontWeight: 700, fontSize: 10, color: 'white',
+                  }}>{(u.user_name || 'U').charAt(0).toUpperCase()}</div>
+                  <div style={{ position: 'absolute' as const, bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#10b981', border: '2px solid white' }} />
+                </div>
+                <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#0f172a' }}>{u.user_name || 'User'}</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>· {formatPageName(u.current_page)}</span>
+              </div>
+            ))}
+            {onlineCount > 8 && (
+              <div style={{ background: '#f1f5f9', borderRadius: 50, padding: '6px 14px', display: 'flex', alignItems: 'center', flexShrink: 0, fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                +{onlineCount - 8} more
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 3 — TODAY'S STATS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+        {[
+          { icon: '👤', bg: 'rgba(5,150,105,0.1)', value: todayStats.activeToday, label: 'Users Active Today', sub: 'unique logins since midnight' },
+          { icon: '🤖', bg: 'rgba(6,182,212,0.1)', value: todayStats.aiCallsToday, label: 'AI Calls Today', sub: 'across all modules' },
+          { icon: '⚡', bg: 'rgba(245,158,11,0.1)', value: `${(todayStats.tokensToday / 1000).toFixed(1)}K`, label: 'Tokens Today', sub: 'input + output combined' },
+          { icon: '🔥', bg: 'rgba(234,88,12,0.1)', value: todayStats.topModule ? (moduleNames[todayStats.topModule[0]] || todayStats.topModule[0]) : '—', label: 'Most Used Today', sub: `${todayStats.topModule?.[1] || 0} calls` },
+        ].map(k => (
+          <div key={k.label} style={{ ...glassCard, padding: '18px 20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</span>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{s.icon}</div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{k.label}</span>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: k.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{k.icon}</div>
             </div>
-            <div style={{ fontFamily: 'Sora', fontSize: 28, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>{s.value}</div>
+            <div style={{ fontFamily: 'Sora', fontSize: typeof k.value === 'string' && k.value.length > 8 ? 16 : 28, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>{k.value}</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{k.sub}</div>
           </div>
         ))}
       </div>
 
-      <h3 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 12 }}>Recent Sign-ups</h3>
-      <div style={{ ...glassCard, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8fafc' }}>
-              {['Name', 'Email', 'Tier', 'Payment', 'Joined'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {users.slice(0, 10).map(u => {
+      {/* SECTION 4 — HOURLY ACTIVITY */}
+      <div style={{ ...glassCard, padding: 20, marginBottom: 20 }}>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>⏰ Today's Activity by Hour</div>
+        <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>When are your users most active?</div>
+        <div style={{ width: '100%', height: 120, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
+          {hourlyData.map((count, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}
+              title={`${i}:00 — ${count} calls`}>
+              <div style={{
+                width: '100%', minHeight: 2, height: `${Math.max(2, (count / maxHourly) * 100)}%`,
+                background: i === currentHour ? 'linear-gradient(180deg,#ea580c,#f59e0b)' : 'linear-gradient(180deg,#06b6d4,#3b82f6)',
+                borderRadius: '3px 3px 0 0', transition: 'height 0.5s ease',
+              }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          {hourLabels.map((l, i) => (
+            <span key={i} style={{ fontFamily: 'DM Sans', fontSize: 9, color: '#94a3b8', flex: 1, textAlign: 'center' as const }}>{l}</span>
+          ))}
+        </div>
+        {peakHour.count > 0 && (
+          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', marginTop: 10 }}>
+            🔥 Peak hour today: {peakHour.hour}:00 ({peakHour.count} calls)
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 5 — RECENT ACTIVITY FEED */}
+      <div style={{ ...glassCard, padding: 20, marginBottom: 20 }}>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>📋 Recent Activity</div>
+        {recentLogs.length === 0 ? (
+          <div style={{ textAlign: 'center' as const, padding: 20, color: '#94a3b8', fontSize: 13 }}>No AI activity today yet.</div>
+        ) : (
+          <>
+            {recentLogs.map((log: any, i: number) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #f8fafc' }}>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', width: 60, flexShrink: 0 }}>{relativeTime(log.created_at)}</span>
+                <div style={{
+                  width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'Sora', fontWeight: 800, fontSize: 8, color: 'white', flexShrink: 0,
+                }}>{(log.user_name || 'U').charAt(0).toUpperCase()}</div>
+                <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12.5, color: '#0f172a', width: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{log.user_name || 'Unknown'}</span>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: 'white', background: moduleColors[log.module] || '#64748b', flexShrink: 0, fontFamily: 'DM Sans' }}>
+                  {(moduleNames[log.module] || log.module || '').replace(/_/g, ' ')}
+                </span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', flex: 1 }}>{formatCallType(log.call_type)}</span>
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: log.model?.includes('flash') ? '#06b6d4' : '#ea580c',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'Sora', fontWeight: 700, fontSize: 9, color: 'white', flexShrink: 0,
+                }}>{log.model?.includes('flash') ? 'F' : 'P'}</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{(log.total_tokens || 0).toLocaleString()}t</span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* SECTION 6 — NEW THIS WEEK */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>🆕 New This Week</div>
+        {newUsers.length === 0 ? (
+          <div style={{ textAlign: 'center' as const, padding: 20, color: '#94a3b8', fontFamily: 'DM Sans', fontSize: 13 }}>No new signups this week yet.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+            {newUsers.slice(0, 9).map(u => {
               const tc = tierColors[u.access_tier] || tierColors.basic;
               return (
-                <tr key={u.id} style={{ borderTop: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{u.full_name || 'Unknown'}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{emailMap[u.id] || '—'}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#059669' }}>₹{u.payment_amount}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{new Date(u.created_at).toLocaleDateString()}</td>
-                </tr>
+                <div key={u.id} style={{ background: 'white', borderRadius: 12, padding: '12px 14px', border: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'Sora', fontWeight: 800, fontSize: 9, color: 'white',
+                    }}>{(u.full_name || 'U').slice(0, 2).toUpperCase()}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12.5, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{u.full_name}</div>
+                      <div style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{emailMap[u.id] || '—'}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const }}>{u.access_tier}</span>
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>Joined {relativeTime(u.created_at)}</span>
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
     </div>
   );
