@@ -437,7 +437,7 @@ function StatCard({ label, value, iconBg, iconColor, changePill, changeColor, ic
 /* ───────── Locked Card Popup Data ───────── */
 const LOCKED_POPUP_DATA: Record<string, { emoji: string; title: string; message: string; percent: number; percentLabel: string; funDetail: string }> = {
   offer: { emoji: '🔥', title: 'Offer Creation is On Fire!', message: 'Our team is literally burning the midnight oil building this. Your irresistible offers are almost ready.', percent: 65, percentLabel: '65% built', funDetail: 'flames' },
-  funnel: { emoji: '🚧', title: 'Funnels Under Construction!', message: 'Your conversion machine is being engineered. Every funnel step is being stress-tested for maximum sales.', percent: 45, percentLabel: '45% built', funDetail: 'building' },
+  funnel: { emoji: '🚧', title: 'Funnels Ready!', message: 'Your funnel builder is live and ready to use!', percent: 100, percentLabel: '100% built', funDetail: 'building' },
   creator: { emoji: '✨', title: 'Something Magical is Brewing!', message: "AI-powered product creation in the making. Soon you'll build ebooks, templates & micro-courses in minutes.", percent: 40, percentLabel: '40% built', funDetail: 'sparkles' },
   copy: { emoji: '✍️', title: 'Words Are Being Crafted...', message: 'Your AI copywriter is learning to write headlines that stop thumbs, emails that sell, and ads that convert.', percent: 55, percentLabel: '55% built', funDetail: 'typing' },
   ads: { emoji: '📡', title: 'Launching Ad Intelligence!', message: "We're training our AI on thousands of winning ads. Your campaign machine will be ready to dominate Meta & Google.", percent: 30, percentLabel: '30% built', funDetail: 'radar' },
@@ -766,7 +766,7 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 32 }}>
-        <StatCard label="Tools Unlocked" value="4 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+3 live now" changeColor="#15803d" delay={0.06} />
+        <StatCard label="Tools Unlocked" value="4 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+4 live now" changeColor="#15803d" delay={0.06} />
         <StatCard label="Product Ideas" value="500+" iconBg="#fff7ed" iconColor="#ea580c" icon="💡" changePill="Explore →" changeColor="#ea580c" delay={0.08} />
         <StatCard label="Niches Mapped" value="594" iconBg="#dcfce7" iconColor="#059669" icon="🎯" changePill="Updated" changeColor="#15803d" delay={0.1} />
         <StatCard label="Time to Launch" value="72 hrs" iconBg="#fce7f3" iconColor="#be185d" icon="🚀" changePill="⚡ Fast track" changeColor="#be185d" delay={0.12} />
@@ -1397,7 +1397,7 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
           {/* Bottom strip */}
           <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 20, paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>🔥 Day {journeyDay} of your journey</span>
-            <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#64748b' }}>3 tools ready to use →</span>
+            <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#64748b' }}>4 tools ready to use →</span>
           </div>
         </div>
       </div>
