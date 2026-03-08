@@ -1172,47 +1172,246 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
           ))}
         </div>
 
-        {/* Grid */}
+        {/* Grid with batch separators */}
         <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 })}>
-          {sortedIdeas.map((idea, i) => (
-            <div key={i} onClick={() => generateReport(idea)}
-              style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 18, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', cursor: 'pointer', overflow: 'hidden', transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)', animation: `fadeUp 0.4s ease ${i * 0.04}s both` })}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(234,88,12,0.12)'; e.currentTarget.style.borderColor = 'rgba(234,88,12,0.2)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.95)'; }}>
-              {/* Top accent bar */}
-              <div style={s({ height: 4, background: isRawResultsMode ? 'linear-gradient(90deg,#7c3aed,#a855f7)' : 'linear-gradient(90deg,#ea580c,#f59e0b)', width: `${(idea.demandScore / 10) * 100}%` })} />
-              <div style={s({ padding: '16px 18px 18px' })}>
-                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 })}>
-                  <div style={s({ width: 22, height: 22, borderRadius: '50%', background: isRawResultsMode ? 'rgba(124,58,237,0.1)' : 'rgba(234,88,12,0.1)', color: isRawResultsMode ? '#7c3aed' : '#ea580c', fontFamily: 'Sora', fontWeight: 800, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>#{i + 1}</div>
-                  <span style={s({ fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 50, background: idea.impulseScore === 'High' ? '#dcfce7' : idea.impulseScore === 'Medium' ? '#fef9c3' : '#f1f5f9', color: idea.impulseScore === 'High' ? '#15803d' : idea.impulseScore === 'Medium' ? '#92400e' : '#64748b' })}>
-                    {idea.impulseScore === 'High' ? '🔥 High Impulse' : idea.impulseScore === 'Medium' ? '⚡ Mid Impulse' : '💤 Low Impulse'}
-                  </span>
-                </div>
-                <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', lineHeight: 1.3, marginBottom: 4 })}>{idea.productName}</div>
-                <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginBottom: 12 })}>{idea.tagline}</div>
-                <div style={s({ background: 'rgba(234,88,12,0.05)', borderLeft: '3px solid #ea580c', borderRadius: '0 8px 8px 0', padding: '8px 12px', marginBottom: 12 })}>
-                  <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>😤 {idea.primaryPain}</span>
-                </div>
-
-                {/* Idea Connection (raw mode only) */}
-                {idea.sourceMode === 'raw' && idea.ideaConnection && (
-                  <div style={s({ background: 'rgba(124,58,237,0.04)', borderLeft: '2px solid #7c3aed', borderRadius: '0 6px 6px 0', padding: '6px 10px', marginBottom: 12 })}>
-                    <span style={s({ fontFamily: 'DM Sans', fontSize: 11.5, color: '#7c3aed', fontWeight: 600, fontStyle: 'italic' })}>💡 {idea.ideaConnection}</span>
+          {filter === 'All' || filter === 'latest-batch' ? (
+            // Render by batch with separators
+            (() => {
+              const batchesToRender = filter === 'latest-batch' && ideaBatches.length > 1
+                ? [ideaBatches[ideaBatches.length - 1]]
+                : ideaBatches;
+              let globalIdx = 0;
+              return batchesToRender.map((batch, bIdx) => {
+                const batchIdeas = batch.ideas.filter(idea => {
+                  if (filter === 'high-impulse') return idea.impulseScore === 'High';
+                  if (filter === 'low-comp') return idea.competitionLevel === 'Low';
+                  return true;
+                });
+                // Sort within batch
+                const sorted = [...batchIdeas].sort((a, b) => {
+                  if (sortBy === 'demand') return b.demandScore - a.demandScore;
+                  if (sortBy === 'competition') { const o: Record<string, number> = { Low: 0, Medium: 1, High: 2 }; return (o[a.competitionLevel] ?? 1) - (o[b.competitionLevel] ?? 1); }
+                  if (sortBy === 'impulse') { const o: Record<string, number> = { High: 0, Medium: 1, Low: 2 }; return (o[a.impulseScore] ?? 1) - (o[b.impulseScore] ?? 1); }
+                  return 0;
+                });
+                const startIdx = globalIdx;
+                globalIdx += sorted.length;
+                return [
+                  // Batch separator (not for batch 1)
+                  batch.batchId > 1 && (
+                    <div key={`sep-${batch.batchId}`} id={`batch-${batch.batchId}`} style={s({ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', marginTop: 8 })}>
+                      <div style={s({ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, #e2e8f0)' })} />
+                      <span style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', borderRadius: 50, padding: '5px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, whiteSpace: 'nowrap' })}>✨ {batch.count} New Ideas Added</span>
+                      <div style={s({ flex: 1, height: 1, background: 'linear-gradient(90deg, #e2e8f0, transparent)' })} />
+                    </div>
+                  ),
+                  // Batch ideas
+                  ...sorted.map((idea, i) => {
+                    const cardIdx = startIdx + i;
+                    const animDelay = batch.batchId > 1 ? i * 0.06 : cardIdx * 0.04;
+                    return (
+                      <div key={`${batch.batchId}-${i}`} onClick={() => generateReport(idea)}
+                        style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 18, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', cursor: 'pointer', overflow: 'hidden', transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)', animation: `fadeUp 0.4s ease ${animDelay}s both` })}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(234,88,12,0.12)'; e.currentTarget.style.borderColor = 'rgba(234,88,12,0.2)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.95)'; }}>
+                        <div style={s({ height: 4, background: isRawResultsMode ? 'linear-gradient(90deg,#7c3aed,#a855f7)' : 'linear-gradient(90deg,#ea580c,#f59e0b)', width: `${(idea.demandScore / 10) * 100}%` })} />
+                        <div style={s({ padding: '16px 18px 18px' })}>
+                          <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 })}>
+                            <div style={s({ width: 22, height: 22, borderRadius: '50%', background: isRawResultsMode ? 'rgba(124,58,237,0.1)' : 'rgba(234,88,12,0.1)', color: isRawResultsMode ? '#7c3aed' : '#ea580c', fontFamily: 'Sora', fontWeight: 800, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>#{cardIdx + 1}</div>
+                            <span style={s({ fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 50, background: idea.impulseScore === 'High' ? '#dcfce7' : idea.impulseScore === 'Medium' ? '#fef9c3' : '#f1f5f9', color: idea.impulseScore === 'High' ? '#15803d' : idea.impulseScore === 'Medium' ? '#92400e' : '#64748b' })}>
+                              {idea.impulseScore === 'High' ? '🔥 High Impulse' : idea.impulseScore === 'Medium' ? '⚡ Mid Impulse' : '💤 Low Impulse'}
+                            </span>
+                          </div>
+                          <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', lineHeight: 1.3, marginBottom: 4 })}>{idea.productName}</div>
+                          <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginBottom: 12 })}>{idea.tagline}</div>
+                          <div style={s({ background: 'rgba(234,88,12,0.05)', borderLeft: '3px solid #ea580c', borderRadius: '0 8px 8px 0', padding: '8px 12px', marginBottom: 12 })}>
+                            <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>😤 {idea.primaryPain}</span>
+                          </div>
+                          {idea.sourceMode === 'raw' && idea.ideaConnection && (
+                            <div style={s({ background: 'rgba(124,58,237,0.04)', borderLeft: '2px solid #7c3aed', borderRadius: '0 6px 6px 0', padding: '6px 10px', marginBottom: 12 })}>
+                              <span style={s({ fontFamily: 'DM Sans', fontSize: 11.5, color: '#7c3aed', fontWeight: 600, fontStyle: 'italic' })}>💡 {idea.ideaConnection}</span>
+                            </div>
+                          )}
+                          <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 })}>
+                            <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: idea.demandScore >= 8 ? '#dcfce7' : idea.demandScore >= 5 ? '#fef9c3' : '#fee2e2', color: idea.demandScore >= 8 ? '#059669' : idea.demandScore >= 5 ? '#92400e' : '#991b1b' })}>🔍 {idea.demandScore}/10</span>
+                            <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: idea.competitionLevel === 'Low' ? '#dcfce7' : idea.competitionLevel === 'Medium' ? '#fef9c3' : '#fee2e2', color: idea.competitionLevel === 'Low' ? '#059669' : idea.competitionLevel === 'Medium' ? '#92400e' : '#991b1b' })}>⚔ {idea.competitionLevel}</span>
+                            <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: '#f0f9ff', color: '#0891b2' })}>🛠 {idea.buildTime}</span>
+                          </div>
+                          <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+                            <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#059669' })}>{idea.priceRange}</span>
+                            <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#ea580c', display: 'flex', gap: 4, alignItems: 'center' })}>Deep Research →</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }),
+                ];
+              });
+            })()
+          ) : (
+            // Non-batch filters: render flat sorted
+            sortedIdeas.map((idea, i) => (
+              <div key={i} onClick={() => generateReport(idea)}
+                style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 18, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', cursor: 'pointer', overflow: 'hidden', transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)', animation: `fadeUp 0.4s ease ${i * 0.04}s both` })}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(234,88,12,0.12)'; e.currentTarget.style.borderColor = 'rgba(234,88,12,0.2)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.95)'; }}>
+                <div style={s({ height: 4, background: isRawResultsMode ? 'linear-gradient(90deg,#7c3aed,#a855f7)' : 'linear-gradient(90deg,#ea580c,#f59e0b)', width: `${(idea.demandScore / 10) * 100}%` })} />
+                <div style={s({ padding: '16px 18px 18px' })}>
+                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 })}>
+                    <div style={s({ width: 22, height: 22, borderRadius: '50%', background: isRawResultsMode ? 'rgba(124,58,237,0.1)' : 'rgba(234,88,12,0.1)', color: isRawResultsMode ? '#7c3aed' : '#ea580c', fontFamily: 'Sora', fontWeight: 800, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>#{i + 1}</div>
+                    <span style={s({ fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 50, background: idea.impulseScore === 'High' ? '#dcfce7' : idea.impulseScore === 'Medium' ? '#fef9c3' : '#f1f5f9', color: idea.impulseScore === 'High' ? '#15803d' : idea.impulseScore === 'Medium' ? '#92400e' : '#64748b' })}>
+                      {idea.impulseScore === 'High' ? '🔥 High Impulse' : idea.impulseScore === 'Medium' ? '⚡ Mid Impulse' : '💤 Low Impulse'}
+                    </span>
                   </div>
-                )}
-
-                <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 })}>
-                  <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: idea.demandScore >= 8 ? '#dcfce7' : idea.demandScore >= 5 ? '#fef9c3' : '#fee2e2', color: idea.demandScore >= 8 ? '#059669' : idea.demandScore >= 5 ? '#92400e' : '#991b1b' })}>🔍 {idea.demandScore}/10</span>
-                  <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: idea.competitionLevel === 'Low' ? '#dcfce7' : idea.competitionLevel === 'Medium' ? '#fef9c3' : '#fee2e2', color: idea.competitionLevel === 'Low' ? '#059669' : idea.competitionLevel === 'Medium' ? '#92400e' : '#991b1b' })}>⚔ {idea.competitionLevel}</span>
-                  <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: '#f0f9ff', color: '#0891b2' })}>🛠 {idea.buildTime}</span>
-                </div>
-                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
-                  <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#059669' })}>{idea.priceRange}</span>
-                  <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#ea580c', display: 'flex', gap: 4, alignItems: 'center' })}>Deep Research →</span>
+                  <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', lineHeight: 1.3, marginBottom: 4 })}>{idea.productName}</div>
+                  <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginBottom: 12 })}>{idea.tagline}</div>
+                  <div style={s({ background: 'rgba(234,88,12,0.05)', borderLeft: '3px solid #ea580c', borderRadius: '0 8px 8px 0', padding: '8px 12px', marginBottom: 12 })}>
+                    <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>😤 {idea.primaryPain}</span>
+                  </div>
+                  {idea.sourceMode === 'raw' && idea.ideaConnection && (
+                    <div style={s({ background: 'rgba(124,58,237,0.04)', borderLeft: '2px solid #7c3aed', borderRadius: '0 6px 6px 0', padding: '6px 10px', marginBottom: 12 })}>
+                      <span style={s({ fontFamily: 'DM Sans', fontSize: 11.5, color: '#7c3aed', fontWeight: 600, fontStyle: 'italic' })}>💡 {idea.ideaConnection}</span>
+                    </div>
+                  )}
+                  <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 })}>
+                    <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: idea.demandScore >= 8 ? '#dcfce7' : idea.demandScore >= 5 ? '#fef9c3' : '#fee2e2', color: idea.demandScore >= 8 ? '#059669' : idea.demandScore >= 5 ? '#92400e' : '#991b1b' })}>🔍 {idea.demandScore}/10</span>
+                    <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: idea.competitionLevel === 'Low' ? '#dcfce7' : idea.competitionLevel === 'Medium' ? '#fef9c3' : '#fee2e2', color: idea.competitionLevel === 'Low' ? '#059669' : idea.competitionLevel === 'Medium' ? '#92400e' : '#991b1b' })}>⚔ {idea.competitionLevel}</span>
+                    <span style={s({ padding: '4px 10px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, background: '#f0f9ff', color: '#0891b2' })}>🛠 {idea.buildTime}</span>
+                  </div>
+                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+                    <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#059669' })}>{idea.priceRange}</span>
+                    <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#ea580c', display: 'flex', gap: 4, alignItems: 'center' })}>Deep Research →</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
+        </div>
+
+        {/* ═══════════ GENERATE MORE BAR ═══════════ */}
+        <div style={s({ marginTop: 32, animation: 'fadeUp 0.5s ease 0.3s both' })}>
+          <div style={s({
+            background: moreSuccess ? 'rgba(5,150,105,0.06)' : 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(20px)', borderRadius: 24,
+            border: moreSuccess ? '1px solid rgba(5,150,105,0.25)' : '1px solid rgba(255,255,255,0.95)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.07)', padding: '24px 28px',
+            transition: 'all 0.3s',
+          })}>
+            {productIdeas.length >= 100 ? (
+              /* ── MAX IDEAS REACHED ── */
+              <div style={s({ textAlign: 'center', padding: 20 })}>
+                <div style={s({ fontSize: 32 })}>🏆</div>
+                <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginTop: 8 })}>100 ideas generated!</div>
+                <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 6, maxWidth: 400, margin: '6px auto 0', lineHeight: 1.7 })}>You've explored the full research depth for this niche. Time to pick your winner and build.</div>
+                <div style={s({ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 })}>
+                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={s({ background: 'none', border: '1px solid #e2e8f0', borderRadius: 12, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#64748b', cursor: 'pointer' })}>🔍 Deep Research Any Idea</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Top row */}
+                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 16 })}>
+                  <div>
+                    {moreSuccess ? (
+                      <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#059669' })}>✓ {moreCount} new ideas added! Scroll up to see them.</div>
+                    ) : (
+                      <>
+                        <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 900, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 })}>🔄 WANT MORE IDEAS?</div>
+                        <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' })}>Generate more ideas from the same research</div>
+                        <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 2 })}>New ideas will never repeat what's already shown above</div>
+                      </>
+                    )}
+                  </div>
+                  <div style={s({ textAlign: 'right' })}>
+                    <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#64748b' })}>{productIdeas.length} ideas generated</div>
+                    <div style={s({ width: 120, height: 4, background: '#f1f5f9', borderRadius: 50, marginTop: 4 })}>
+                      <div style={s({ width: `${Math.min(productIdeas.length / 100, 1) * 100}%`, height: '100%', background: 'linear-gradient(90deg,#ea580c,#f59e0b)', borderRadius: 50, transition: 'width 0.5s' })} />
+                    </div>
+                    <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', marginTop: 2 })}>{Math.max(100 - productIdeas.length, 0)} more possible</div>
+                  </div>
+                </div>
+
+                <div style={s({ opacity: generatingMore ? 0.5 : 1, pointerEvents: generatingMore ? 'none' : 'auto', transition: 'opacity 0.2s' })}>
+                  {/* Quantity picker */}
+                  <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 })}>HOW MANY MORE?</div>
+                  <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
+                    {[5, 10, 15, 20].map(n => {
+                      const remaining = 100 - productIdeas.length;
+                      const disabled = n > remaining;
+                      return (
+                        <button key={n} onClick={() => !disabled && setMoreCount(n)}
+                          style={s({
+                            borderRadius: 50, padding: '8px 20px', cursor: disabled ? 'not-allowed' : 'pointer',
+                            border: moreCount === n ? '2px solid transparent' : '2px solid #e2e8f0',
+                            background: moreCount === n ? 'linear-gradient(135deg,#ea580c,#f59e0b)' : '#f8fafc',
+                            color: moreCount === n ? 'white' : '#64748b',
+                            fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
+                            boxShadow: moreCount === n ? '0 3px 12px rgba(234,88,12,0.3)' : 'none',
+                            transform: moreCount === n ? 'scale(1.04)' : 'scale(1)',
+                            opacity: disabled ? 0.4 : 1,
+                            transition: 'all 0.18s',
+                          })}>
+                          +{n} Ideas
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Direction picker */}
+                  <div style={s({ marginTop: 18 })}>
+                    <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 })}>WHAT KIND OF IDEAS?</div>
+                    <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 })}>
+                      {DIRECTION_OPTIONS.map(d => (
+                        <div key={d.id} onClick={() => setMoreDirection(d.id)}
+                          style={s({
+                            borderRadius: 12, padding: '12px 14px', cursor: 'pointer',
+                            border: moreDirection === d.id ? `1.5px solid ${d.accent}` : '1.5px solid #e2e8f0',
+                            background: moreDirection === d.id ? `${d.accent}08` : '#f8fafc',
+                            boxShadow: moreDirection === d.id ? `0 0 0 3px ${d.accent}12` : 'none',
+                            transition: 'all 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+                          })}
+                          onMouseEnter={e => { if (moreDirection !== d.id) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = `${d.accent}4d`; } }}
+                          onMouseLeave={e => { if (moreDirection !== d.id) { e.currentTarget.style.transform = 'none'; e.currentTarget.style.borderColor = '#e2e8f0'; } }}>
+                          <div style={s({ display: 'flex', gap: 10, alignItems: 'flex-start' })}>
+                            <span style={s({ fontSize: 20, flexShrink: 0, marginTop: 1 })}>{d.emoji}</span>
+                            <div>
+                              <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a', marginBottom: 2 })}>{d.name}</div>
+                              <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 })}>{d.desc}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Generate button row */}
+                <div style={s({ marginTop: 20, paddingTop: 20, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 })}>
+                  {generatingMore ? (
+                    <div style={s({ display: 'flex', alignItems: 'center', gap: 10 })}>
+                      <div style={s({ width: 20, height: 20, border: '2px solid #f1f5f9', borderTop: '2px solid #ea580c', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' })} />
+                      <div>
+                        <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#ea580c' })}>Generating {moreCount} new ideas...</div>
+                        <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>Finding ideas you haven't seen yet...</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b' })}>
+                        Generating {moreCount} <strong style={{ color: '#0f172a' }}>{directionLabels[moreDirection]}</strong> ideas for <strong style={{ color: '#0f172a' }}>{inputData.niche}</strong> · {inputData.country}
+                      </div>
+                      <button onClick={generateMoreIdeas}
+                        style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 14, padding: '12px 26px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 18px rgba(234,88,12,0.35)', transition: 'all 0.2s' })}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(234,88,12,0.45)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 18px rgba(234,88,12,0.35)'; }}>
+                        ✨ Generate {moreCount} More Ideas →
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
