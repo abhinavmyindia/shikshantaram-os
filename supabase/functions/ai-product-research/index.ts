@@ -40,6 +40,96 @@ CRITICAL REQUIREMENTS:
 Return ONLY a valid JSON array of exactly 30 objects. No preamble, no markdown, no explanation.`;
 }
 
+function buildAnalyzeIdeaPrompt(ideaText: string, country: string): string {
+  return `You are an expert product strategist and market analyst.
+
+A creator has shared a raw business idea. Analyze it and help them understand its market potential.
+
+RAW IDEA: "${ideaText}"
+TARGET COUNTRY: ${country}
+
+Analyze this idea and return ONLY a valid JSON object with this exact structure:
+
+{
+  "ideaSummary": "Restate their idea in one clear, sharp sentence (improve their wording if needed)",
+  "detectedNiche": "The specific niche this falls into (e.g. 'Freelancing & Career Growth')",
+  "detectedCategory": "One of: Health, Finance, Career, Business, Creativity, Education, Technology, Lifestyle, Relationships, Other",
+  "coreProblem": "The real underlying problem this idea solves (1-2 sentences, be specific)",
+  "targetBuyer": "The exact person who would pay for this (very specific, not generic)",
+  "ideaStrengths": ["Strength 1 of their idea", "Strength 2", "Strength 3"],
+  "ideaGaps": ["One thing missing or unclear", "One risk to consider"],
+  "marketReadiness": "High",
+  "marketReadinessReason": "Why the market is ready (or not) for this right now in ${country}",
+  "angles": [
+    {
+      "angleId": "A",
+      "angleName": "Name of this product angle (catchy, specific)",
+      "angleDescription": "2-3 sentences on what this product would be and who buys it",
+      "productFormat": "Best format (e.g. Ebook, Template, Micro-Course, Prompt Pack)",
+      "priceRange": "Realistic price in ${country} currency",
+      "buildTime": "e.g. 2 days",
+      "whyThisWorks": "One sentence on why this specific angle is strong right now",
+      "demandSignal": "High"
+    },
+    {
+      "angleId": "B",
+      "angleName": "Second angle name",
+      "angleDescription": "2-3 sentences",
+      "productFormat": "Format",
+      "priceRange": "Price",
+      "buildTime": "Time",
+      "whyThisWorks": "Reason",
+      "demandSignal": "Medium"
+    },
+    {
+      "angleId": "C",
+      "angleName": "Third angle name",
+      "angleDescription": "2-3 sentences",
+      "productFormat": "Format",
+      "priceRange": "Price",
+      "buildTime": "Time",
+      "whyThisWorks": "Reason",
+      "demandSignal": "Medium"
+    }
+  ],
+  "recommendedAngle": "A",
+  "recommendedAngleReason": "Why you recommend this specific angle over the others"
+}
+
+Be specific to ${country} context. No preamble, no markdown. Return only the JSON.`;
+}
+
+function buildRawIdeaIdeasPrompt(ideaText: string, analysis: any, chosenAngle: any, country: string): string {
+  return `You are an expert digital product researcher.
+
+A creator has a raw business idea and has chosen a specific product angle to explore.
+
+ORIGINAL RAW IDEA: "${ideaText}"
+DETECTED NICHE: ${analysis.detectedNiche}
+CHOSEN ANGLE: ${chosenAngle.angleName}
+ANGLE DESCRIPTION: ${chosenAngle.angleDescription}
+PRODUCT FORMAT: ${chosenAngle.productFormat}
+TARGET COUNTRY: ${country}
+TARGET BUYER: ${analysis.targetBuyer}
+CORE PROBLEM BEING SOLVED: ${analysis.coreProblem}
+
+Your task: Generate exactly 30 unique digital product ideas that are DIRECT EXPANSIONS AND VARIATIONS of this specific angle and original idea. 
+
+CRITICAL: 
+- All 30 ideas must feel like natural variations of the creator's original concept
+- Use their specific context, language, and target audience throughout
+- Idea #1 should be the most direct execution of their idea
+- Ideas #2-15 should be variations (different formats, different sub-audiences, different price points)
+- Ideas #16-30 should be creative expansions (adjacent problems, complementary products, upsells/downsells)
+- Price all products realistically for ${country}
+- Reference ${country}-specific platforms, behaviors, and context
+
+For EACH of the 30 ideas return this exact JSON structure in an array:
+{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":8,"competitionLevel":"Low","impulseScore":"High","primaryPain":"...","searchKeyword":"...","ideaConnection":"One sentence explaining how this connects to their original idea"}
+
+Return ONLY a valid JSON array of exactly 30 objects. No preamble, no markdown.`;
+}
+
 function buildDeepResearchPrompt(product: any, inputData: any): string {
   return `You are a world-class product researcher, market analyst, and consumer psychologist.
 
@@ -77,7 +167,7 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
     "relatedKeywords": ["keyword1","keyword2","keyword3","keyword4","keyword5"],
     "trendDirection": "Rising/Stable/Declining",
     "trendNote": "Brief explanation",
-    "bestTimeToLaunch": "e.g. 'January–March'"
+    "bestTimeToLaunch": "e.g. 'January-March'"
   },
   "painPoints": [
     {"rank":1,"title":"Pain point title","description":"2-3 sentence description","emotionalWeight":"High/Medium/Low","trigger":"What triggers this pain"},
@@ -154,7 +244,6 @@ function parseJsonResponse(text: string): any {
   const jsonEnd = Math.max(lastBracket, lastBrace);
   if (jsonEnd >= 0 && jsonEnd < clean.length - 1) clean = clean.substring(0, jsonEnd + 1);
 
-  // Fix common issues
   clean = clean
     .replace(/,\s*}/g, '}')
     .replace(/,\s*]/g, ']')
@@ -163,16 +252,13 @@ function parseJsonResponse(text: string): any {
   try {
     return JSON.parse(clean);
   } catch (e) {
-    // Truncated JSON - try to repair by closing open braces/brackets
     console.log("Initial parse failed, attempting repair...");
     let repaired = clean;
     
-    // Remove any trailing incomplete string value (e.g. `"key": "incomplete...`)
     repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
     repaired = repaired.replace(/,\s*"[^"]*$/, '');
     repaired = repaired.replace(/,\s*$/, '');
     
-    // Count and close unbalanced braces/brackets
     let braces = 0, brackets = 0;
     let inString = false, escape = false;
     for (const c of repaired) {
@@ -248,19 +334,32 @@ serve(async (req) => {
   }
 
   try {
-    const { action, niche, country, productType, product, inputData } = await req.json();
+    const body = await req.json();
+    const { action } = body;
 
     let prompt: string;
     let model: string;
     let maxTokens: number;
 
     if (action === "generate-ideas") {
+      const { niche, country, productType } = body;
       prompt = buildGenerateIdeasPrompt(niche, country, productType);
-      model = "google/gemini-3-flash-preview"; // Fastest model for quick generation
+      model = "google/gemini-3-flash-preview";
+      maxTokens = 16000;
+    } else if (action === "analyze-idea") {
+      const { ideaText, country } = body;
+      prompt = buildAnalyzeIdeaPrompt(ideaText, country);
+      model = "google/gemini-3-flash-preview"; // Fast model for analysis
+      maxTokens = 2000;
+    } else if (action === "generate-ideas-from-raw") {
+      const { ideaText, analysis, chosenAngle, country } = body;
+      prompt = buildRawIdeaIdeasPrompt(ideaText, analysis, chosenAngle, country);
+      model = "google/gemini-3-flash-preview";
       maxTokens = 16000;
     } else if (action === "deep-research") {
+      const { product, inputData } = body;
       prompt = buildDeepResearchPrompt(product, inputData);
-      model = "google/gemini-2.5-flash"; // Balanced speed + quality for deep research
+      model = "google/gemini-2.5-flash";
       maxTokens = 8000;
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
@@ -268,7 +367,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`AI Product Research: action=${action}, model=${model}, niche=${niche || inputData?.niche}`);
+    console.log(`AI Product Research: action=${action}, model=${model}`);
 
     const rawText = await callLovableAI(prompt, model, maxTokens);
 
