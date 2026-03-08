@@ -557,6 +557,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
           )}
         </div>
       </div>
+    );
   }
 
   /* ───────── RENDER: GENERATING ───────── */
