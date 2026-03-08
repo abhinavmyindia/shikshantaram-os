@@ -797,8 +797,8 @@ export default function OfferCreation({ onBack }: { onBack: () => void }) {
               ))}
             </div>
 
-            <div style={s({ background: '#f8fafc', borderRadius: 14, padding: 20, border: '1px solid #e2e8f0', position: 'relative' })}>
-              <div style={s({ position: 'absolute', top: 12, right: 12 })}>
+            <div style={s({ background: '#f8fafc', borderRadius: 14, padding: 20, border: '1px solid #e2e8f0' })}>
+              <div style={s({ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 })}>
                 <CopyButton text={
                   outputTab === 'page' ? (offerData.offerDescription || '') :
                   outputTab === 'dm' ? (offerData.dmScript || '') :
