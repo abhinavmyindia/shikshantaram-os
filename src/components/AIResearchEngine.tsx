@@ -1152,7 +1152,12 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
 
         {/* Filters */}
         <div style={s({ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' })}>
-          {[{ key: 'All', label: 'All' }, { key: 'high-impulse', label: '🔥 High Impulse' }, { key: 'low-comp', label: '🟢 Low Competition' }].map(f => (
+          {[
+            { key: 'All', label: 'All' },
+            { key: 'high-impulse', label: '🔥 High Impulse' },
+            { key: 'low-comp', label: '🟢 Low Competition' },
+            ...(ideaBatches.length > 1 ? [{ key: 'latest-batch', label: '✨ Latest Batch' }] : []),
+          ].map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               style={s({ padding: '5px 14px', borderRadius: 50, border: 'none', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, cursor: 'pointer', background: filter === f.key ? '#ea580c' : '#f1f5f9', color: filter === f.key ? 'white' : '#64748b', transition: 'all 0.15s' })}>
               {f.label}
