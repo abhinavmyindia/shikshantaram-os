@@ -386,6 +386,14 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
   const [filter, setFilter] = useState('All');
   const [sortBy, setSortBy] = useState('demand');
 
+  /* ── Generate More state ── */
+  const [moreCount, setMoreCount] = useState(10);
+  const [moreDirection, setMoreDirection] = useState('different-angle');
+  const [generatingMore, setGeneratingMore] = useState(false);
+  const [ideaBatches, setIdeaBatches] = useState<{ batchId: number; count: number; label: string; ideas: ProductIdea[]; direction?: string }[]>([]);
+  const [moreSuccess, setMoreSuccess] = useState(false);
+  const [countAnimating, setCountAnimating] = useState(false);
+
   /* ── Raw Idea state ── */
   const [ideaMode, setIdeaMode] = useState<'niche' | 'raw'>('niche');
   const [rawIdeaStep, setRawIdeaStep] = useState<'input' | 'analyzing' | 'analysis-result' | 'loading-ideas'>('input');
