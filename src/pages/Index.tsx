@@ -765,7 +765,7 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 32 }}>
-        <StatCard label="Tools Unlocked" value="2 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+2 live now" changeColor="#15803d" delay={0.06} />
+        <StatCard label="Tools Unlocked" value="3 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+3 live now" changeColor="#15803d" delay={0.06} />
         <StatCard label="Product Ideas" value="500+" iconBg="#fff7ed" iconColor="#ea580c" icon="💡" changePill="Explore →" changeColor="#ea580c" delay={0.08} />
         <StatCard label="Niches Mapped" value="594" iconBg="#dcfce7" iconColor="#059669" icon="🎯" changePill="Updated" changeColor="#15803d" delay={0.1} />
         <StatCard label="Time to Launch" value="72 hrs" iconBg="#fce7f3" iconColor="#be185d" icon="🚀" changePill="⚡ Fast track" changeColor="#be185d" delay={0.12} />
@@ -1396,7 +1396,7 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
           {/* Bottom strip */}
           <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 20, paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>🔥 Day {journeyDay} of your journey</span>
-            <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#64748b' }}>2 tools ready to use →</span>
+            <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#64748b' }}>3 tools ready to use →</span>
           </div>
         </div>
       </div>
