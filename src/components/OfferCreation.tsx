@@ -206,27 +206,47 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 }
 
 /* ───────── Main Component ───────── */
-export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { onBack: () => void; prefill?: { beforeState: string; afterState: string } | null; onPrefillConsumed?: () => void }) {
+export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { onBack: () => void; prefill?: any; onPrefillConsumed?: () => void }) {
   const [offerStep, setOfferStep] = useState<OfferStep>('brief');
   const [offerBrief, setOfferBrief] = useState<OfferBrief>({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
   const [showPrefillBanner, setShowPrefillBanner] = useState(false);
+  const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
+  const [autoSelectedPrice, setAutoSelectedPrice] = useState(false);
   const [offerStructures, setOfferStructures] = useState<OfferStructure[]>([]);
   const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
   const [offerData, setOfferData] = useState<OfferData | null>(null);
   const [offerScore, setOfferScore] = useState(0);
   const [error, setError] = useState('');
   const [outputTab, setOutputTab] = useState<'page' | 'dm' | 'social' | 'email'>('page');
-
+  const platformRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (prefill?.beforeState) {
+    if (prefill?.sourceProduct) {
+      // Map price range tier to actual price range string
+      const priceRanges = prefill.sourceCountry === 'United States' || prefill.sourceCountry === 'United Kingdom' || prefill.sourceCountry === 'Canada' || prefill.sourceCountry === 'Australia' ? PRICE_RANGES_USD : PRICE_RANGES_INR;
+      const tierMap: Record<string, number> = { 'impulse': 0, 'low-ticket': 1, 'mid-ticket': 2, 'high-ticket': 3 };
+      const tierIdx = tierMap[prefill.priceRangeTier] ?? 1;
+      const currency = priceRanges === PRICE_RANGES_USD ? 'usd' : 'inr';
+
       setOfferBrief(prev => ({
         ...prev,
-        beforeState: prefill.beforeState.slice(0, 100),
-        afterState: prefill.afterState.slice(0, 100),
+        productName: prefill.productName || '',
+        audience: prefill.audience || '',
+        beforeState: prefill.beforeState || '',
+        afterState: prefill.afterState || '',
+        priceRange: priceRanges[tierIdx]?.range || '',
+        platforms: [],
+        currency,
       }));
+
+      setPrefilledFields(new Set(['productName', 'audience', 'beforeState', 'afterState', 'priceRange']));
+      setAutoSelectedPrice(true);
       setShowPrefillBanner(true);
-      onPrefillConsumed?.();
+
+      // Scroll to platform selector after a brief delay
+      setTimeout(() => {
+        platformRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 600);
     }
   }, [prefill]);
 
