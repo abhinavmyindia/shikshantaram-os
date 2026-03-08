@@ -168,7 +168,7 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 );
 
 /* ───────── Types ───────── */
-type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'settings' | 'help' | 'profile';
+type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'settings' | 'help' | 'profile' | 'saved';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
 const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel'];
@@ -203,6 +203,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'creator', label: 'Product Creator', icon: () => <WandIcon />, badge: 'SOON', locked: true },
   { id: 'copy', label: 'Copy Suite', icon: () => <PenIcon />, badge: 'SOON', locked: true },
   { id: 'ads', label: 'AI Ad Suite', icon: () => <MegaphoneIcon />, badge: 'SOON', locked: true },
+  { id: 'landing', label: 'Landing Page Designer', icon: () => <WandIcon color="#6366f1" />, badge: 'SOON', locked: true },
 ];
 
 const TOOL_CARDS = [
