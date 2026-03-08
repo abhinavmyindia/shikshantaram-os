@@ -363,9 +363,9 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic' }
       {/* Progress card */}
       <div style={{ marginTop: 'auto', background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.06))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 12, padding: 12 }}>
         <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#7c3aed', marginBottom: 4 }}>🚀 72-Hour Launch</div>
-        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>2 of 8 tools unlocked</div>
+        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>3 of 8 tools unlocked</div>
         <div style={{ width: '100%', height: 5, background: '#f1f5f9', borderRadius: 50 }}>
-          <div style={{ width: '25%', height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
+          <div style={{ width: '37.5%', height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
         </div>
         <div style={{ fontSize: 9.5, color: '#7c3aed', fontWeight: 600, marginTop: 6 }}>More tools dropping soon →</div>
       </div>
