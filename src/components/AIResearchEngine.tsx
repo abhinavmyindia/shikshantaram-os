@@ -1040,7 +1040,7 @@ export default function AIResearchEngine() {
 
         {/* ── SECTION 0: YOUR IDEA vs THE MARKET (raw mode only) ── */}
         {isRawReport && selectedProduct.originalIdea && (
-          <ReportSection icon="✨" iconBg="linear-gradient(135deg,#7c3aed,#a855f7)" iconColor="white" title="Your Idea vs The Market" subtitle="How your original concept maps to real market demand" defaultOpen>
+          <ReportSection icon="✨" iconBg="linear-gradient(135deg,#7c3aed,#a855f7)" iconColor="white" title="Your Idea vs The Market" subtitle="How your original concept maps to real market demand">
             <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 })}>
               {/* Left — Original Idea */}
               <div style={s({ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 12, padding: 16 })}>
@@ -1079,7 +1079,7 @@ export default function AIResearchEngine() {
         )}
 
         {/* SECTIONS */}
-        <ReportSection icon="🌍" iconBg="#dcfce7" iconColor="#059669" title="Market Overview" subtitle="Total addressable market & audience" defaultOpen>
+        <ReportSection icon="🌍" iconBg="#dcfce7" iconColor="#059669" title="Market Overview" subtitle="Total addressable market & audience">
           <div style={s({ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 })}>
             {[
               { label: 'Total Addressable Market', value: r.marketOverview?.totalAddressableMarket },
@@ -1126,7 +1126,7 @@ export default function AIResearchEngine() {
           )}
         </ReportSection>
 
-        <ReportSection icon="😤" iconBg="#fee2e2" iconColor="#ef4444" title="5 Pain Points" subtitle="What keeps your buyer up at night" defaultOpen>
+        <ReportSection icon="😤" iconBg="#fee2e2" iconColor="#ef4444" title="5 Pain Points" subtitle="What keeps your buyer up at night">
           {r.painPoints?.map((pp: any, i: number) => {
             const rankColors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e'];
             return (
@@ -1241,7 +1241,7 @@ export default function AIResearchEngine() {
           )}
         </ReportSection>
 
-        <ReportSection icon="🚀" iconBg="#fff7ed" iconColor="#ea580c" title="Your Next Steps" subtitle="Start building today" defaultOpen glowing>
+        <ReportSection icon="🚀" iconBg="#fff7ed" iconColor="#ea580c" title="Your Next Steps" subtitle="Start building today" glowing>
           {r.nextSteps?.map((step: any, i: number) => (
             <div key={i} style={s({ background: 'white', borderRadius: 14, padding: 16, marginBottom: 10, border: '1px solid #f1f5f9', borderLeft: `4px solid ${STEP_COLORS[i % STEP_COLORS.length]}` })}>
               <div style={s({ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 })}>
