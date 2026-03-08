@@ -387,7 +387,11 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
       {error && (
         <div style={s({ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
           <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#ef4444' })}>{error}</span>
-          <button onClick={() => setError('')} style={s({ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 700 })}>✕</button>
+          <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
+            <button onClick={() => { setError(''); if (offerStep === 'brief') generateOfferStructures(); else if (offerStep === 'structures') buildFullOffer(); }} style={s({ background: 'white', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 10, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' })}
+              onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')} onMouseLeave={e => (e.currentTarget.style.background = 'white')}>🔄 Try Again</button>
+            <button onClick={() => setError('')} style={s({ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: 700 })}>✕</button>
+          </div>
         </div>
       )}
 
@@ -513,6 +517,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
                 );
               })}
             </div>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 6 })}>Choose up to 2 platforms where you'll sell this offer</div>
 
             {/* Generate Button */}
             <div style={s({ marginTop: 28, borderTop: '1px solid #f1f5f9', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
