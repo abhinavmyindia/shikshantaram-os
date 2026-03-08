@@ -250,6 +250,33 @@ export type Database = {
           },
         ]
       }
+      user_presence: {
+        Row: {
+          current_page: string | null
+          last_seen: string | null
+          session_start: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          current_page?: string | null
+          last_seen?: string | null
+          session_start?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          current_page?: string | null
+          last_seen?: string | null
+          session_start?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           access_tier: string
