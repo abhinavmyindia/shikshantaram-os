@@ -1150,10 +1150,9 @@ function ProductPage({ onBack, onAction }: { onBack: () => void; onAction?: () =
       </div>
 
       {researchMode === 'ai' ? (
-        <AIResearchEngine onUseInOffer={(before, after) => {
+        <AIResearchEngine onUseInOffer={(before: string, after: string) => {
           setOfferPrefill({ beforeState: before, afterState: after });
           navigateTo('offer');
-          showToast('✓ Transformation copied to Offer Creation!', 'success');
         }} />
       ) : (
         <>
