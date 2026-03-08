@@ -548,8 +548,300 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
     </div>
   );
 }
+// ─── AI ANALYTICS TAB ────────────────────────────────────────
+function AIAnalyticsTab() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState('30days');
+  const [showLogFeed, setShowLogFeed] = useState(false);
+  const [analytics, setAnalytics] = useState<any>(null);
 
-// ─── MAIN ADMIN PANEL ────────────────────────────────────────
+  useEffect(() => { fetchAnalytics(dateRange); }, []);
+
+  const fetchAnalytics = async (range: string) => {
+    setLoading(true);
+    const fromDate: Record<string, string> = {
+      'today': new Date(new Date().setHours(0,0,0,0)).toISOString(),
+      '7days': new Date(Date.now() - 7*24*60*60*1000).toISOString(),
+      '30days': new Date(Date.now() - 30*24*60*60*1000).toISOString(),
+      'all': '2020-01-01T00:00:00Z',
+    };
+    const { data } = await supabase.from('ai_usage_logs').select('*').gte('created_at', fromDate[range]).order('created_at', { ascending: false });
+    const l = (data || []) as any[];
+    setLogs(l);
+
+    const totalCalls = l.length;
+    const totalTokens = l.reduce((s: number, x: any) => s + (x.total_tokens || 0), 0);
+    const totalCostUsd = l.reduce((s: number, x: any) => s + parseFloat(x.estimated_cost_usd || '0'), 0);
+    const uniqueUsers = new Set(l.map((x: any) => x.user_id).filter(Boolean)).size;
+
+    const byModule: Record<string, any> = {};
+    const byModel: Record<string, any> = {};
+    const byUser: Record<string, any> = {};
+    const byDay: Record<string, any> = {};
+
+    l.forEach((x: any) => {
+      const mod = x.module || 'unknown';
+      if (!byModule[mod]) byModule[mod] = { calls: 0, tokens: 0, cost: 0 };
+      byModule[mod].calls++; byModule[mod].tokens += x.total_tokens || 0; byModule[mod].cost += parseFloat(x.estimated_cost_usd || '0');
+
+      const mdl = x.model || 'unknown';
+      if (!byModel[mdl]) byModel[mdl] = { calls: 0, tokens: 0, cost: 0 };
+      byModel[mdl].calls++; byModel[mdl].tokens += x.total_tokens || 0; byModel[mdl].cost += parseFloat(x.estimated_cost_usd || '0');
+
+      const email = x.user_email || 'anonymous';
+      if (!byUser[email]) byUser[email] = { name: x.user_name, email: x.user_email, calls: 0, tokens: 0, cost: 0, lastActive: x.created_at };
+      byUser[email].calls++; byUser[email].tokens += x.total_tokens || 0; byUser[email].cost += parseFloat(x.estimated_cost_usd || '0');
+      if (x.created_at > byUser[email].lastActive) byUser[email].lastActive = x.created_at;
+
+      const day = (x.created_at || '').slice(0, 10);
+      if (!byDay[day]) byDay[day] = { calls: 0, tokens: 0, cost: 0 };
+      byDay[day].calls++; byDay[day].tokens += x.total_tokens || 0; byDay[day].cost += parseFloat(x.estimated_cost_usd || '0');
+    });
+
+    // Top call types
+    const byCallType: Record<string, number> = {};
+    l.forEach((x: any) => { const ct = x.call_type || 'unknown'; byCallType[ct] = (byCallType[ct] || 0) + 1; });
+    const topCallTypes = Object.entries(byCallType).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes });
+    setLoading(false);
+  };
+
+  const handleRangeChange = (r: string) => { setDateRange(r); fetchAnalytics(r); };
+
+  const relativeTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const formatCallType = (ct: string) => ct.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed' };
+  const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity' };
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#06b6d4', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+  }
+
+  if (!analytics || analytics.totalCalls === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: 60 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🤖</div>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a', marginBottom: 8 }}>No AI calls logged yet</div>
+        <div style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#94a3b8', lineHeight: 1.7 }}>Usage will appear here as your users start using the AI tools.</div>
+      </div>
+    );
+  }
+
+  const { totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes } = analytics;
+
+  // Daily chart data (last 14 days)
+  const dayEntries = Object.entries(byDay).sort((a, b) => a[0].localeCompare(b[0])).slice(-14) as [string, any][];
+  const maxDayTokens = Math.max(...dayEntries.map(([, d]) => d.tokens), 1);
+
+  // Users sorted by cost
+  const userEntries = Object.values(byUser).sort((a: any, b: any) => b.cost - a.cost).slice(0, 20) as any[];
+
+  // Modules sorted by cost
+  const moduleEntries = Object.entries(byModule).sort((a, b) => (b[1] as any).cost - (a[1] as any).cost) as [string, any][];
+
+  const costDisplay = totalCostUsd < 0.01 ? `$${totalCostUsd.toFixed(6)}` : `$${totalCostUsd.toFixed(4)}`;
+
+  const kpiCards = [
+    { label: 'Total AI Calls', value: totalCalls.toLocaleString(), sub: 'in selected period', icon: '🤖', bg: 'rgba(6,182,212,0.1)' },
+    { label: 'Tokens Consumed', value: `${(totalTokens/1000).toFixed(1)}K`, sub: 'across all modules', icon: '⚡', bg: 'rgba(245,158,11,0.1)' },
+    { label: 'Estimated API Cost', value: costDisplay, sub: 'based on model pricing', icon: '💰', bg: 'rgba(34,197,94,0.1)' },
+    { label: 'Users Made AI Calls', value: uniqueUsers, sub: 'unique users in period', icon: '👥', bg: 'rgba(124,58,237,0.1)' },
+  ];
+
+  const ranges = [
+    { id: 'today', label: 'Today' }, { id: '7days', label: '7 Days' },
+    { id: '30days', label: '30 Days' }, { id: 'all', label: 'All Time' },
+  ];
+
+  // Model cards
+  const flashModels = Object.entries(byModel).filter(([k]) => k.includes('flash'));
+  const proModels = Object.entries(byModel).filter(([k]) => !k.includes('flash'));
+  const flashTotal = flashModels.reduce((s, [, v]: any) => ({ calls: s.calls + v.calls, tokens: s.tokens + v.tokens, cost: s.cost + v.cost }), { calls: 0, tokens: 0, cost: 0 });
+  const proTotal = proModels.reduce((s, [, v]: any) => ({ calls: s.calls + v.calls, tokens: s.tokens + v.tokens, cost: s.cost + v.cost }), { calls: 0, tokens: 0, cost: 0 });
+
+  return (
+    <div>
+      {/* KPI Strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
+        {kpiCards.map(k => (
+          <div key={k.label} style={{ ...glassCard, padding: '18px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{k.label}</span>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: k.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{k.icon}</div>
+            </div>
+            <div style={{ fontFamily: 'Sora', fontSize: 28, fontWeight: 900, color: '#0f172a', marginTop: 8 }}>{k.value}</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Date Range Filter */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+        <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>Filter by period:</span>
+        {ranges.map(r => (
+          <button key={r.id} onClick={() => handleRangeChange(r.id)} style={{
+            padding: '6px 16px', borderRadius: 50, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'DM Sans',
+            background: dateRange === r.id ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : '#f8fafc',
+            color: dateRange === r.id ? 'white' : '#64748b',
+          }}>{r.label}</button>
+        ))}
+        <div style={{ flex: 1 }} />
+        <button onClick={() => fetchAnalytics(dateRange)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b', fontFamily: 'DM Sans' }}>🔄 Refresh</button>
+      </div>
+
+      {/* Middle Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+        {/* Usage by Module */}
+        <div style={{ ...glassCard, padding: 20 }}>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>Usage by Module</div>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Which tools are consuming the most AI</div>
+          {moduleEntries.map(([mod, data]) => (
+            <div key={mod} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: moduleColors[mod] || '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'white', fontWeight: 800, fontFamily: 'Sora', flexShrink: 0 }}>
+                {(moduleNames[mod] || mod).charAt(0)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a', marginBottom: 4 }}>{moduleNames[mod] || mod}</div>
+                <div style={{ background: '#f1f5f9', height: 8, borderRadius: 50, overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(2, (data.cost / totalCostUsd) * 100)}%`, height: '100%', background: moduleColors[mod] || '#64748b', borderRadius: 50, transition: 'width 0.8s ease' }} />
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: moduleColors[mod] || '#64748b' }}>${data.cost.toFixed(4)}</div>
+                <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' }}>{data.calls} calls</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Model Breakdown */}
+        <div style={{ ...glassCard, padding: 20 }}>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 16 }}>Model Breakdown</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+            <div style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 12, padding: 14 }}>
+              <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#0891b2', marginBottom: 4 }}>⚡ Flash Models</div>
+              <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 20, color: '#0f172a' }}>{flashTotal.calls}</div>
+              <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{(flashTotal.tokens/1000).toFixed(1)}K tokens</div>
+              <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#059669' }}>${flashTotal.cost.toFixed(4)}</div>
+            </div>
+            <div style={{ background: 'rgba(234,88,12,0.06)', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 12, padding: 14 }}>
+              <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#ea580c', marginBottom: 4 }}>🧠 Pro Models</div>
+              <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 20, color: '#0f172a' }}>{proTotal.calls}</div>
+              <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{(proTotal.tokens/1000).toFixed(1)}K tokens</div>
+              <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#059669' }}>${proTotal.cost.toFixed(4)}</div>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 14 }}>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>MOST USED OPERATIONS</div>
+            {topCallTypes.map(([ct, count]) => (
+              <div key={ct} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#334155' }}>{formatCallType(ct)}</span>
+                <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '2px 8px', color: '#64748b' }}>{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        {/* Per-User Table */}
+        <div style={{ ...glassCard, padding: 20 }}>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>Usage by User</div>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>Most active AI users in your platform</div>
+          <div style={{ overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 70px 80px 70px', gap: 0, background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+              {['User', 'Calls', 'Tokens', 'Est. Cost', 'Last'].map(h => (
+                <div key={h} style={{ padding: '8px 12px', fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{h}</div>
+              ))}
+            </div>
+            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+              {userEntries.map((u, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 70px 80px 70px', gap: 0, borderBottom: '1px solid #f8fafc', padding: '2px 0' }}>
+                  <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 9, color: 'white', flexShrink: 0 }}>
+                      {(u.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12.5, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name || 'Unknown'}</div>
+                      <div style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                    </div>
+                  </div>
+                  <div style={{ padding: '10px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a', display: 'flex', alignItems: 'center' }}>{u.calls}</div>
+                  <div style={{ padding: '10px 12px', fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', display: 'flex', alignItems: 'center' }}>{(u.tokens/1000).toFixed(1)}K</div>
+                  <div style={{ padding: '10px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#059669', display: 'flex', alignItems: 'center' }}>${u.cost.toFixed(4)}</div>
+                  <div style={{ padding: '10px 12px', fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center' }}>{relativeTime(u.lastActive)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Daily Trend Chart */}
+        <div style={{ ...glassCard, padding: 20 }}>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>Daily AI Usage</div>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Token consumption over time</div>
+          <div style={{ width: '100%', height: 180, display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+            {dayEntries.map(([day, data]) => {
+              const pct = (data.tokens / maxDayTokens) * 100;
+              return (
+                <div key={day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }} title={`${day}\n${data.calls} calls\n${(data.tokens/1000).toFixed(1)}K tokens\n$${data.cost.toFixed(4)}`}>
+                  <div style={{ width: '100%', minHeight: 4, height: `${Math.max(2, pct)}%`, background: 'linear-gradient(180deg,#06b6d4,#3b82f6)', borderRadius: '4px 4px 0 0', transition: 'height 0.5s ease' }} />
+                  <span style={{ fontFamily: 'DM Sans', fontSize: 9, color: '#94a3b8', whiteSpace: 'nowrap' }}>{day.slice(5)}</span>
+                </div>
+              );
+            })}
+          </div>
+          {dayEntries.length > 0 && (
+            <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
+              <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b' }}>🟦 Tokens consumed</span>
+              <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' }}>
+                Peak: {dayEntries.reduce((best, [day, d]) => d.tokens > best.tokens ? { day, ...d } : best, { day: '', tokens: 0, calls: 0 }).day?.slice(5)} ({dayEntries.reduce((best, [, d]) => d.calls > best ? d.calls : best, 0)} calls)
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Live Log Feed */}
+      <div style={{ ...glassCard, overflow: 'hidden' }}>
+        <button onClick={() => setShowLogFeed(!showLogFeed)} style={{ width: '100%', padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#64748b' }}>📋 Live API Call Log ({logs.length} entries)</span>
+          <span style={{ fontSize: 12, color: '#94a3b8', transform: showLogFeed ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>▾</span>
+        </button>
+        {showLogFeed && (
+          <div style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: 16, maxHeight: 320, overflowY: 'auto' }}>
+            {logs.slice(0, 100).map((log: any) => (
+              <div key={log.id} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f1f5f9', fontSize: 12 }}>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', width: 60, flexShrink: 0 }}>{new Date(log.created_at).toLocaleTimeString('en-US', { hour12: false })}</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: 'white', background: moduleColors[log.module] || '#64748b', flexShrink: 0 }}>{log.module?.replace('_', ' ')}</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', flex: 1 }}>{formatCallType(log.call_type)}</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b', width: 100, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.user_name || log.user_email}</span>
+                <span style={{ width: 18, height: 18, borderRadius: '50%', background: log.model?.includes('flash') ? '#06b6d4' : '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 700, fontSize: 9, color: 'white', flexShrink: 0 }}>{log.model?.includes('flash') ? 'F' : 'P'}</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b', width: 50, flexShrink: 0, textAlign: 'right' }}>{(log.total_tokens || 0).toLocaleString()}t</span>
+                <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#059669', width: 60, flexShrink: 0, textAlign: 'right' }}>${parseFloat(log.estimated_cost_usd || '0').toFixed(4)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 export default function AdminPanel() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
