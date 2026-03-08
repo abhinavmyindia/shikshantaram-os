@@ -195,8 +195,28 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
       .map((block: any) => block.text)
       .join('') || '';
 
-    // Parse JSON — strip any markdown fences
-    const clean = textContent.replace(/```json|```/g, '').trim();
+    // Parse JSON — strip any markdown fences and extract JSON portion
+    let clean = textContent.replace(/```json|```/g, '').trim();
+    
+    // Find the first [ or { to skip any preamble text
+    const arrayStart = clean.indexOf('[');
+    const objStart = clean.indexOf('{');
+    let jsonStart = -1;
+    if (arrayStart >= 0 && objStart >= 0) jsonStart = Math.min(arrayStart, objStart);
+    else if (arrayStart >= 0) jsonStart = arrayStart;
+    else if (objStart >= 0) jsonStart = objStart;
+    
+    if (jsonStart > 0) {
+      clean = clean.substring(jsonStart);
+    }
+    
+    // Also trim any trailing text after the last ] or }
+    const lastBracket = clean.lastIndexOf(']');
+    const lastBrace = clean.lastIndexOf('}');
+    const jsonEnd = Math.max(lastBracket, lastBrace);
+    if (jsonEnd >= 0 && jsonEnd < clean.length - 1) {
+      clean = clean.substring(0, jsonEnd + 1);
+    }
     
     try {
       const parsed = JSON.parse(clean);
