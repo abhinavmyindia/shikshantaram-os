@@ -227,27 +227,47 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
 }`;
 }
 
-function parseJsonResponse(text: string): any {
-  let clean = text.replace(/```json|```/g, '').trim();
+function sanitizeJsonString(s: string): string {
+  // Remove markdown fences
+  let clean = s.replace(/```json|```/g, '').trim();
 
+  // Find JSON start
   const arrayStart = clean.indexOf('[');
   const objStart = clean.indexOf('{');
   let jsonStart = -1;
   if (arrayStart >= 0 && objStart >= 0) jsonStart = Math.min(arrayStart, objStart);
   else if (arrayStart >= 0) jsonStart = arrayStart;
   else if (objStart >= 0) jsonStart = objStart;
-
   if (jsonStart > 0) clean = clean.substring(jsonStart);
 
+  // Find JSON end
   const lastBracket = clean.lastIndexOf(']');
   const lastBrace = clean.lastIndexOf('}');
   const jsonEnd = Math.max(lastBracket, lastBrace);
   if (jsonEnd >= 0 && jsonEnd < clean.length - 1) clean = clean.substring(0, jsonEnd + 1);
 
-  clean = clean
-    .replace(/,\s*}/g, '}')
-    .replace(/,\s*]/g, ']')
-    .replace(/[\x00-\x1F\x7F]/g, (c) => c === '\n' || c === '\r' || c === '\t' ? c : '');
+  // Replace control characters inside strings with spaces (preserve \n \r \t)
+  // Process character by character to handle control chars inside JSON strings
+  let result = '';
+  for (let i = 0; i < clean.length; i++) {
+    const code = clean.charCodeAt(i);
+    if (code < 32 && code !== 10 && code !== 13 && code !== 9) {
+      result += ' ';
+    } else if (code === 127) {
+      result += ' ';
+    } else {
+      result += clean[i];
+    }
+  }
+
+  // Fix trailing commas
+  result = result.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+
+  return result;
+}
+
+function parseJsonResponse(text: string): any {
+  const clean = sanitizeJsonString(text);
 
   try {
     return JSON.parse(clean);
@@ -255,10 +275,15 @@ function parseJsonResponse(text: string): any {
     console.log("Initial parse failed, attempting repair...");
     let repaired = clean;
     
+    // Remove trailing incomplete key-value pairs
     repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
+    repaired = repaired.replace(/,\s*"[^"]*":\s*\[?[^\]]*$/, '');
     repaired = repaired.replace(/,\s*"[^"]*$/, '');
     repaired = repaired.replace(/,\s*$/, '');
+    // Fix trailing commas again after truncation
+    repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
     
+    // Count and close unbalanced braces/brackets
     let braces = 0, brackets = 0;
     let inString = false, escape = false;
     for (const c of repaired) {
@@ -272,11 +297,41 @@ function parseJsonResponse(text: string): any {
       if (c === ']') brackets--;
     }
     
+    // If we're inside a string, close it
+    if (inString) repaired += '"';
+    
     while (brackets > 0) { repaired += ']'; brackets--; }
     while (braces > 0) { repaired += '}'; braces--; }
     
     console.log("Repaired JSON, attempting parse...");
-    return JSON.parse(repaired);
+    try {
+      return JSON.parse(repaired);
+    } catch (e2) {
+      // Last resort: try to extract valid JSON by removing the last problematic section
+      console.log("Repair failed, trying aggressive cleanup...");
+      // Find the last complete key-value pair ending with a proper value
+      const lastGoodBrace = repaired.lastIndexOf('}');
+      if (lastGoodBrace > 0) {
+        let aggressive = repaired.substring(0, lastGoodBrace + 1);
+        aggressive = aggressive.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+        // Re-count and close
+        let b2 = 0, k2 = 0, s2 = false, e3 = false;
+        for (const c of aggressive) {
+          if (e3) { e3 = false; continue; }
+          if (c === '\\') { e3 = true; continue; }
+          if (c === '"') { s2 = !s2; continue; }
+          if (s2) continue;
+          if (c === '{') b2++;
+          if (c === '}') b2--;
+          if (c === '[') k2++;
+          if (c === ']') k2--;
+        }
+        while (k2 > 0) { aggressive += ']'; k2--; }
+        while (b2 > 0) { aggressive += '}'; b2--; }
+        return JSON.parse(aggressive);
+      }
+      throw e2;
+    }
   }
 }
 
