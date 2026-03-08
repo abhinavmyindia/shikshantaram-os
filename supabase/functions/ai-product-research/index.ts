@@ -442,6 +442,44 @@ serve(async (req) => {
       prompt = buildRawIdeaIdeasPrompt(ideaText, analysis, chosenAngle, country);
       model = "google/gemini-3-flash-preview";
       maxTokens = 24000;
+    } else if (action === "generate-more") {
+      const { niche, country, productType, existingNames, moreCount, direction, rawIdea } = body;
+      const directionInstructions: Record<string, string> = {
+        'different-angle': 'Explore completely different sub-niches, audiences, and angles within this niche. Think laterally.',
+        'more-specific': 'Go deeper and more specific within the same niche. Narrower audience, more targeted pain points.',
+        'easier-to-build': 'Focus on products that can be created in 1-3 days maximum. Simple formats, low complexity.',
+        'higher-ticket': 'Focus exclusively on premium products priced at the top end of the market. Higher transformation, higher price.',
+        'impulse-buy': 'Focus on products with high impulse purchase scores. The buyer sees it and wants it immediately.',
+        'trending-now': 'Focus on products tied to current trends, viral topics, and rising demand in this market right now.'
+      };
+      const dirInstruction = directionInstructions[direction] || directionInstructions['different-angle'];
+      const rawContext = rawIdea ? `\nORIGINAL RAW IDEA: "${rawIdea}"\nAll new ideas must stay relevant to this original concept.\n` : '';
+      prompt = `You are an expert digital product researcher.
+
+Generate exactly ${moreCount} NEW digital product ideas. These must be COMPLETELY DIFFERENT from the ideas already generated.
+
+RESEARCH CONTEXT:
+- Niche: ${niche}
+- Country: ${country}
+- Product Type: ${productType}
+- Direction Focus: ${dirInstruction}
+${rawContext}
+ALREADY GENERATED — DO NOT REPEAT THESE:
+${(existingNames || []).map((n: string, i: number) => `${i + 1}. ${n}`).join('\n')}
+
+STRICT RULES:
+1. None of your ${moreCount} ideas can be similar to ANY idea in the list above
+2. Apply the direction focus strictly: ${dirInstruction}
+3. All ideas must be specific to ${country} market context
+4. Vary demand scores, build times, and impulse scores realistically
+5. Every idea must feel genuinely fresh compared to what was already generated
+
+For EACH idea return the EXACT same JSON structure:
+{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":"High","primaryPain":"...","searchKeyword":"..."}
+
+Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No markdown.`;
+      model = "google/gemini-3-flash-preview";
+      maxTokens = Math.max(4000, Math.ceil(moreCount * 800));
     } else if (action === "deep-research") {
       const { product, inputData } = body;
       prompt = buildDeepResearchPrompt(product, inputData);
