@@ -526,11 +526,87 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
     }
   };
 
+  /* ───── Generate More Ideas ───── */
+  const DIRECTION_OPTIONS = [
+    { id: 'different-angle', emoji: '🔀', name: 'Different Angle', desc: 'Explore new sub-niches you haven\'t seen yet', accent: '#06b6d4' },
+    { id: 'more-specific', emoji: '🎯', name: 'More Specific', desc: 'Go deeper and narrower on the same topic', accent: '#7c3aed' },
+    { id: 'easier-to-build', emoji: '⚡', name: 'Easier to Build', desc: 'Low-effort products, fast to create', accent: '#22c55e' },
+    { id: 'higher-ticket', emoji: '💎', name: 'Higher Ticket', desc: 'Premium products with bigger price points', accent: '#f59e0b' },
+    { id: 'impulse-buy', emoji: '🔥', name: 'Impulse Buys', desc: 'High impulse score, quick purchase decisions', accent: '#ef4444' },
+    { id: 'trending-now', emoji: '📈', name: 'Trending Now', desc: 'Products riding current market trends', accent: '#ec4899' },
+  ];
+  const directionLabels: Record<string, string> = Object.fromEntries(DIRECTION_OPTIONS.map(d => [d.id, d.name]));
+
+  const generateMoreIdeas = async () => {
+    setGeneratingMore(true);
+    setError('');
+    try {
+      const existingNames = productIdeas.map(p => p.productName);
+      const rawIdea = isRawResultsMode ? productIdeas[0]?.originalIdea : undefined;
+      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+        body: {
+          action: 'generate-more',
+          niche: inputData.niche,
+          country: inputData.country,
+          productType: inputData.productType,
+          existingNames,
+          moreCount,
+          direction: moreDirection,
+          rawIdea,
+        },
+      });
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+
+      const newIdeas: ProductIdea[] = data.result.map((idea: any) => ({
+        ...idea,
+        sourceMode: isRawResultsMode ? 'raw' : 'niche',
+        originalIdea: isRawResultsMode ? productIdeas[0]?.originalIdea : undefined,
+        batchId: ideaBatches.length + 1,
+      }));
+
+      setProductIdeas(prev => [...prev, ...newIdeas]);
+      const newBatch = {
+        batchId: ideaBatches.length + 1,
+        count: newIdeas.length,
+        label: `+${newIdeas.length} ${directionLabels[moreDirection] || 'New'}`,
+        ideas: newIdeas,
+        direction: moreDirection,
+      };
+      setIdeaBatches(prev => [...prev, newBatch]);
+
+      // Animate count
+      setCountAnimating(true);
+      setTimeout(() => setCountAnimating(false), 600);
+
+      // Success flash
+      setMoreSuccess(true);
+      setTimeout(() => setMoreSuccess(false), 2500);
+
+      // Reset direction
+      setMoreDirection('different-angle');
+
+      // Scroll to separator
+      setTimeout(() => {
+        const sep = document.getElementById(`batch-${newBatch.batchId}`);
+        if (sep) sep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    } catch (err: any) {
+      setError(err.message || 'Could not generate more ideas. Please try again.');
+    } finally {
+      setGeneratingMore(false);
+    }
+  };
+
   /* ───── Filter & Sort ───── */
   const filteredIdeas = productIdeas.filter(idea => {
     if (filter === 'All') return true;
     if (filter === 'high-impulse') return idea.impulseScore === 'High';
     if (filter === 'low-comp') return idea.competitionLevel === 'Low';
+    if (filter === 'latest-batch') {
+      const lastBatch = ideaBatches[ideaBatches.length - 1];
+      return lastBatch && lastBatch.ideas.includes(idea);
+    }
     return true;
   });
 
