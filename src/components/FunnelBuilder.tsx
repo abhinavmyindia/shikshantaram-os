@@ -683,6 +683,10 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
           </div>
           <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
             {chosenType && <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(6,182,212,0.1)', color: '#0891b2', padding: '4px 12px', borderRadius: 50 })}>🔀 {chosenType.name}</span>}
+            <button onClick={() => saveItem({ tool: 'funnel_builder', item_type: 'funnel_map', title: funnelData.funnelName, summary: funnelData.funnelTagline, full_data: { brief: funnelBrief, funnel: funnelData } })}
+              style={s({ background: isSaved('funnel_builder', 'funnel_map', funnelData.funnelName) ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : 'none', border: isSaved('funnel_builder', 'funnel_map', funnelData.funnelName) ? 'none' : '1px solid #e2e8f0', borderRadius: 50, padding: '5px 14px', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: isSaved('funnel_builder', 'funnel_map', funnelData.funnelName) ? 'white' : '#64748b', cursor: 'pointer', opacity: isSaving('funnel_builder', 'funnel_map', funnelData.funnelName) ? 0.5 : 1, transition: 'all 0.2s' })}>
+              {isSaved('funnel_builder', 'funnel_map', funnelData.funnelName) ? '🔖 Saved' : '🔖 Save Funnel'}
+            </button>
             <span onClick={() => setFunnelStep('brief')} style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '5px 12px', borderRadius: 8 })}>← Edit Brief</span>
             <button onClick={() => setFunnelStep('emails')} style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: 'white', background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' })}>📧 Email Sequence</button>
           </div>
