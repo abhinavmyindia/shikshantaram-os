@@ -1106,7 +1106,7 @@ function NichePage({ onBack, onAction }: { onBack: () => void; onAction?: () => 
 }
 
 /* ───────── Product Page ───────── */
-function ProductPage({ onBack, onAction, onUseInOffer }: { onBack: () => void; onAction?: () => void; onUseInOffer?: (before: string, after: string) => void }) {
+function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; onAction?: () => void; onBuildOffer?: (data: any) => void }) {
   const [researchMode, setResearchMode] = useState<'ai' | 'browse'>('ai');
   const [search, setSearch] = useState('');
   const [speed, setSpeed] = useState('All');
@@ -1150,7 +1150,7 @@ function ProductPage({ onBack, onAction, onUseInOffer }: { onBack: () => void; o
       </div>
 
       {researchMode === 'ai' ? (
-        <AIResearchEngine onUseInOffer={onUseInOffer} />
+        <AIResearchEngine onBuildOffer={onBuildOffer} />
       ) : (
         <>
           <FilterBar search={search} onSearch={setSearch} accentColor="#ea580c"
@@ -1411,7 +1411,7 @@ const Index = () => {
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [toast, setToast] = useState<ToastData | null>(null);
   const [showMotivation, setShowMotivation] = useState(false);
-  const [offerPrefill, setOfferPrefill] = useState<{ beforeState: string; afterState: string } | null>(null);
+  const [offerPrefill, setOfferPrefill] = useState<any>(null);
   const [motivationMsg, setMotivationMsg] = useState<typeof MOTIVATION_MESSAGES[0] | null>(null);
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
@@ -1478,8 +1478,8 @@ const Index = () => {
           <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
             {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
-            {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onUseInOffer={(before, after) => {
-              setOfferPrefill({ beforeState: before, afterState: after });
+            {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onBuildOffer={(data) => {
+              setOfferPrefill(data);
               navigateTo('offer');
             }} />}
             {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} prefill={offerPrefill} onPrefillConsumed={() => setOfferPrefill(null)} />}
