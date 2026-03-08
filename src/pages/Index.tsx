@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, CSSProperties } from 'react';
 import AIResearchEngine from '@/components/AIResearchEngine';
 import OfferCreation from '@/components/OfferCreation';
 import FunnelBuilder from '@/components/FunnelBuilder';
+import MySavedPage from '@/components/MySavedPage';
+import OfferCreation from '@/components/OfferCreation';
+import FunnelBuilder from '@/components/FunnelBuilder';
 import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
@@ -1439,12 +1442,30 @@ const Index = () => {
   const [showMotivation, setShowMotivation] = useState(false);
   const [offerPrefill, setOfferPrefill] = useState<any>(null);
   const [motivationMsg, setMotivationMsg] = useState<typeof MOTIVATION_MESSAGES[0] | null>(null);
+  const [savedCount, setSavedCount] = useState(0);
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
 
   const tier = profile?.access_tier || 'basic';
   const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
   const journeyDay = getJourneyDay(profile?.created_at);
+
+  // Fetch saved items count
+  useEffect(() => {
+    if (!user) return;
+    const fetchCount = async () => {
+      const { count } = await supabase.from('saved_items').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+      setSavedCount(count || 0);
+    };
+    fetchCount();
+  }, [user, activePage]);
+
+  // Clear prefill when navigating away from offer
+  useEffect(() => {
+    if (activePage !== 'offer') {
+      setOfferPrefill(null);
+    }
+  }, [activePage]);
 
   // Motivation popup — only on fresh login
   useEffect(() => {
@@ -1500,7 +1521,7 @@ const Index = () => {
       }}>
         <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} />
+          <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} savedCount={savedCount} />
           <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
             {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
@@ -1510,6 +1531,7 @@ const Index = () => {
             }} />}
             {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} prefill={offerPrefill} onPrefillConsumed={() => setOfferPrefill(null)} />}
             {activePage === 'funnel' && <FunnelBuilder onBack={() => navigateTo('dashboard')} />}
+            {activePage === 'saved' && user && <MySavedPage userId={user.id} onNavigate={navigateTo} onSavedCountChange={setSavedCount} />}
             {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
           </main>
         </div>
