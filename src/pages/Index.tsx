@@ -1529,16 +1529,21 @@ const Index = () => {
 
     const checkCost = async () => {
       if (usagePopupShown.current) return;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('ai_usage_logs')
         .select('estimated_cost_usd')
         .eq('user_id', user.id)
         .gte('created_at', sessionStart);
       
+      console.log('[UsagePopup] Query result:', { data, error, sessionStart, userId: user.id });
+      
       const totalCost = (data || []).reduce((sum: number, row: any) => sum + parseFloat(row.estimated_cost_usd || '0'), 0);
       setSessionCostUsd(totalCost);
+      
+      console.log('[UsagePopup] totalCost:', totalCost, 'threshold: 0.01', 'shown:', usagePopupShown.current);
 
       if (totalCost >= 0.01 && !usagePopupShown.current) {
+        console.log('[UsagePopup] TRIGGERING POPUP!');
         usagePopupShown.current = true;
         setUsageMsg(USAGE_MESSAGES[Math.floor(Math.random() * USAGE_MESSAGES.length)]);
         setShowUsagePopup(true);
