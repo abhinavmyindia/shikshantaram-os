@@ -858,7 +858,11 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         {error && (
           <div style={s({ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
             <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#991b1b' })}>{error}</span>
-            <button onClick={() => setError('')} style={s({ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 700 })}>✕</button>
+            <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
+              <button onClick={() => { setError(''); if (ideaMode === 'raw') runIdeaAnalysis(); else generateIdeas(); }} style={s({ background: 'white', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 10, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' })}
+                onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')} onMouseLeave={e => (e.currentTarget.style.background = 'white')}>🔄 Try Again</button>
+              <button onClick={() => setError('')} style={s({ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontWeight: 700 })}>✕</button>
+            </div>
           </div>
         )}
 
