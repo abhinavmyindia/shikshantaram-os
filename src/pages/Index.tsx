@@ -1482,13 +1482,15 @@ const Index = () => {
   const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [toast, setToast] = useState<ToastData | null>(null);
-  const [showMotivation, setShowMotivation] = useState(false);
+  const [showUsagePopup, setShowUsagePopup] = useState(false);
   const [offerPrefill, setOfferPrefill] = useState<any>(null);
   const [funnelPrefill, setFunnelPrefill] = useState<any>(null);
-  const [motivationMsg, setMotivationMsg] = useState<typeof MOTIVATION_MESSAGES[0] | null>(null);
+  const [usageMsg, setUsageMsg] = useState<typeof USAGE_MESSAGES[0] | null>(null);
+  const [sessionCostUsd, setSessionCostUsd] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
+  const usagePopupShown = useRef(false);
 
   const tier = profile?.access_tier || 'basic';
   const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
@@ -1518,17 +1520,37 @@ const Index = () => {
     }
   }, [activePage]);
 
-  // Motivation popup — only on fresh login
+  // Usage value popup — poll AI cost, trigger at $0.50
   useEffect(() => {
-    if (user && !sessionStorage.getItem('motivationShown')) {
-      const timer = setTimeout(() => {
-        setMotivationMsg(MOTIVATION_MESSAGES[Math.floor(Math.random() * MOTIVATION_MESSAGES.length)]);
-        setShowMotivation(true);
-        sessionStorage.setItem('motivationShown', 'true');
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
+    if (!user || isAdmin || usagePopupShown.current) return;
+    if (sessionStorage.getItem('usagePopupShown')) { usagePopupShown.current = true; return; }
+
+    const sessionStart = sessionStorage.getItem('session_start') || new Date().toISOString();
+
+    const checkCost = async () => {
+      if (usagePopupShown.current) return;
+      const { data } = await supabase
+        .from('ai_usage_logs')
+        .select('estimated_cost_usd')
+        .eq('user_id', user.id)
+        .gte('created_at', sessionStart);
+      
+      const totalCost = (data || []).reduce((sum: number, row: any) => sum + parseFloat(row.estimated_cost_usd || '0'), 0);
+      setSessionCostUsd(totalCost);
+
+      if (totalCost >= 0.50 && !usagePopupShown.current) {
+        usagePopupShown.current = true;
+        setUsageMsg(USAGE_MESSAGES[Math.floor(Math.random() * USAGE_MESSAGES.length)]);
+        setShowUsagePopup(true);
+        sessionStorage.setItem('usagePopupShown', 'true');
+      }
+    };
+
+    const interval = setInterval(checkCost, 15000);
+    // Also check after a short delay for returning sessions
+    const initialCheck = setTimeout(checkCost, 3000);
+    return () => { clearInterval(interval); clearTimeout(initialCheck); };
+  }, [user, isAdmin]);
 
   // Start session tracking
   useEffect(() => {
@@ -1661,12 +1683,12 @@ const Index = () => {
       </div>
       {toast && <Toast data={toast} onClose={() => setToast(null)} />}
       {profile?.is_beta_user && user && <BetaFeedback userId={user.id} />}
-      {showMotivation && motivationMsg && (
-        <MotivationPopup
-          message={motivationMsg}
-          onClose={() => setShowMotivation(false)}
+      {showUsagePopup && usageMsg && (
+        <UsageValuePopup
+          message={usageMsg}
+          onClose={() => setShowUsagePopup(false)}
           onNavigate={navigateTo}
-          journeyDay={journeyDay}
+          displayValue={getRetailValue(sessionCostUsd)}
         />
       )}
     </>
