@@ -24,6 +24,7 @@ serve(async (req) => {
     let maxTokens = 8000;
 
     if (action === "generate-ideas") {
+      maxTokens = 16000;
       prompt = `You are an expert digital product researcher and market analyst.
 
 A creator wants to build a digital product with these parameters:
