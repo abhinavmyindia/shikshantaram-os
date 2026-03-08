@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface SaveItemParams {
   tool: string;
@@ -31,15 +32,25 @@ export function useSaveItem() {
     if (savedIds.has(key)) {
       // Unsave
       setSaving(key);
-      await supabase.from('saved_items').delete().eq('user_id', userId).eq('tool', params.tool).eq('item_type', params.item_type).eq('title', params.title);
+      const { error } = await supabase.from('saved_items').delete().eq('user_id', userId).eq('tool', params.tool).eq('item_type', params.item_type).eq('title', params.title);
       setSavedIds(prev => { const n = new Set(prev); n.delete(key); return n; });
       setSaving(null);
+      if (error) {
+        toast.error('Could not remove. Try again.', { duration: 3000 });
+      } else {
+        toast('Removed from saved', { duration: 1500 });
+      }
       return;
     }
     setSaving(key);
-    await supabase.from('saved_items').insert({ user_id: userId, ...params });
+    const { error } = await supabase.from('saved_items').insert({ user_id: userId, ...params });
     setSavedIds(prev => new Set(prev).add(key));
     setSaving(null);
+    if (error) {
+      toast.error('Could not save. Try again.', { duration: 3000 });
+    } else {
+      toast.success('🔖 Saved to My Saved!', { duration: 2000 });
+    }
   }, [userId, savedIds]);
 
   const isSaved = useCallback((tool: string, item_type: string, title: string) => {

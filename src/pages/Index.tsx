@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, CSSProperties } from 'react';
+import { useState, useEffect, useRef, CSSProperties, useCallback } from 'react';
+import { Menu, X } from 'lucide-react';
 import AIResearchEngine from '@/components/AIResearchEngine';
 import OfferCreation from '@/components/OfferCreation';
 import FunnelBuilder from '@/components/FunnelBuilder';
@@ -533,8 +534,6 @@ function StatCard({ label, value, iconBg, iconColor, changePill, changeColor, ic
 
 /* ───────── Locked Card Popup Data ───────── */
 const LOCKED_POPUP_DATA: Record<string, { emoji: string; title: string; message: string; percent: number; percentLabel: string; funDetail: string }> = {
-  offer: { emoji: '🔥', title: 'Offer Creation is On Fire!', message: 'Our team is literally burning the midnight oil building this. Your irresistible offers are almost ready.', percent: 65, percentLabel: '65% built', funDetail: 'flames' },
-  funnel: { emoji: '🚧', title: 'Funnels Ready!', message: 'Your funnel builder is live and ready to use!', percent: 100, percentLabel: '100% built', funDetail: 'building' },
   creator: { emoji: '✨', title: 'Something Magical is Brewing!', message: "AI-powered product creation in the making. Soon you'll build ebooks, templates & micro-courses in minutes.", percent: 40, percentLabel: '40% built', funDetail: 'sparkles' },
   copy: { emoji: '✍️', title: 'Words Are Being Crafted...', message: 'Your AI copywriter is learning to write headlines that stop thumbs, emails that sell, and ads that convert.', percent: 55, percentLabel: '55% built', funDetail: 'typing' },
   ads: { emoji: '📡', title: 'Launching Ad Intelligence!', message: "We're training our AI on thousands of winning ads. Your campaign machine will be ready to dominate Meta & Google.", percent: 30, percentLabel: '30% built', funDetail: 'radar' },
@@ -862,7 +861,7 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 32 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 32 }}>
         <StatCard label="Tools Unlocked" value="4 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+4 live now" changeColor="#15803d" delay={0.06} />
         <StatCard label="Product Ideas" value="500+" iconBg="#fff7ed" iconColor="#ea580c" icon="💡" changePill="Explore →" changeColor="#ea580c" delay={0.08} />
         <StatCard label="Niches Mapped" value="594" iconBg="#dcfce7" iconColor="#059669" icon="🎯" changePill="Updated" changeColor="#15803d" delay={0.1} />
@@ -1601,6 +1600,20 @@ const Index = () => {
     tracking.trackToolAction();
   };
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sidebar on mobile when page changes
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false);
+  }, [activePage, isMobile]);
+
   return (
     <>
       <GlobalStyles />
@@ -1609,9 +1622,46 @@ const Index = () => {
         background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)',
       }}>
         <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} />
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} savedCount={savedCount} />
-          <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+          {/* Mobile hamburger */}
+          {isMobile && !sidebarOpen && (
+            <button onClick={() => setSidebarOpen(true)} style={{
+              position: 'fixed', top: 14, left: 14, zIndex: 60,
+              width: 40, height: 40, borderRadius: 10,
+              background: 'white', border: 'none', cursor: 'pointer',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Menu size={22} color="#374151" />
+            </button>
+          )}
+          {/* Mobile overlay */}
+          {isMobile && sidebarOpen && (
+            <div onClick={() => setSidebarOpen(false)} style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 49,
+            }} />
+          )}
+          {/* Sidebar wrapper */}
+          <div style={{
+            ...(isMobile ? {
+              position: 'fixed' as const, top: 0, left: sidebarOpen ? 0 : -240,
+              transition: 'left 0.3s ease', zIndex: 50, height: '100vh',
+            } : {}),
+          }}>
+            {/* Mobile close button */}
+            {isMobile && sidebarOpen && (
+              <button onClick={() => setSidebarOpen(false)} style={{
+                position: 'absolute', top: 16, right: 12, zIndex: 51,
+                width: 28, height: 28, borderRadius: 8,
+                background: '#f1f5f9', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <X size={16} color="#64748b" />
+              </button>
+            )}
+            <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} savedCount={savedCount} />
+          </div>
+          <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '32px 16px' : '32px 36px', marginLeft: 0 }}>
             {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} />}
             {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onBuildOffer={(data) => {

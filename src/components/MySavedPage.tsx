@@ -1,5 +1,7 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const s = (styles: CSSProperties): CSSProperties => styles;
 
@@ -47,6 +49,7 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange }: 
   const [sort, setSort] = useState<'newest' | 'oldest' | 'az'>('newest');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<SavedItem | null>(null);
+  const [copiedFunnel, setCopiedFunnel] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -76,6 +79,32 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange }: 
   });
 
   const toolCounts = items.reduce((acc, i) => { acc[i.tool] = (acc[i.tool] || 0) + 1; return acc; }, {} as Record<string, number>);
+
+  /* ── Action button handlers ── */
+  const handleDeepResearch = (item: SavedItem) => {
+    setSelectedItem(null);
+    // Navigate to product navigator — the product data is in full_data
+    onNavigate('product');
+  };
+
+  const handleBuildOffer = (item: SavedItem) => {
+    setSelectedItem(null);
+    onNavigate('offer');
+  };
+
+  const handleBuildFunnel = (item: SavedItem) => {
+    setSelectedItem(null);
+    onNavigate('funnel');
+  };
+
+  const handleCopyFunnelSummary = (item: SavedItem) => {
+    const fd = item.full_data?.funnelData;
+    const text = fd ? `${fd.funnelName} — ${fd.funnelTagline || 'funnel'} — ${fd.steps?.length || 0} steps` : item.title;
+    navigator.clipboard.writeText(text);
+    setCopiedFunnel(true);
+    setTimeout(() => setCopiedFunnel(false), 2000);
+    toast.success('✓ Copied!', { duration: 2000 });
+  };
 
   return (
     <div style={s({ animation: 'fadeUp 0.4s ease' })}>
@@ -150,9 +179,11 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange }: 
                     <span style={s({ background: tc.light, color: tc.accent, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', padding: '3px 10px', borderRadius: 50 })}>{tc.emoji} {tc.label}</span>
                     <div style={s({ display: 'flex', gap: 6, alignItems: 'center' })}>
                       <span style={s({ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, background: '#f8fafc', color: '#94a3b8', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: 50 })}>{TYPE_LABELS[item.item_type] || item.item_type}</span>
-                      <span onClick={e => { e.stopPropagation(); setDeleteConfirm(item.id); }} style={s({ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', cursor: 'pointer', fontSize: 14, borderRadius: '50%' })}
+                      <span onClick={e => { e.stopPropagation(); setDeleteConfirm(item.id); }} style={s({ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', cursor: 'pointer', borderRadius: '50%' })}
                         onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-                        onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}>×</span>
+                        onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}>
+                        <Trash2 size={14} />
+                      </span>
                     </div>
                   </div>
                   {/* Title */}
@@ -256,6 +287,22 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange }: 
               {/* Fallback: show raw JSON summary */}
               {!['product_idea', 'deep_research', 'offer_output', 'funnel_map'].includes(selectedItem.item_type) && (
                 <pre style={s({ fontFamily: 'monospace', fontSize: 11, color: '#64748b', whiteSpace: 'pre-wrap', wordBreak: 'break-all' })}>{JSON.stringify(selectedItem.full_data, null, 2).slice(0, 2000)}</pre>
+              )}
+            </div>
+            {/* Action footer */}
+            <div style={s({ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0 })}>
+              <button onClick={() => setSelectedItem(null)} style={s({ background: 'none', border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#64748b', cursor: 'pointer' })}>✕ Close</button>
+              {selectedItem.item_type === 'product_idea' && (
+                <button onClick={() => handleDeepResearch(selectedItem)} style={s({ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(234,88,12,0.3)' })}>🔬 Deep Research This →</button>
+              )}
+              {selectedItem.item_type === 'deep_research' && (
+                <button onClick={() => handleBuildOffer(selectedItem)} style={s({ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(245,158,11,0.3)' })}>🎁 Build Offer for This Product →</button>
+              )}
+              {selectedItem.item_type === 'offer_output' && (
+                <button onClick={() => handleBuildFunnel(selectedItem)} style={s({ background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(6,182,212,0.3)' })}>🔀 Build a Funnel for This →</button>
+              )}
+              {selectedItem.item_type === 'funnel_map' && (
+                <button onClick={() => handleCopyFunnelSummary(selectedItem)} style={s({ background: copiedFunnel ? '#dcfce7' : 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: copiedFunnel ? '#059669' : 'white', border: copiedFunnel ? '1px solid #bbf7d0' : 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' })}>{copiedFunnel ? '✓ Copied!' : '📋 Copy Funnel Summary'}</button>
               )}
             </div>
           </div>
