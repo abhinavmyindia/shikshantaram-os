@@ -1555,6 +1555,27 @@ const Index = () => {
     }
   }, [user]);
 
+  // Presence heartbeat — every 60s
+  useEffect(() => {
+    if (!user) return;
+    const updatePresence = async () => {
+      await supabase.from('user_presence').upsert({
+        user_id: user.id,
+        user_email: user.email,
+        user_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
+        last_seen: new Date().toISOString(),
+        current_page: activePage,
+        session_start: sessionStorage.getItem('session_start') || new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    };
+    if (!sessionStorage.getItem('session_start')) {
+      sessionStorage.setItem('session_start', new Date().toISOString());
+    }
+    updatePresence();
+    const interval = setInterval(updatePresence, 60000);
+    return () => clearInterval(interval);
+  }, [user, activePage]);
+
   // Track page visits
   useEffect(() => {
     tracking.trackPageVisit(activePage);
