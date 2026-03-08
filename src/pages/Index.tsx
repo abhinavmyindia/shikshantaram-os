@@ -1508,6 +1508,7 @@ const Index = () => {
   const [toast, setToast] = useState<ToastData | null>(null);
   const [showMotivation, setShowMotivation] = useState(false);
   const [offerPrefill, setOfferPrefill] = useState<any>(null);
+  const [funnelPrefill, setFunnelPrefill] = useState<any>(null);
   const [motivationMsg, setMotivationMsg] = useState<typeof MOTIVATION_MESSAGES[0] | null>(null);
   const [savedCount, setSavedCount] = useState(0);
   const tracking = useTracking(user?.id);
@@ -1531,6 +1532,13 @@ const Index = () => {
   useEffect(() => {
     if (activePage !== 'offer') {
       setOfferPrefill(null);
+    }
+  }, [activePage]);
+
+  // Clear funnel prefill when navigating away from funnel
+  useEffect(() => {
+    if (activePage !== 'funnel') {
+      setFunnelPrefill(null);
     }
   }, [activePage]);
 
@@ -1668,9 +1676,9 @@ const Index = () => {
               setOfferPrefill(data);
               navigateTo('offer');
             }} />}
-            {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} prefill={offerPrefill} onPrefillConsumed={() => setOfferPrefill(null)} />}
-            {activePage === 'funnel' && <FunnelBuilder onBack={() => navigateTo('dashboard')} />}
-            {activePage === 'saved' && user && <MySavedPage userId={user.id} onNavigate={navigateTo} onSavedCountChange={setSavedCount} />}
+            {activePage === 'offer' && <OfferCreation onBack={() => navigateTo('dashboard')} prefill={offerPrefill} onPrefillConsumed={() => setOfferPrefill(null)} onBuildFunnel={(data: any) => { setFunnelPrefill(data); navigateTo('funnel'); }} />}
+            {activePage === 'funnel' && <FunnelBuilder onBack={() => navigateTo('dashboard')} funnelPrefill={funnelPrefill} />}
+            {activePage === 'saved' && user && <MySavedPage userId={user.id} onNavigate={navigateTo} onSavedCountChange={setSavedCount} onBuildFunnel={(data: any) => { setFunnelPrefill(data); navigateTo('funnel'); }} />}
             {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
           </main>
         </div>

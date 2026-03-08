@@ -2,7 +2,14 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSaveItem } from '@/hooks/useSaveItem';
 
-/* ───────── Types ───────── */
+/* ───────── Prefill Types ───────── */
+interface FunnelPrefillData {
+  productName: string;
+  offerDescription: string;
+  targetBuyer: string;
+  priceRange?: string;
+  sourceProduct?: string;
+}
 interface FunnelBrief {
   productName: string;
   offer: string;
@@ -104,14 +111,14 @@ const FUNNEL_TYPES: FunnelType[] = [
 ];
 
 const TRAFFIC_SOURCES = [
-  { emoji: '📸', name: 'Instagram', accent: '#ec4899' },
-  { emoji: '💼', name: 'LinkedIn', accent: '#0a66c2' },
-  { emoji: '📱', name: 'WhatsApp', accent: '#22c55e' },
-  { emoji: '🎥', name: 'YouTube', accent: '#ef4444' },
-  { emoji: '🐦', name: 'Twitter/X', accent: '#0f172a' },
-  { emoji: '📧', name: 'Email List', accent: '#7c3aed' },
-  { emoji: '🔍', name: 'Google/SEO', accent: '#f59e0b' },
-  { emoji: '👥', name: 'Referrals', accent: '#06b6d4' },
+  { id: 'meta_ads', icon: '📘', name: 'Meta Ads', description: 'Facebook & Instagram paid ads', color: '#1877f2', lightBg: 'rgba(24,119,242,0.06)', lightBorder: 'rgba(24,119,242,0.2)' },
+  { id: 'google_ads', icon: '🔍', name: 'Google Ads', description: 'Search & display advertising', color: '#ea4335', lightBg: 'rgba(234,67,53,0.06)', lightBorder: 'rgba(234,67,53,0.2)' },
+  { id: 'linkedin_ads', icon: '💼', name: 'LinkedIn Ads', description: 'B2B & professional targeting', color: '#0a66c2', lightBg: 'rgba(10,102,194,0.06)', lightBorder: 'rgba(10,102,194,0.2)' },
+  { id: 'youtube', icon: '📺', name: 'YouTube', description: 'Video content & pre-roll ads', color: '#ff0000', lightBg: 'rgba(255,0,0,0.05)', lightBorder: 'rgba(255,0,0,0.15)' },
+  { id: 'organic_social', icon: '🌱', name: 'Organic Social', description: 'Free posts, reels & stories', color: '#059669', lightBg: 'rgba(5,150,105,0.06)', lightBorder: 'rgba(5,150,105,0.2)' },
+  { id: 'email_list', icon: '📧', name: 'Email List', description: 'Existing subscribers & nurture', color: '#7c3aed', lightBg: 'rgba(124,58,237,0.06)', lightBorder: 'rgba(124,58,237,0.2)' },
+  { id: 'google_seo', icon: '🔎', name: 'Google SEO', description: 'Organic search traffic', color: '#0891b2', lightBg: 'rgba(8,145,178,0.06)', lightBorder: 'rgba(8,145,178,0.2)' },
+  { id: 'referrals', icon: '🤝', name: 'Referrals', description: 'Word of mouth & partnerships', color: '#d97706', lightBg: 'rgba(217,119,6,0.06)', lightBorder: 'rgba(217,119,6,0.2)' },
 ];
 
 const GOAL_OPTIONS = [
@@ -181,7 +188,7 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
 }
 
 /* ───────── Main Component ───────── */
-export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
+export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () => void; funnelPrefill?: FunnelPrefillData | null }) {
   const { saveItem, isSaved, isSaving } = useSaveItem();
   const [funnelStep, setFunnelStep] = useState<FunnelStepId>('brief');
   const [funnelBrief, setFunnelBrief] = useState<FunnelBrief>({ productName: '', offer: '', audience: '', goal: '', trafficSources: [] });
@@ -200,6 +207,26 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
   const [emailTab, setEmailTab] = useState<'welcome' | 'sales' | 'postPurchase'>('welcome');
   const [expandedEmails, setExpandedEmails] = useState<Record<string, boolean>>({});
   const [copyViewStep, setCopyViewStep] = useState<FunnelStep | null>(null);
+  const [showPrefillBanner, setShowPrefillBanner] = useState(false);
+  const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
+  const [editedFields, setEditedFields] = useState<Set<string>>(new Set());
+
+  // Consume prefill on mount
+  useEffect(() => {
+    if (funnelPrefill) {
+      setFunnelBrief(prev => ({
+        ...prev,
+        productName: funnelPrefill.productName || '',
+        offer: funnelPrefill.offerDescription || '',
+        audience: funnelPrefill.targetBuyer || '',
+      }));
+      setPrefilledFields(new Set(['productName', 'offer', 'audience']));
+      setShowPrefillBanner(true);
+      setTimeout(() => {
+        document.getElementById('funnel-type-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 400);
+    }
+  }, []);
 
   const currentProgressStep = funnelStep === 'brief' || funnelStep === 'generating' ? 0 : funnelStep === 'visualizer' ? 1 : 2;
   const chosenType = FUNNEL_TYPES.find(t => t.id === funnelType);
@@ -306,6 +333,38 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
     });
   };
 
+  const markFieldEdited = (field: string) => {
+    setEditedFields(prev => { const n = new Set(prev); n.add(field); return n; });
+    setPrefilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
+  };
+
+  const isPrefilled = (field: string) => prefilledFields.has(field) && !editedFields.has(field);
+
+  // Smart goal hint based on price range
+  const getGoalHint = () => {
+    if (!funnelPrefill?.priceRange) return null;
+    const pr = funnelPrefill.priceRange.toLowerCase();
+    if (pr.includes('199') || pr.includes('impulse') || pr.includes('$7')) return "💡 For impulse-priced offers, 'Maximize Sales Volume' often works best";
+    if (pr.includes('499') || pr.includes('low') || pr.includes('$27')) return "💡 Low-ticket offers do well with 'Get Direct Sales'";
+    if (pr.includes('1,999') || pr.includes('mid') || pr.includes('$97')) return "💡 Mid-ticket? Consider 'Build Email List First' to warm up leads";
+    if (pr.includes('9,999') || pr.includes('high') || pr.includes('$497')) return "💡 High-ticket offers convert better with 'Build Email List + Nurture'";
+    return null;
+  };
+
+  // Progress-aware validation message for prefill mode
+  const getValidationMessage = () => {
+    if (!funnelPrefill) {
+      return canGenerate ? '✓ Ready to map your funnel' : 'Fill in product name & offer to continue';
+    }
+    if (!funnelType) return '👆 Choose your funnel type to continue';
+    if (!funnelBrief.goal) return '✓ Funnel type selected · 👆 Now choose your primary goal';
+    if (funnelBrief.trafficSources.length === 0) return '✓ Funnel type + goal ready · 👆 Just pick your traffic source';
+    return "✅ Everything's set · Hit Map My Funnel to build your funnel!";
+  };
+
+  const allManualFieldsFilled = funnelType && funnelBrief.goal && funnelBrief.trafficSources.length > 0;
+  const shouldPulse = !!funnelPrefill && allManualFieldsFilled && canGenerate;
+
   /* ───────── RENDER: BRIEF ───────── */
   if (funnelStep === 'brief') {
     return (
@@ -334,6 +393,22 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
         )}
 
         <div style={s({ maxWidth: 720, margin: '0 auto' })}>
+          {/* Prefill Banner */}
+          {showPrefillBanner && funnelPrefill && (
+            <div style={s({ background: 'linear-gradient(135deg, rgba(6,182,212,0.08), rgba(59,130,246,0.05))', border: '1px solid rgba(6,182,212,0.25)', borderRadius: 18, padding: '18px 22px', marginBottom: 24, animation: 'fadeUp 0.4s ease' })}>
+              <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+                <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0891b2' })}>✨ 3 things auto-filled from your offer</span>
+                <span style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>← from {(funnelPrefill.sourceProduct || '').slice(0, 30)}</span>
+              </div>
+              <div style={s({ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' })}>
+                {['Product Name', 'Offer Description', 'Target Buyer'].map(f => (
+                  <span key={f} style={s({ background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#0891b2' })}>✓ {f}</span>
+                ))}
+              </div>
+              <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', marginTop: 10, lineHeight: 1.6 })}>Just pick your funnel type, goal, and traffic source — then hit Map My Funnel 🚀</div>
+            </div>
+          )}
+
           {/* Hero */}
           <div style={s({ textAlign: 'center', marginBottom: 28 })}>
             <span style={s({ fontSize: 11, fontWeight: 800, background: 'rgba(6,182,212,0.1)', color: '#0891b2', padding: '3px 12px', borderRadius: 50 })}>Step 1 of 3</span>
@@ -342,9 +417,10 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
           </div>
 
           {/* Funnel Type Selection */}
-          <div style={s({ marginBottom: 28 })}>
+          <div id="funnel-type-section" style={s({ marginBottom: 28 })}>
             <h3 style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 4 })}>Choose Your Funnel Type</h3>
-            <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8', marginBottom: 16 })}>Pick the funnel that matches how you sell</p>
+            <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8', marginBottom: funnelPrefill ? 4 : 16 })}>Pick the funnel that matches how you sell</p>
+            {funnelPrefill && <p style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', fontStyle: 'italic', marginBottom: 12 })}>👆 Pick the funnel type that best matches how you'll sell this offer</p>}
             <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 })}>
               {FUNNEL_TYPES.map(ft => {
                 const sel = funnelType === ft.id;
@@ -380,19 +456,37 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
               <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20, padding: 28, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' })}>
                 {/* Field 1 */}
                 <div style={s({ marginBottom: 20 })}>
-                  <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#06b6d4', letterSpacing: '0.04em' })}>01 · WHAT ARE YOU SELLING?</label>
-                  <input value={funnelBrief.productName} onChange={e => setFunnelBrief(p => ({ ...p, productName: e.target.value }))} placeholder="e.g. 'LinkedIn Client Acquisition Guide for Indian Developers'" style={s({ width: '100%', fontFamily: 'DM Sans', fontSize: 13.5, color: '#0f172a', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', outline: 'none', marginTop: 6 })} />
+                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+                    <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#06b6d4', letterSpacing: '0.04em' })}>01 · WHAT ARE YOU SELLING?</label>
+                    {isPrefilled('productName') && <span style={s({ background: 'rgba(6,182,212,0.1)', color: '#0891b2', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Offer Creation</span>}
+                    {editedFields.has('productName') && <span style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' })}>✏️ Edited</span>}
+                  </div>
+                  <input value={funnelBrief.productName} onChange={e => { setFunnelBrief(p => ({ ...p, productName: e.target.value })); markFieldEdited('productName'); }}
+                    placeholder="e.g. 'LinkedIn Client Acquisition Guide for Indian Developers'"
+                    style={s({ width: '100%', fontFamily: 'DM Sans', fontSize: 13.5, color: '#0f172a', background: isPrefilled('productName') ? 'rgba(6,182,212,0.03)' : '#f8fafc', border: isPrefilled('productName') ? '1.5px solid rgba(6,182,212,0.4)' : '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', outline: 'none', marginTop: 6 })} />
                 </div>
                 {/* Field 2 */}
                 <div style={s({ marginBottom: 20 })}>
-                  <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#06b6d4', letterSpacing: '0.04em' })}>02 · DESCRIBE YOUR OFFER</label>
-                  <textarea value={funnelBrief.offer} onChange={e => setFunnelBrief(p => ({ ...p, offer: e.target.value }))} placeholder="e.g. 'A ₹997 guide + 3 templates + 30-day money back guarantee...'" style={s({ width: '100%', minHeight: 80, fontFamily: 'DM Sans', fontSize: 13.5, color: '#0f172a', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', outline: 'none', marginTop: 6, resize: 'vertical' as any })} />
+                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+                    <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#06b6d4', letterSpacing: '0.04em' })}>02 · DESCRIBE YOUR OFFER</label>
+                    {isPrefilled('offer') && <span style={s({ background: 'rgba(6,182,212,0.1)', color: '#0891b2', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Offer Creation</span>}
+                    {editedFields.has('offer') && <span style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' })}>✏️ Edited</span>}
+                  </div>
+                  <textarea value={funnelBrief.offer} onChange={e => { setFunnelBrief(p => ({ ...p, offer: e.target.value })); markFieldEdited('offer'); }}
+                    placeholder="e.g. 'A ₹997 guide + 3 templates + 30-day money back guarantee...'"
+                    style={s({ width: '100%', minHeight: 80, fontFamily: 'DM Sans', fontSize: 13.5, color: '#0f172a', background: isPrefilled('offer') ? 'rgba(6,182,212,0.03)' : '#f8fafc', border: isPrefilled('offer') ? '1.5px solid rgba(6,182,212,0.4)' : '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', outline: 'none', marginTop: 6, resize: 'vertical' as any })} />
                   <p style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 4 })}>Paste from your Offer Creation output, or describe it here</p>
                 </div>
                 {/* Field 3 */}
                 <div style={s({ marginBottom: 20 })}>
-                  <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#06b6d4', letterSpacing: '0.04em' })}>03 · WHO IS YOUR BUYER?</label>
-                  <input value={funnelBrief.audience} onChange={e => setFunnelBrief(p => ({ ...p, audience: e.target.value }))} placeholder="e.g. 'Indian software developers with 2-5 years experience wanting to freelance'" style={s({ width: '100%', fontFamily: 'DM Sans', fontSize: 13.5, color: '#0f172a', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', outline: 'none', marginTop: 6 })} />
+                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+                    <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#06b6d4', letterSpacing: '0.04em' })}>03 · WHO IS YOUR BUYER?</label>
+                    {isPrefilled('audience') && <span style={s({ background: 'rgba(6,182,212,0.1)', color: '#0891b2', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Offer Creation</span>}
+                    {editedFields.has('audience') && <span style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' })}>✏️ Edited</span>}
+                  </div>
+                  <input value={funnelBrief.audience} onChange={e => { setFunnelBrief(p => ({ ...p, audience: e.target.value })); markFieldEdited('audience'); }}
+                    placeholder="e.g. 'Indian software developers with 2-5 years experience wanting to freelance'"
+                    style={s({ width: '100%', fontFamily: 'DM Sans', fontSize: 13.5, color: '#0f172a', background: isPrefilled('audience') ? 'rgba(6,182,212,0.03)' : '#f8fafc', border: isPrefilled('audience') ? '1.5px solid rgba(6,182,212,0.4)' : '1.5px solid #e2e8f0', borderRadius: 10, padding: '11px 14px', outline: 'none', marginTop: 6 })} />
                 </div>
                 {/* Field 4 — Goal */}
                 <div style={s({ marginBottom: 20 })}>
@@ -405,18 +499,42 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
                       </button>
                     ))}
                   </div>
+                  {/* Smart goal hint */}
+                  {getGoalHint() && (
+                    <div style={s({ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 14px', marginTop: 10, fontFamily: 'DM Sans', fontSize: 12, color: '#92400e', animation: 'fadeIn 0.3s ease' })}>
+                      {getGoalHint()}
+                    </div>
+                  )}
                 </div>
-                {/* Field 5 — Traffic */}
+                {/* Field 5 — Traffic Sources (new design) */}
                 <div style={s({ marginBottom: 20 })}>
-                  <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#06b6d4', letterSpacing: '0.04em' })}>05 · WHERE WILL YOUR TRAFFIC COME FROM?</label>
-                  <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 8, marginTop: 8 })}>
+                  <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#06b6d4', letterSpacing: '0.04em', textTransform: 'uppercase' })}>05 · WHERE WILL YOUR TRAFFIC COME FROM?</label>
+                  <p style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 4, marginBottom: 10 })}>Pick up to 3 traffic sources</p>
+                  <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 })}>
                     {TRAFFIC_SOURCES.map(ts => {
                       const sel = funnelBrief.trafficSources.includes(ts.name);
                       return (
-                        <div key={ts.name} onClick={() => toggleTrafficSource(ts.name)}
-                          style={s({ borderRadius: 10, padding: '10px 8px', cursor: 'pointer', textAlign: 'center', border: `2px solid ${sel ? ts.accent : '#e2e8f0'}`, background: sel ? `${ts.accent}0a` : '#f8fafc', boxShadow: sel ? `0 0 0 3px ${ts.accent}15` : 'none', transition: 'all 0.15s' })}>
-                          <span style={s({ fontSize: 20, display: 'block' })}>{ts.emoji}</span>
-                          <span style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 600, color: sel ? ts.accent : '#64748b', marginTop: 4, display: 'block' })}>{ts.name}</span>
+                        <div key={ts.id} onClick={() => toggleTrafficSource(ts.name)}
+                          style={s({
+                            borderRadius: 14, padding: '14px 16px', cursor: 'pointer',
+                            border: `1.5px solid ${sel ? ts.color : '#f1f5f9'}`,
+                            background: sel ? ts.lightBg : 'white',
+                            boxShadow: sel ? `0 4px 16px ${ts.color}25` : 'none',
+                            transition: 'all 0.18s', position: 'relative',
+                            display: 'flex', gap: 12, alignItems: 'center',
+                          })}
+                          onMouseEnter={e => { if (!sel) { e.currentTarget.style.borderColor = `${ts.color}66`; e.currentTarget.style.background = ts.lightBg; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
+                          onMouseLeave={e => { if (!sel) { e.currentTarget.style.borderColor = '#f1f5f9'; e.currentTarget.style.background = 'white'; e.currentTarget.style.transform = 'none'; } }}>
+                          <div style={s({ width: 38, height: 38, borderRadius: '50%', background: sel ? ts.color : ts.lightBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, transition: 'all 0.18s' })}>
+                            {ts.icon}
+                          </div>
+                          <div>
+                            <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: sel ? ts.color : '#0f172a' })}>{ts.name}</div>
+                            <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 })}>{ts.description}</div>
+                          </div>
+                          {sel && (
+                            <div style={s({ position: 'absolute', top: 8, right: 8, width: 16, height: 16, borderRadius: '50%', background: ts.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 10, fontWeight: 800 })}>✓</div>
+                          )}
                         </div>
                       );
                     })}
@@ -425,12 +543,13 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
               </div>
 
               {/* Generate Button */}
-              <div style={s({ marginTop: 28, borderTop: '1px solid #f1f5f9', paddingTop: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
-                <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: canGenerate ? '#059669' : '#f59e0b' })}>
-                  {canGenerate ? '✓ Ready to map your funnel' : 'Fill in product name & offer to continue'}
+              <style>{`@keyframes ctaPulse { 0%, 100% { box-shadow: 0 4px 20px rgba(6,182,212,0.3); } 50% { box-shadow: 0 4px 32px rgba(6,182,212,0.55), 0 0 0 4px rgba(6,182,212,0.1); } }`}</style>
+              <div style={s({ marginTop: 28, borderTop: '1px solid #f1f5f9', paddingTop: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
+                <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: canGenerate ? '#059669' : '#64748b', textAlign: 'center', transition: 'all 0.3s' })}>
+                  {getValidationMessage()}
                 </span>
                 <button onClick={generateFunnel} disabled={!canGenerate}
-                  style={s({ background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: 'white', border: 'none', borderRadius: 14, padding: '13px 28px', fontFamily: 'Sora', fontWeight: 800, fontSize: 15, cursor: canGenerate ? 'pointer' : 'not-allowed', opacity: canGenerate ? 1 : 0.45, boxShadow: '0 4px 20px rgba(6,182,212,0.35)', transition: 'all 0.15s' })}>
+                  style={s({ background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: 'white', border: 'none', borderRadius: 14, padding: '13px 28px', fontFamily: 'Sora', fontWeight: 800, fontSize: 15, cursor: canGenerate ? 'pointer' : 'not-allowed', opacity: canGenerate ? 1 : 0.45, boxShadow: '0 4px 20px rgba(6,182,212,0.35)', transition: 'all 0.15s', ...(shouldPulse ? { animation: 'ctaPulse 2s ease-in-out infinite' } : {}) })}>
                   🗺 Map My Funnel →
                 </button>
               </div>
