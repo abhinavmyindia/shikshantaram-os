@@ -1,4 +1,4 @@
-import { useState, useEffect, CSSProperties } from 'react';
+import { useState, useEffect, useRef, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 /* ───────── Types ───────── */
