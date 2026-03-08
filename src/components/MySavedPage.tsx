@@ -10,10 +10,11 @@ const TOOL_COLORS: Record<string, { gradient: string; light: string; accent: str
   offer_creation: { gradient: 'linear-gradient(90deg,#f59e0b,#ef4444)', light: 'rgba(245,158,11,0.08)', accent: '#f59e0b', label: 'Offer Creation', emoji: '🎁' },
   funnel_builder: { gradient: 'linear-gradient(90deg,#06b6d4,#3b82f6)', light: 'rgba(6,182,212,0.08)', accent: '#06b6d4', label: 'Funnel Builder', emoji: '🔀' },
   niche_clarity: { gradient: 'linear-gradient(90deg,#7c3aed,#a855f7)', light: 'rgba(124,58,237,0.08)', accent: '#7c3aed', label: 'Niche Clarity', emoji: '🎯' },
+  copy_suite: { gradient: 'linear-gradient(90deg,#6366f1,#8b5cf6)', light: 'rgba(99,102,241,0.08)', accent: '#6366f1', label: 'Copy Suite', emoji: '✍️' },
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  product_idea: 'Product Idea', deep_research: 'Deep Research', offer_output: 'Offer Output', funnel_map: 'Funnel Map',
+  product_idea: 'Product Idea', deep_research: 'Deep Research', offer_output: 'Offer Output', funnel_map: 'Funnel Map', copy_output: 'Copy Output',
 };
 
 function relativeTime(dateStr: string) {
@@ -296,8 +297,25 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
                   ))}
                 </div>
               )}
+              {selectedItem.item_type === 'copy_output' && selectedItem.full_data?.sections && (
+                <div>
+                  <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 50, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', marginBottom: 12 })}>
+                    <span>{selectedItem.full_data.copyType?.icon || '✍️'}</span>
+                    <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#6366f1' })}>{selectedItem.full_data.copyType?.name || 'Copy'}</span>
+                  </div>
+                  {selectedItem.full_data.score && (
+                    <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#6366f1', marginBottom: 12 })}>Copy Strength: {selectedItem.full_data.score.overall}/100</div>
+                  )}
+                  {selectedItem.full_data.sections.map((sec: any, i: number) => (
+                    <div key={i} style={s({ background: '#f8fafc', borderRadius: 12, padding: '12px 16px', marginBottom: 8 })}>
+                      <div style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#6366f1', marginBottom: 6 })}>{sec.icon} {sec.name}</div>
+                      <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#374151', lineHeight: 1.7, whiteSpace: 'pre-wrap' })}>{sec.content?.slice(0, 200)}{sec.content?.length > 200 ? '...' : ''}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* Fallback: show raw JSON summary */}
-              {!['product_idea', 'deep_research', 'offer_output', 'funnel_map'].includes(selectedItem.item_type) && (
+              {!['product_idea', 'deep_research', 'offer_output', 'funnel_map', 'copy_output'].includes(selectedItem.item_type) && (
                 <pre style={s({ fontFamily: 'monospace', fontSize: 11, color: '#64748b', whiteSpace: 'pre-wrap', wordBreak: 'break-all' })}>{JSON.stringify(selectedItem.full_data, null, 2).slice(0, 2000)}</pre>
               )}
             </div>
@@ -315,6 +333,9 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
               )}
               {selectedItem.item_type === 'funnel_map' && (
                 <button onClick={() => handleCopyFunnelSummary(selectedItem)} style={s({ background: copiedFunnel ? '#dcfce7' : 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: copiedFunnel ? '#059669' : 'white', border: copiedFunnel ? '1px solid #bbf7d0' : 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' })}>{copiedFunnel ? '✓ Copied!' : '📋 Copy Funnel Summary'}</button>
+              )}
+              {selectedItem.item_type === 'copy_output' && (
+                <button onClick={() => { setSelectedItem(null); onNavigate('copy_suite' as any); }} style={s({ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' })}>✍️ Write More Copy →</button>
               )}
             </div>
           </div>
