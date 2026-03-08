@@ -131,30 +131,33 @@ const ChevronRight = ({ size = 14, color = '#94a3b8' }: { size?: number; color?:
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round"><path d="m9 18 6-6-6-6"/></svg>
 );
 
-/* Nav icons */
+/* Nav icons — using lucide-react-style inline SVGs with unique icons per tool */
 const GridIcon = ({ color = '#64748b' }: { color?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
 );
 const TargetIcon = ({ color = '#64748b' }: { color?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
 );
 const CompassIcon = ({ color = '#64748b' }: { color?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill={color} opacity="0.3"/></svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill={color} opacity="0.3"/></svg>
 );
 const GiftIcon = ({ color = '#94a3b8' }: { color?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C9 3 12 8 12 8"/><path d="M16.5 8a2.5 2.5 0 0 0 0-5C15 3 12 8 12 8"/></svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C9 3 12 8 12 8"/><path d="M16.5 8a2.5 2.5 0 0 0 0-5C15 3 12 8 12 8"/></svg>
 );
-const FunnelIcon = ({ color = '#94a3b8' }: { color?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+const GitMergeIcon = ({ color = '#94a3b8' }: { color?: string }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/></svg>
 );
-const WandIcon = ({ color = '#94a3b8' }: { color?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><path d="m15 4-9 9 3 3 9-9-3-3Z"/><path d="m18 7 3-3-3-3-3 3"/><path d="m5 16-3 3 3 3 3-3"/></svg>
+const PackageIcon = ({ color = '#94a3b8' }: { color?: string }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m16.5 9.4-9-5.19"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
 );
-const PenIcon = ({ color = '#94a3b8' }: { color?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+const TypeIcon = ({ color = '#94a3b8' }: { color?: string }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
 );
 const MegaphoneIcon = ({ color = '#94a3b8' }: { color?: string }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+);
+const MonitorIcon = ({ color = '#94a3b8' }: { color?: string }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
 );
 const GearIcon = ({ color = '#64748b' }: { color?: string }) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -201,11 +204,11 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'niche', label: 'Niche Clarity', icon: (c) => <TargetIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'product', label: 'Product Navigator', icon: (c) => <CompassIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'offer', label: 'Offer Creation', icon: (c) => <GiftIcon color={c} />, badge: 'LIVE', locked: false },
-  { id: 'funnel', label: 'Funnel Builder', icon: (c) => <FunnelIcon color={c} />, badge: 'LIVE', locked: false },
-  { id: 'creator', label: 'Product Creator', icon: () => <WandIcon />, badge: 'SOON', locked: true },
-  { id: 'copy', label: 'Copy Suite', icon: () => <PenIcon />, badge: 'SOON', locked: true },
-  { id: 'ads', label: 'AI Ad Suite', icon: () => <MegaphoneIcon />, badge: 'SOON', locked: true },
-  { id: 'landing', label: 'Landing Page Designer', icon: () => <WandIcon color="#6366f1" />, badge: 'SOON', locked: true },
+  { id: 'funnel', label: 'Funnel Builder', icon: (c) => <GitMergeIcon color={c} />, badge: 'LIVE', locked: false },
+  { id: 'creator', label: 'Product Creator', icon: (c) => <PackageIcon color={c} />, badge: 'SOON', locked: true },
+  { id: 'copy', label: 'Copy Suite', icon: (c) => <TypeIcon color={c} />, badge: 'SOON', locked: true },
+  { id: 'ads', label: 'AI Ad Suite', icon: (c) => <MegaphoneIcon color={c} />, badge: 'SOON', locked: true },
+  { id: 'landing', label: 'Landing Page Designer', icon: (c) => <MonitorIcon color={c} />, badge: 'SOON', locked: true },
 ];
 
 const TOOL_CARDS = [
@@ -321,9 +324,16 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick }: { us
 
 /* ───────── Sidebar ───────── */
 function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', savedCount = 0 }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string; savedCount?: number }) {
+  const [hoveredSoon, setHoveredSoon] = useState<string | null>(null);
+
   const BookmarkIcon = ({ filled, color = '#64748b' }: { filled?: boolean; color?: string }) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? color : 'none'} stroke={color} strokeWidth="2" strokeLinecap="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill={filled ? color : 'none'} stroke={color} strokeWidth="2" strokeLinecap="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
   );
+
+  const liveItems = NAV_ITEMS.filter(i => !i.locked);
+  const soonItems = NAV_ITEMS.filter(i => i.locked);
+  const liveCount = liveItems.length - 1; // subtract dashboard
+  const totalTools = NAV_ITEMS.length - 1; // subtract dashboard
 
   return (
     <div style={{
@@ -331,70 +341,129 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', 
       backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.85)', padding: '20px 12px',
       boxShadow: '2px 0 16px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginBottom: 6 }}>MY WORKSPACE</div>
-      {NAV_ITEMS.map(item => {
-        const active = activePage === item.id;
-        const iconColor = item.locked ? '#94a3b8' : active ? '#7c3aed' : '#64748b';
-        return (
-          <div key={item.id} onClick={() => item.locked ? onLockedClick(item.label) : onNavigate(item.id as PageId)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer',
-              marginBottom: 2, transition: 'all 0.15s',
-              background: active ? 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(168,85,247,0.08))' : 'transparent',
-              border: active ? '1px solid rgba(124,58,237,0.18)' : '1px solid transparent',
-            }}
-            onMouseEnter={e => { if (!active) (e.currentTarget.style.background = 'rgba(0,0,0,0.04)'); }}
-            onMouseLeave={e => { if (!active) (e.currentTarget.style.background = 'transparent'); }}
-          >
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: active ? 'rgba(124,58,237,0.12)' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {item.icon(iconColor)}
-            </div>
-            <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: active ? 700 : 500, color: item.locked ? '#94a3b8' : active ? '#7c3aed' : '#475569', flex: 1 }}>{item.label}</span>
-            {item.badge === 'LIVE' && <span style={{ fontSize: 8, fontWeight: 800, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 20 }}>LIVE</span>}
-            {item.badge === 'SOON' && accessTier === 'basic' && <span style={{ fontSize: 8, fontWeight: 800, background: '#fef9c3', color: '#92400e', padding: '1px 6px', borderRadius: 20 }}>PREMIUM</span>}
-            {item.badge === 'SOON' && accessTier !== 'basic' && <span style={{ fontSize: 8, fontWeight: 800, background: '#f1f5f9', color: '#94a3b8', padding: '1px 6px', borderRadius: 20 }}>SOON</span>}
-          </div>
-        );
-      })}
+      <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginTop: 4, paddingBottom: 12, fontFamily: 'DM Sans' }}>MY WORKSPACE</div>
 
-      {/* Divider + My Saved */}
-      <div style={{ height: 1, background: '#f1f5f9', margin: '10px 12px' }} />
+      {/* LIVE items */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {liveItems.map(item => {
+          const active = activePage === item.id;
+          const iconColor = active ? 'white' : '#64748b';
+          return (
+            <div key={item.id} onClick={() => onNavigate(item.id as PageId)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                transition: 'all 0.2s', position: 'relative' as const, width: '100%',
+                background: active ? 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(109,40,217,0.06))' : 'transparent',
+              }}
+              onMouseEnter={e => { if (!active) (e.currentTarget.style.background = 'rgba(0,0,0,0.03)'); }}
+              onMouseLeave={e => { if (!active) (e.currentTarget.style.background = 'transparent'); }}
+            >
+              {/* Left accent bar */}
+              {active && <div style={{ position: 'absolute' as const, left: 0, top: '25%', bottom: '25%', width: 3, background: 'linear-gradient(180deg,#7c3aed,#a855f7)', borderRadius: '0 2px 2px 0' }} />}
+              <div style={{
+                width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                background: active ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f1f5f9',
+                boxShadow: active ? '0 3px 10px rgba(124,58,237,0.3)' : 'none',
+              }}>
+                {item.icon(iconColor)}
+              </div>
+              <span style={{ fontFamily: active ? 'Sora' : 'DM Sans', fontSize: 14, fontWeight: active ? 800 : 600, color: active ? '#7c3aed' : '#374151', flex: 1 }}>{item.label}</span>
+              {item.badge === 'LIVE' && (
+                <span style={{ fontSize: 9, fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '2px 7px', borderRadius: 50, fontFamily: 'DM Sans', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>LIVE</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* LIVE/SOON divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 8px' }}>
+        <div style={{ flex: 1, height: 1, background: '#f1f5f9' }} />
+        <span style={{ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.1em', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const, padding: '0 4px' }}>COMING SOON</span>
+        <div style={{ flex: 1, height: 1, background: '#f1f5f9' }} />
+      </div>
+
+      {/* SOON items */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {soonItems.map(item => (
+          <div key={item.id}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12,
+              cursor: 'default', transition: 'all 0.2s', position: 'relative' as const, width: '100%',
+              background: 'transparent',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.05)'; setHoveredSoon(item.id); }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; setHoveredSoon(null); }}
+          >
+            <div style={{
+              width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              background: hoveredSoon === item.id ? 'rgba(245,158,11,0.1)' : '#f8fafc',
+              border: '1px solid #f1f5f9',
+              transition: 'all 0.2s',
+            }}>
+              {item.icon(hoveredSoon === item.id ? '#f59e0b' : '#94a3b8')}
+            </div>
+            <span style={{ fontFamily: 'DM Sans', fontSize: 14, fontWeight: 500, color: hoveredSoon === item.id ? '#64748b' : '#94a3b8', flex: 1, transition: 'color 0.2s' }}>{item.label}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(245,158,11,0.1)', color: '#b45309', padding: '2px 7px', borderRadius: 50, fontFamily: 'DM Sans', letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>SOON</span>
+            {/* Tooltip */}
+            {hoveredSoon === item.id && (
+              <div style={{
+                position: 'absolute' as const, left: 'calc(100% + 8px)', top: '50%', transform: 'translateY(-50%)',
+                background: '#0f172a', color: 'white', borderRadius: 8, padding: '5px 10px',
+                fontFamily: 'DM Sans', fontSize: 11, whiteSpace: 'nowrap' as const, zIndex: 100,
+                animation: 'fadeIn 0.15s ease',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              }}>Coming soon! 🚧</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* My Saved divider + item */}
+      <div style={{ height: 1, background: '#f1f5f9', margin: '8px 8px' }} />
       <div onClick={() => onNavigate('saved')}
         style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer',
-          marginBottom: 2, transition: 'all 0.15s',
-          background: activePage === 'saved' ? 'linear-gradient(135deg,rgba(234,88,12,0.12),rgba(245,158,11,0.08))' : 'transparent',
-          border: activePage === 'saved' ? '1px solid rgba(234,88,12,0.18)' : '1px solid transparent',
+          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+          transition: 'all 0.2s', position: 'relative' as const,
+          background: activePage === 'saved' ? 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(109,40,217,0.06))' : 'transparent',
         }}
-        onMouseEnter={e => { if (activePage !== 'saved') (e.currentTarget.style.background = 'rgba(0,0,0,0.04)'); }}
+        onMouseEnter={e => { if (activePage !== 'saved') (e.currentTarget.style.background = 'rgba(0,0,0,0.03)'); }}
         onMouseLeave={e => { if (activePage !== 'saved') (e.currentTarget.style.background = 'transparent'); }}
       >
-        <div style={{ width: 28, height: 28, borderRadius: 7, background: activePage === 'saved' ? 'rgba(234,88,12,0.12)' : '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <BookmarkIcon filled={savedCount > 0} color={activePage === 'saved' ? '#ea580c' : '#64748b'} />
+        {activePage === 'saved' && <div style={{ position: 'absolute' as const, left: 0, top: '25%', bottom: '25%', width: 3, background: 'linear-gradient(180deg,#7c3aed,#a855f7)', borderRadius: '0 2px 2px 0' }} />}
+        <div style={{
+          width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          background: activePage === 'saved' ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : savedCount > 0 ? 'rgba(234,88,12,0.1)' : '#f8fafc',
+          boxShadow: activePage === 'saved' ? '0 3px 10px rgba(124,58,237,0.3)' : 'none',
+        }}>
+          <BookmarkIcon filled={savedCount > 0} color={activePage === 'saved' ? 'white' : savedCount > 0 ? '#ea580c' : '#64748b'} />
         </div>
-        <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: activePage === 'saved' ? 700 : 500, color: activePage === 'saved' ? '#ea580c' : '#475569', flex: 1 }}>My Saved</span>
+        <span style={{ fontFamily: activePage === 'saved' ? 'Sora' : 'DM Sans', fontSize: 14, fontWeight: activePage === 'saved' ? 800 : 600, color: activePage === 'saved' ? '#7c3aed' : '#374151', flex: 1 }}>My Saved</span>
         {savedCount > 0 && (
-          <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', fontFamily: 'Sora', fontWeight: 800, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{savedCount}</span>
+          <span style={{ background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9, padding: '2px 7px', borderRadius: 50 }}>
+            {savedCount <= 9 ? `${savedCount} saved` : '9+ saved'}
+          </span>
         )}
       </div>
 
-      <div style={{ height: 1, background: '#f1f5f9', margin: '10px 12px' }} />
-      <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginBottom: 6 }}>ACCOUNT</div>
+      {/* Settings/Help */}
+      <div style={{ height: 1, background: '#f1f5f9', margin: '8px 8px' }} />
+      <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginBottom: 6, fontFamily: 'DM Sans' }}>ACCOUNT</div>
       {[{ icon: GearIcon, label: 'Settings' }, { icon: HelpIcon, label: 'Help & Docs' }].map(a => (
-        <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer', marginBottom: 2 }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
+        <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,0,0,0.03)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-          <div style={{ width: 28, height: 28, borderRadius: 7, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><a.icon /></div>
-          <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 500, color: '#64748b' }}>{a.label}</span>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><a.icon color="#94a3b8" /></div>
+          <span style={{ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>{a.label}</span>
         </div>
       ))}
 
       {/* Progress card */}
       <div style={{ marginTop: 'auto', background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.06))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 12, padding: 12 }}>
         <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#7c3aed', marginBottom: 4 }}>🚀 72-Hour Launch</div>
-        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>4 of 9 tools unlocked</div>
+        <div style={{ fontSize: 10.5, color: '#94a3b8', marginBottom: 8 }}>{liveCount} of {totalTools} tools unlocked</div>
         <div style={{ width: '100%', height: 5, background: '#f1f5f9', borderRadius: 50 }}>
-          <div style={{ width: '44%', height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
+          <div style={{ width: `${Math.round((liveCount / totalTools) * 100)}%`, height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
         </div>
         <div style={{ fontSize: 9.5, color: '#7c3aed', fontWeight: 600, marginTop: 6 }}>More tools dropping soon →</div>
       </div>
@@ -1485,6 +1554,27 @@ const Index = () => {
       tracking.startSession();
     }
   }, [user]);
+
+  // Presence heartbeat — every 60s
+  useEffect(() => {
+    if (!user) return;
+    const updatePresence = async () => {
+      await supabase.from('user_presence').upsert({
+        user_id: user.id,
+        user_email: user.email,
+        user_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
+        last_seen: new Date().toISOString(),
+        current_page: activePage,
+        session_start: sessionStorage.getItem('session_start') || new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    };
+    if (!sessionStorage.getItem('session_start')) {
+      sessionStorage.setItem('session_start', new Date().toISOString());
+    }
+    updatePresence();
+    const interval = setInterval(updatePresence, 60000);
+    return () => clearInterval(interval);
+  }, [user, activePage]);
 
   // Track page visits
   useEffect(() => {
