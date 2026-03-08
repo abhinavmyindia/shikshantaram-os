@@ -444,7 +444,9 @@ export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (bef
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
-      setProductIdeas(data.result.map((idea: any) => ({ ...idea, sourceMode: 'niche' })));
+      const ideas = data.result.map((idea: any) => ({ ...idea, sourceMode: 'niche' }));
+      setProductIdeas(ideas);
+      setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
       setAiStep('results');
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
