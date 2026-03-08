@@ -592,7 +592,7 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
-  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups', '📋 Activity Log'];
+  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups', '📋 Activity Log', '⚡ AI Analytics'];
 
   const logActivity = async (action_type: string, target_user_id: string | null, target_user_name: string | null, details: Record<string, any> = {}) => {
     if (!user) return;
