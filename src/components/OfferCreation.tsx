@@ -335,6 +335,14 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
     setOfferData(null);
     setOfferScore(0);
     setError('');
+    setPrefilledFields(new Set());
+    setAutoSelectedPrice(false);
+    setShowPrefillBanner(false);
+    onPrefillConsumed?.();
+  };
+
+  const clearPrefillField = (field: string) => {
+    setPrefilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
   };
 
   /* ───────── RENDER ───────── */
