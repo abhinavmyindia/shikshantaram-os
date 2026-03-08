@@ -182,6 +182,7 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
 
 /* ───────── Main Component ───────── */
 export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
+  const { saveItem, isSaved, isSaving } = useSaveItem();
   const [funnelStep, setFunnelStep] = useState<FunnelStepId>('brief');
   const [funnelBrief, setFunnelBrief] = useState<FunnelBrief>({ productName: '', offer: '', audience: '', goal: '', trafficSources: [] });
   const [funnelType, setFunnelType] = useState<string | null>(null);

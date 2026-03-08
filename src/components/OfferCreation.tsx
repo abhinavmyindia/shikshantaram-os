@@ -208,6 +208,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 
 /* ───────── Main Component ───────── */
 export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { onBack: () => void; prefill?: any; onPrefillConsumed?: () => void }) {
+  const { saveItem, isSaved, isSaving } = useSaveItem();
   const [offerStep, setOfferStep] = useState<OfferStep>('brief');
   const [offerBrief, setOfferBrief] = useState<OfferBrief>({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
   const [showPrefillBanner, setShowPrefillBanner] = useState(false);
