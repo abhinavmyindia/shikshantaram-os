@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, CSSProperties, useCallback } from 'react';
+import { getRetailValue } from '@/utils/calculateResearchValue';
 import { Menu, X } from 'lucide-react';
 import AIResearchEngine from '@/components/AIResearchEngine';
 import OfferCreation from '@/components/OfferCreation';
@@ -1286,97 +1287,79 @@ function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; o
   );
 }
 
-/* ───────── Motivation Messages ───────── */
-const MOTIVATION_MESSAGES = [
+/* ───────── Usage Value Messages ───────── */
+const USAGE_MESSAGES = [
   {
-    emoji: "🎯", tag: "YOUR NICHE IS WAITING",
-    gradient: "linear-gradient(135deg, #7c3aed, #c026d3)", accentColor: "#7c3aed",
-    lightBg: "rgba(124,58,237,0.06)",
-    headline: "The niche you keep postponing? Someone just claimed it.",
-    body: "Every day you spend 'thinking about it' is a day another creator builds an audience in your space, publishes the ebook you had in your head, and takes the income that was supposed to be yours. The window is open — but it won't stay open forever.",
-    hardTruth: "\"You don't need more information. You need to make a decision and start.\"",
-    cta: "🎯 Find My Niche Right Now →", ctaTool: "niche" as PageId,
+    emoji: '🤯', tag: 'RESEARCH VALUE',
+    gradient: 'linear-gradient(135deg, #7c3aed, #c026d3)', accentColor: '#7c3aed',
+    lightBg: 'rgba(124,58,237,0.06)',
+    headline: (value: string) => `You just ran ${value} worth of research. In one session.`,
+    body: "A market research agency would've charged you that — easily. We did it in minutes. That's the power here. Now slow down and actually USE what was generated. 🎯",
+    cta: 'Reading it now 📖', secondaryCta: 'Okay okay, I\'m going deep',
+    ctaTool: 'product' as PageId,
   },
   {
-    emoji: "📦", tag: "BUILD IT TODAY",
-    gradient: "linear-gradient(135deg, #ea580c, #f59e0b)", accentColor: "#ea580c",
-    lightBg: "rgba(234,88,12,0.06)",
-    headline: "Your first digital product could be live by tonight.",
-    body: "Not next month. Not after you 'figure everything out.' Tonight. A simple ₹499 ebook, a Notion template, a prompt pack — something real, something sellable, something that makes your phone buzz with a payment notification while you sleep.",
-    hardTruth: "\"Done and imperfect beats perfect and unpublished — every single time.\"",
-    cta: "📦 Find My First Product →", ctaTool: "product" as PageId,
+    emoji: '💰', tag: 'VALUE GENERATED',
+    gradient: 'linear-gradient(135deg, #ea580c, #f59e0b)', accentColor: '#ea580c',
+    lightBg: 'rgba(234,88,12,0.06)',
+    headline: (value: string) => `${value} of professional research. Done. By you. Today.`,
+    body: "That's what a consultant would invoice for this. You're getting it for basically free in beta. We love the hustle — just make sure you're building, not just generating. 🙏",
+    cta: 'Building mode: ON 🏗️', secondaryCta: 'Just one more research...',
+    ctaTool: 'product' as PageId,
   },
   {
-    emoji: "⚡", tag: "NO MORE WAITING",
-    gradient: "linear-gradient(135deg, #0891b2, #7c3aed)", accentColor: "#0891b2",
-    lightBg: "rgba(8,145,178,0.06)",
-    headline: "Waiting for the 'right time' is the most expensive mistake you'll make.",
-    body: "The creators earning ₹50,000 a month from digital products didn't wait until they felt ready. They picked a niche, built something scrappy, put it online, and improved from there. The only difference between them and you right now is that they started.",
-    hardTruth: "\"Every morning you wake up without a product for sale is a morning you worked for free.\"",
-    cta: "⚡ Start Building Now →", ctaTool: "product" as PageId,
+    emoji: '🚀', tag: 'POWER USER',
+    gradient: 'linear-gradient(135deg, #059669, #06b6d4)', accentColor: '#059669',
+    lightBg: 'rgba(5,150,105,0.06)',
+    headline: (value: string) => `Bro. ${value} of AI work in a single session?`,
+    body: "You're not using a tool. You're wielding a research department. That's actually insane. Take 10 minutes, review what you've got, and pick your ONE product to go all in on. 💎",
+    cta: 'Picking my ONE product', secondaryCta: 'I need more data first',
+    ctaTool: 'product' as PageId,
   },
   {
-    emoji: "🚀", tag: "72 HOURS. THAT'S ALL.",
-    gradient: "linear-gradient(135deg, #059669, #06b6d4)", accentColor: "#059669",
-    lightBg: "rgba(5,150,105,0.06)",
-    headline: "72 hours from now, you could have your first digital product live.",
-    body: "That's the exact time it takes to go from zero to a published product on Gumroad. Find your niche today. Pick your product format tomorrow. Build it the day after. This platform was built for exactly this — your 72-hour launch is not a dream, it's a plan.",
-    hardTruth: "\"In 72 hours, you'll either have a product live or another set of excuses. Choose wisely.\"",
-    cta: "🚀 Start My 72-Hour Launch →", ctaTool: "niche" as PageId,
+    emoji: '🧠', tag: 'SESSION INSIGHT',
+    gradient: 'linear-gradient(135deg, #7c3aed, #3b82f6)', accentColor: '#7c3aed',
+    lightBg: 'rgba(124,58,237,0.06)',
+    headline: (value: string) => `This session = ${value} of market research.`,
+    body: "A startup would've spent weeks getting this data. You got it in one sitting. Genuinely impressive. Now the real work begins — executing on it. Ready? 👊",
+    cta: "Let's execute 🔥", secondaryCta: 'Almost ready, few more clicks',
+    ctaTool: 'offer' as PageId,
   },
   {
-    emoji: "💰", tag: "THE INCOME IS REAL",
-    gradient: "linear-gradient(135deg, #b45309, #ea580c)", accentColor: "#b45309",
-    lightBg: "rgba(180,83,9,0.06)",
-    headline: "Someone bought a digital product in the last 3 seconds. It wasn't yours.",
-    body: "The global digital product market doesn't pause while you think. Thousands of buyers are right now on Gumroad, Instagram, and WhatsApp groups looking for exactly what you know — your niche knowledge, your system, your shortcut — packaged into something they can pay for instantly.",
-    hardTruth: "\"You are one product launch away from changing your monthly income forever.\"",
-    cta: "💰 Find My Profitable Niche →", ctaTool: "niche" as PageId,
+    emoji: '⚡', tag: 'BUILT DIFFERENT',
+    gradient: 'linear-gradient(135deg, #0891b2, #7c3aed)', accentColor: '#0891b2',
+    lightBg: 'rgba(8,145,178,0.06)',
+    headline: (value: string) => `${value} worth of insights generated. You're built different.`,
+    body: "No, seriously. Most people open this tool, generate 5 ideas, and close the tab. You're going deep. We respect it. Just make sure depth = action, not just more research. 😅",
+    cta: "Action time. Let's go.", secondaryCta: 'Depth IS my action',
+    ctaTool: 'offer' as PageId,
   },
   {
-    emoji: "🧠", tag: "YOU ALREADY KNOW ENOUGH",
-    gradient: "linear-gradient(135deg, #7c3aed, #3b82f6)", accentColor: "#7c3aed",
-    lightBg: "rgba(124,58,237,0.06)",
-    headline: "You already know more than 10,000 people who would pay to learn from you.",
-    body: "You don't need a degree. You don't need 10 years of experience. You don't need to be the world's best. You just need to know more than a beginner on ONE specific topic — and turn that into a ₹299 guide, a template, a mini-course. That's it. That's the whole business model.",
-    hardTruth: "\"Stop waiting to be an expert. Beginners with ₹50,000/month incomes started exactly where you are.\"",
-    cta: "🧠 Explore My Niche Options →", ctaTool: "niche" as PageId,
+    emoji: '🎯', tag: 'TIME TO ACT',
+    gradient: 'linear-gradient(135deg, #b45309, #ea580c)', accentColor: '#b45309',
+    lightBg: 'rgba(180,83,9,0.06)',
+    headline: (value: string) => `Your session value: ${value}. Your action so far: ?`,
+    body: "We're rooting for you. The AI has done its job. Now it's your turn. Pick one product, build one offer, map one funnel. That's how ₹0 becomes ₹1. 💸",
+    cta: 'Starting with one thing', secondaryCta: 'Need to research more first',
+    ctaTool: 'product' as PageId,
   },
   {
-    emoji: "🔥", tag: "YOUR COMPETITION IS SLEEPING",
-    gradient: "linear-gradient(135deg, #ec4899, #f97316)", accentColor: "#ec4899",
-    lightBg: "rgba(236,72,153,0.06)",
-    headline: "Most people in your niche are consuming. You could be selling.",
-    body: "Right now, 99% of people in your space are watching YouTube videos, reading tweets, and saving Instagram posts about digital products. They're building a perfect plan they'll never execute. You have the tools. You have the platform. You just need to stop consuming and start creating.",
-    hardTruth: "\"Your future buyers are already online. They're just buying from someone else right now.\"",
-    cta: "🔥 Start Creating Today →", ctaTool: "product" as PageId,
+    emoji: '🏆', tag: 'BETA POWER',
+    gradient: 'linear-gradient(135deg, #6366f1, #ec4899)', accentColor: '#6366f1',
+    lightBg: 'rgba(99,102,241,0.06)',
+    headline: (value: string) => `You've unlocked ${value} worth of beta access today.`,
+    body: "Most tools charge per report. You got all of this in beta. That's the deal — we give you the tools, you give us focused, strategic usage. Deal still on? 🤝",
+    cta: 'Deal. Being strategic now.', secondaryCta: 'Deal. After one more idea.',
+    ctaTool: 'product' as PageId,
   },
   {
-    emoji: "📱", tag: "ONE SALE CHANGES EVERYTHING",
-    gradient: "linear-gradient(135deg, #6366f1, #ec4899)", accentColor: "#6366f1",
-    lightBg: "rgba(99,102,241,0.06)",
-    headline: "Your first sale will feel like nothing else you've ever experienced.",
-    body: "The first time your phone buzzes with a Gumroad payment notification — ₹399 from a complete stranger who found your product, read your page, and decided your knowledge was worth paying for — that feeling will rewrite what you believe is possible for you. You're one product away from that moment.",
-    hardTruth: "\"The first sale is proof. Proof that you have value, that people will pay, that this is real.\"",
-    cta: "📱 Find My First Product Idea →", ctaTool: "product" as PageId,
-  },
-  {
-    emoji: "⏰", tag: "TODAY IS THE DAY",
-    gradient: "linear-gradient(135deg, #0f172a, #334155)", accentColor: "#334155",
-    lightBg: "rgba(15,23,42,0.05)",
-    headline: "A year from now, you'll wish you had started today.",
-    body: "That's not a cliché — it's a mathematical fact. If you start your first digital product today, one year from now you'll have 12 months of learning, iterations, sales, and growth behind you. If you don't start today, you'll just have one more year of 'almost started.'",
-    hardTruth: "\"The best time to launch your first product was last year. The second best time is right now.\"",
-    cta: "⏰ Start Right Now →", ctaTool: "niche" as PageId,
-  },
-  {
-    emoji: "🌏", tag: "INDIA'S CREATOR MOMENT",
-    gradient: "linear-gradient(135deg, #059669, #7c3aed)", accentColor: "#059669",
-    lightBg: "rgba(5,150,105,0.06)",
-    headline: "India's digital product economy is exploding — and most people are missing it.",
-    body: "This is not a future trend. Right now, Indian creators are selling Notion templates, Hindi-language guides, finance trackers, and AI prompt packs to buyers across India and the world. The infrastructure is ready. The buyers are ready. Shikshantaram OS is ready. The only missing piece is your first product.",
-    hardTruth: "\"The Indian creator economy is ₹2,500 Cr and growing. Your slice is sitting there unclaimed.\"",
-    cta: "🌏 Claim My Space Now →", ctaTool: "niche" as PageId,
+    emoji: '😤', tag: 'GO BUILD',
+    gradient: 'linear-gradient(135deg, #ec4899, #f97316)', accentColor: '#ec4899',
+    lightBg: 'rgba(236,72,153,0.06)',
+    headline: (value: string) => `${value} of AI work. The question is — what are you building?`,
+    body: "We're not mad. We're actually hyped. But here's the truth: 100 ideas < 1 executed product. You have everything you need. Stop researching. Start building. GO. 🚀",
+    cta: 'GOING. Right now. 🏃', secondaryCta: '5 more minutes, I promise',
+    ctaTool: 'offer' as PageId,
   },
 ];
 
@@ -1393,20 +1376,14 @@ function getJourneyDay(createdAt?: string | null) {
   return Math.max(1, Math.min(90, diff + 1));
 }
 
-/* ───────── Motivation Popup ───────── */
-function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
-  message: typeof MOTIVATION_MESSAGES[0];
+/* ───────── Usage Value Popup ───────── */
+function UsageValuePopup({ message, onClose, onNavigate, displayValue }: {
+  message: typeof USAGE_MESSAGES[0];
   onClose: () => void;
   onNavigate: (p: PageId) => void;
-  journeyDay: number;
+  displayValue: string;
 }) {
-  const [notified, setNotified] = useState(false);
   const [fadingOut, setFadingOut] = useState(false);
-  const [barWidth, setBarWidth] = useState(0);
-
-  useEffect(() => {
-    requestAnimationFrame(() => setBarWidth(1));
-  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -1433,24 +1410,19 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
       }}>
         {/* Hero Band */}
         <div style={{ height: 180, position: 'relative', overflow: 'hidden', background: message.gradient }}>
-          {/* Decorative circles */}
           <div style={{ position: 'absolute', top: -40, right: -40, width: 220, height: 220, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', animation: 'float 6s ease-in-out infinite' }} />
           <div style={{ position: 'absolute', bottom: -30, left: -20, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', animation: 'float 8s ease-in-out infinite reverse' }} />
-          {/* Dot cluster */}
           <div style={{ position: 'absolute', top: 20, left: 24, display: 'flex', gap: 4 }}>
             {[0, 0.3, 0.6].map((d, i) => (
               <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.4)', animation: `pulse 2s ease-in-out ${d}s infinite` }} />
             ))}
           </div>
-          {/* Time badge */}
           <div style={{ position: 'absolute', top: 14, left: 14, background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 50, padding: '4px 14px', fontSize: 10, fontWeight: 800, color: 'white', letterSpacing: '0.1em' }}>
             {getTimeOfDayBadge()}
           </div>
-          {/* Close */}
           <div onClick={dismiss} style={{ position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}>✕</div>
-          {/* Center emoji + tag */}
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
             <span style={{ fontSize: 52, animation: 'float 3s ease-in-out infinite' }}>{message.emoji}</span>
             <div style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 50, padding: '4px 14px', fontSize: 10, fontWeight: 800, color: 'white', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
@@ -1462,16 +1434,20 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
         {/* Content Body */}
         <div style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(20px)', padding: '28px 28px 24px' }}>
           <h2 style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 'clamp(18px, 4vw, 22px)', color: '#0f172a', lineHeight: 1.2, letterSpacing: '-0.03em', marginBottom: 12 }}>
-            {message.headline}
+            {message.headline(displayValue)}
           </h2>
           <p style={{ fontFamily: 'DM Sans', fontSize: 14.5, color: '#475569', lineHeight: 1.75, marginBottom: 20 }}>
             {message.body}
           </p>
-          {/* Hard truth callout */}
+          {/* Value meter */}
           <div style={{ background: message.lightBg, borderLeft: `3px solid ${message.accentColor}`, borderRadius: '0 10px 10px 0', padding: '12px 16px', marginBottom: 22 }}>
-            <p style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#334155', lineHeight: 1.65, fontStyle: 'italic' }}>
-              {message.hardTruth}
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#64748b' }}>Session research value</span>
+              <span style={{ fontFamily: 'Sora', fontSize: 14, fontWeight: 800, color: '#ea580c' }}>{displayValue} generated</span>
+            </div>
+            <div style={{ background: '#e2e8f0', height: 6, borderRadius: 50, overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '100%', background: message.gradient, borderRadius: 50, animation: 'shrinkBar 15s linear reverse' }} />
+            </div>
           </div>
           {/* Action row */}
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -1487,12 +1463,12 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
             <button onClick={dismiss} style={{ background: 'none', border: 'none', color: '#94a3b8', fontFamily: 'DM Sans', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
               onMouseEnter={e => (e.currentTarget.style.color = '#64748b')}
               onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}>
-              Maybe later
+              {message.secondaryCta}
             </button>
           </div>
           {/* Bottom strip */}
           <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 20, paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>🔥 Day {journeyDay} of your journey</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>🔥 Powered by Shikshantaram AI</span>
             <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#64748b' }}>4 tools ready to use →</span>
           </div>
         </div>
@@ -1506,13 +1482,15 @@ const Index = () => {
   const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [toast, setToast] = useState<ToastData | null>(null);
-  const [showMotivation, setShowMotivation] = useState(false);
+  const [showUsagePopup, setShowUsagePopup] = useState(false);
   const [offerPrefill, setOfferPrefill] = useState<any>(null);
   const [funnelPrefill, setFunnelPrefill] = useState<any>(null);
-  const [motivationMsg, setMotivationMsg] = useState<typeof MOTIVATION_MESSAGES[0] | null>(null);
+  const [usageMsg, setUsageMsg] = useState<typeof USAGE_MESSAGES[0] | null>(null);
+  const [sessionCostUsd, setSessionCostUsd] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
+  const usagePopupShown = useRef(false);
 
   const tier = profile?.access_tier || 'basic';
   const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
@@ -1542,17 +1520,37 @@ const Index = () => {
     }
   }, [activePage]);
 
-  // Motivation popup — only on fresh login
+  // Usage value popup — poll AI cost, trigger at $0.50
   useEffect(() => {
-    if (user && !sessionStorage.getItem('motivationShown')) {
-      const timer = setTimeout(() => {
-        setMotivationMsg(MOTIVATION_MESSAGES[Math.floor(Math.random() * MOTIVATION_MESSAGES.length)]);
-        setShowMotivation(true);
-        sessionStorage.setItem('motivationShown', 'true');
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
+    if (!user || isAdmin || usagePopupShown.current) return;
+    if (sessionStorage.getItem('usagePopupShown')) { usagePopupShown.current = true; return; }
+
+    const sessionStart = sessionStorage.getItem('session_start') || new Date().toISOString();
+
+    const checkCost = async () => {
+      if (usagePopupShown.current) return;
+      const { data } = await supabase
+        .from('ai_usage_logs')
+        .select('estimated_cost_usd')
+        .eq('user_id', user.id)
+        .gte('created_at', sessionStart);
+      
+      const totalCost = (data || []).reduce((sum: number, row: any) => sum + parseFloat(row.estimated_cost_usd || '0'), 0);
+      setSessionCostUsd(totalCost);
+
+      if (totalCost >= 0.50 && !usagePopupShown.current) {
+        usagePopupShown.current = true;
+        setUsageMsg(USAGE_MESSAGES[Math.floor(Math.random() * USAGE_MESSAGES.length)]);
+        setShowUsagePopup(true);
+        sessionStorage.setItem('usagePopupShown', 'true');
+      }
+    };
+
+    const interval = setInterval(checkCost, 15000);
+    // Also check after a short delay for returning sessions
+    const initialCheck = setTimeout(checkCost, 3000);
+    return () => { clearInterval(interval); clearTimeout(initialCheck); };
+  }, [user, isAdmin]);
 
   // Start session tracking
   useEffect(() => {
@@ -1685,12 +1683,12 @@ const Index = () => {
       </div>
       {toast && <Toast data={toast} onClose={() => setToast(null)} />}
       {profile?.is_beta_user && user && <BetaFeedback userId={user.id} />}
-      {showMotivation && motivationMsg && (
-        <MotivationPopup
-          message={motivationMsg}
-          onClose={() => setShowMotivation(false)}
+      {showUsagePopup && usageMsg && (
+        <UsageValuePopup
+          message={usageMsg}
+          onClose={() => setShowUsagePopup(false)}
           onNavigate={navigateTo}
-          journeyDay={journeyDay}
+          displayValue={getRetailValue(sessionCostUsd)}
         />
       )}
     </>
