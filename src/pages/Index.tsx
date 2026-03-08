@@ -865,7 +865,7 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 32 }}>
-        <StatCard label="Tools Unlocked" value="4 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+4 live now" changeColor="#15803d" delay={0.06} />
+        <StatCard label="Tools Unlocked" value="5 / 8" iconBg="#ede9fe" iconColor="#7c3aed" icon="⚡" changePill="+5 live now" changeColor="#15803d" delay={0.06} />
         <StatCard label="Product Ideas" value="500+" iconBg="#fff7ed" iconColor="#ea580c" icon="💡" changePill="Explore →" changeColor="#ea580c" delay={0.08} />
         <StatCard label="Niches Mapped" value="594" iconBg="#dcfce7" iconColor="#059669" icon="🎯" changePill="Updated" changeColor="#15803d" delay={0.1} />
         <StatCard label="Time to Launch" value="72 hrs" iconBg="#fce7f3" iconColor="#be185d" icon="🚀" changePill="⚡ Fast track" changeColor="#be185d" delay={0.12} />
@@ -907,7 +907,7 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
           {[
             { step: '1', emoji: '🎯', title: 'Find Your Niche', desc: 'Use Niche Clarity to find a proven, low-competition niche with strong buyer demand.', cta: 'Start Niche Clarity →', color: '#7c3aed', bg: '#ede9fe', onClick: () => onNavigate('niche') },
             { step: '2', emoji: '📦', title: 'Pick Your Product', desc: 'Use Product Navigator to choose a fast-launch product idea with a built-in ascension path.', cta: 'Open Product Navigator →', color: '#ea580c', bg: '#fff7ed', onClick: () => onNavigate('product') },
-            { step: '3', emoji: '🚀', title: 'Build & Launch', desc: 'More creator tools drop soon. Subscribe to get notified when Product Creator & Copy Suite go live.', cta: 'Get Notified →', color: '#059669', bg: '#dcfce7', onClick: () => onLockedClick('Product Creator') },
+            { step: '3', emoji: '🚀', title: 'Build & Launch', desc: 'Use Copy Suite to write high-converting sales pages, emails & more. More creator tools dropping soon!', cta: 'Open Copy Suite →', color: '#059669', bg: '#dcfce7', onClick: () => onNavigate('copy_suite') },
           ].map(s => (
             <div key={s.step} style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 16, padding: 20, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
