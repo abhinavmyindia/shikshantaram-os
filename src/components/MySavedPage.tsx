@@ -334,6 +334,9 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
               {selectedItem.item_type === 'funnel_map' && (
                 <button onClick={() => handleCopyFunnelSummary(selectedItem)} style={s({ background: copiedFunnel ? '#dcfce7' : 'linear-gradient(135deg,#06b6d4,#3b82f6)', color: copiedFunnel ? '#059669' : 'white', border: copiedFunnel ? '1px solid #bbf7d0' : 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' })}>{copiedFunnel ? '✓ Copied!' : '📋 Copy Funnel Summary'}</button>
               )}
+              {selectedItem.item_type === 'copy_output' && (
+                <button onClick={() => { setSelectedItem(null); onNavigate('copy_suite' as any); }} style={s({ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' })}>✍️ Write More Copy →</button>
+              )}
             </div>
           </div>
         </div>
