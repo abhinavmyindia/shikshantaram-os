@@ -469,11 +469,10 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
             {/* Field 4 — Price Range */}
             <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, marginTop: 20 })}>
               <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b' })}>04 · WHAT PRICE RANGE ARE YOU THINKING?</label>
-              {prefilledFields.has('priceRange') && <span style={s({ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 50, padding: '1px 8px', fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700 })}>✓ From Product Navigator</span>}
             </div>
             <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 8 })}>
               {priceRanges.map(pr => (
-                <div key={pr.range} onClick={() => { setOfferBrief(p => ({ ...p, priceRange: pr.range })); setAutoSelectedPrice(false); clearPrefillField('priceRange'); }}
+                <div key={pr.range} onClick={() => { setOfferBrief(p => ({ ...p, priceRange: pr.range })); }}
                   style={s({
                     borderRadius: 10, padding: 10, cursor: 'pointer', textAlign: 'center',
                     border: offerBrief.priceRange === pr.range ? '2px solid #f59e0b' : '2px solid #e2e8f0',
@@ -482,9 +481,6 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
                   })}>
                   <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' })}>{pr.range}</div>
                   <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', marginTop: 2 })}>{pr.type}</div>
-                  {autoSelectedPrice && offerBrief.priceRange === pr.range && (
-                    <div style={s({ fontFamily: 'DM Sans', fontSize: 9, color: '#ea580c', marginTop: 3 })}>auto-selected</div>
-                  )}
                 </div>
               ))}
             </div>
