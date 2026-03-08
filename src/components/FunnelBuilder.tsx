@@ -188,7 +188,7 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
 }
 
 /* ───────── Main Component ───────── */
-export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
+export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () => void; funnelPrefill?: FunnelPrefillData | null }) {
   const { saveItem, isSaved, isSaving } = useSaveItem();
   const [funnelStep, setFunnelStep] = useState<FunnelStepId>('brief');
   const [funnelBrief, setFunnelBrief] = useState<FunnelBrief>({ productName: '', offer: '', audience: '', goal: '', trafficSources: [] });
@@ -207,6 +207,26 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
   const [emailTab, setEmailTab] = useState<'welcome' | 'sales' | 'postPurchase'>('welcome');
   const [expandedEmails, setExpandedEmails] = useState<Record<string, boolean>>({});
   const [copyViewStep, setCopyViewStep] = useState<FunnelStep | null>(null);
+  const [showPrefillBanner, setShowPrefillBanner] = useState(false);
+  const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
+  const [editedFields, setEditedFields] = useState<Set<string>>(new Set());
+
+  // Consume prefill on mount
+  useEffect(() => {
+    if (funnelPrefill) {
+      setFunnelBrief(prev => ({
+        ...prev,
+        productName: funnelPrefill.productName || '',
+        offer: funnelPrefill.offerDescription || '',
+        audience: funnelPrefill.targetBuyer || '',
+      }));
+      setPrefilledFields(new Set(['productName', 'offer', 'audience']));
+      setShowPrefillBanner(true);
+      setTimeout(() => {
+        document.getElementById('funnel-type-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 400);
+    }
+  }, []);
 
   const currentProgressStep = funnelStep === 'brief' || funnelStep === 'generating' ? 0 : funnelStep === 'visualizer' ? 1 : 2;
   const chosenType = FUNNEL_TYPES.find(t => t.id === funnelType);
@@ -312,6 +332,38 @@ export default function FunnelBuilder({ onBack }: { onBack: () => void }) {
       return { ...prev, trafficSources: sources };
     });
   };
+
+  const markFieldEdited = (field: string) => {
+    setEditedFields(prev => { const n = new Set(prev); n.add(field); return n; });
+    setPrefilledFields(prev => { const n = new Set(prev); n.delete(field); return n; });
+  };
+
+  const isPrefilled = (field: string) => prefilledFields.has(field) && !editedFields.has(field);
+
+  // Smart goal hint based on price range
+  const getGoalHint = () => {
+    if (!funnelPrefill?.priceRange) return null;
+    const pr = funnelPrefill.priceRange.toLowerCase();
+    if (pr.includes('199') || pr.includes('impulse') || pr.includes('$7')) return "💡 For impulse-priced offers, 'Maximize Sales Volume' often works best";
+    if (pr.includes('499') || pr.includes('low') || pr.includes('$27')) return "💡 Low-ticket offers do well with 'Get Direct Sales'";
+    if (pr.includes('1,999') || pr.includes('mid') || pr.includes('$97')) return "💡 Mid-ticket? Consider 'Build Email List First' to warm up leads";
+    if (pr.includes('9,999') || pr.includes('high') || pr.includes('$497')) return "💡 High-ticket offers convert better with 'Build Email List + Nurture'";
+    return null;
+  };
+
+  // Progress-aware validation message for prefill mode
+  const getValidationMessage = () => {
+    if (!funnelPrefill) {
+      return canGenerate ? '✓ Ready to map your funnel' : 'Fill in product name & offer to continue';
+    }
+    if (!funnelType) return '👆 Choose your funnel type to continue';
+    if (!funnelBrief.goal) return '✓ Funnel type selected · 👆 Now choose your primary goal';
+    if (funnelBrief.trafficSources.length === 0) return '✓ Funnel type + goal ready · 👆 Just pick your traffic source';
+    return "✅ Everything's set · Hit Map My Funnel to build your funnel!";
+  };
+
+  const allManualFieldsFilled = funnelType && funnelBrief.goal && funnelBrief.trafficSources.length > 0;
+  const shouldPulse = !!funnelPrefill && allManualFieldsFilled && canGenerate;
 
   /* ───────── RENDER: BRIEF ───────── */
   if (funnelStep === 'brief') {
