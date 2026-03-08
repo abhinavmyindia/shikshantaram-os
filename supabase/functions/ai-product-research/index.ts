@@ -176,6 +176,25 @@ Return ONLY a valid JSON object with this EXACT structure (no markdown, no extra
     {"rank":4,"title":"...","description":"...","emotionalWeight":"...","trigger":"..."},
     {"rank":5,"title":"...","description":"...","emotionalWeight":"...","trigger":"..."}
   ],
+  "transformation": {
+    "beforeHeadline": "A short punchy headline capturing the before state (e.g. 'Stuck, Invisible, and Running Out of Time')",
+    "beforeParagraph": "A rich, vivid 3-4 sentence narrative describing the buyer's current reality. Write in second person ('You wake up every morning...'). Capture the emotion, the frustration, the specific daily struggle. Make it feel so real that the buyer thinks 'this is literally me.' Reference the specific country context of ${inputData.country}.",
+    "beforeMoments": [
+      "A specific micro-moment that captures the before state (e.g. 'Refreshing your bank app at 11pm, watching the balance not move')",
+      "Second micro-moment — a different angle of the same pain",
+      "Third micro-moment — the emotional low point"
+    ],
+    "afterHeadline": "A short punchy headline capturing the after state (e.g. 'Confident, In Demand, and Finally Earning What You Deserve')",
+    "afterParagraph": "A rich, vivid 3-4 sentence narrative describing the buyer's life AFTER they've used this product. Same second person voice. Capture the new identity, the specific results, the emotional relief and pride. Paint the exact life they've been wanting. Keep it realistic and believable, not fantasy.",
+    "afterMoments": [
+      "A specific micro-moment of the after state (e.g. 'Seeing a new client inquiry notification while having your morning chai')",
+      "Second after micro-moment — a different dimension of success",
+      "Third after micro-moment — the emotional high point"
+    ],
+    "transformationBridge": "ONE powerful sentence that captures the complete journey. Format: 'From [specific before] to [specific after] — without [common objection/fear].'",
+    "timeToTransformation": "Realistic timeframe e.g. '30 days', '90 days'",
+    "identityShift": "The new identity label e.g. 'from job-seeker to in-demand freelancer'"
+  },
   "deepestDesires": [
     {"desire":"What they REALLY want","underlyingBelief":"What they believe","emotionalDriver":"Core emotion"},
     {"desire":"...","underlyingBelief":"...","emotionalDriver":"..."},

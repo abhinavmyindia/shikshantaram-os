@@ -209,15 +209,29 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 }
 
 /* ───────── Main Component ───────── */
-export default function OfferCreation({ onBack }: { onBack: () => void }) {
+export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { onBack: () => void; prefill?: { beforeState: string; afterState: string } | null; onPrefillConsumed?: () => void }) {
   const [offerStep, setOfferStep] = useState<OfferStep>('brief');
   const [offerBrief, setOfferBrief] = useState<OfferBrief>({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
+  const [showPrefillBanner, setShowPrefillBanner] = useState(false);
   const [offerStructures, setOfferStructures] = useState<OfferStructure[]>([]);
   const [selectedStructure, setSelectedStructure] = useState<string | null>(null);
   const [offerData, setOfferData] = useState<OfferData | null>(null);
   const [offerScore, setOfferScore] = useState(0);
   const [error, setError] = useState('');
   const [outputTab, setOutputTab] = useState<'page' | 'dm' | 'social' | 'email'>('page');
+
+
+  useEffect(() => {
+    if (prefill?.beforeState) {
+      setOfferBrief(prev => ({
+        ...prev,
+        beforeState: prefill.beforeState.slice(0, 100),
+        afterState: prefill.afterState.slice(0, 100),
+      }));
+      setShowPrefillBanner(true);
+      onPrefillConsumed?.();
+    }
+  }, [prefill]);
 
   const priceRanges = offerBrief.currency === 'inr' ? PRICE_RANGES_INR : PRICE_RANGES_USD;
 
@@ -350,6 +364,13 @@ export default function OfferCreation({ onBack }: { onBack: () => void }) {
             <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginTop: 6 })}>5 quick inputs. AI does the rest.</p>
           </div>
 
+          {showPrefillBanner && (
+            <div style={s({ background: 'linear-gradient(135deg,rgba(234,88,12,0.08),rgba(245,158,11,0.05))', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10, animation: 'fadeUp 0.4s ease' })}>
+              <span style={s({ fontSize: 20 })}>✨</span>
+              <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#92400e', lineHeight: 1.6, flex: 1 })}>Transformation pre-filled from Product Navigator — review and adjust before continuing.</span>
+              <span onClick={() => setShowPrefillBanner(false)} style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#94a3b8', cursor: 'pointer', marginLeft: 'auto' })}>✕</span>
+            </div>
+          )}
           <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20, padding: 32, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' })}>
             {/* Field 1 */}
             <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#f59e0b', display: 'block', marginBottom: 8 })}>01 · WHAT ARE YOU SELLING?</label>
