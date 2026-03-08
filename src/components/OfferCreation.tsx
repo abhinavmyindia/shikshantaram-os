@@ -220,6 +220,19 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed }: { 
   const [error, setError] = useState('');
   const [outputTab, setOutputTab] = useState<'page' | 'dm' | 'social' | 'email'>('page');
 
+
+  useEffect(() => {
+    if (prefill?.beforeState) {
+      setOfferBrief(prev => ({
+        ...prev,
+        beforeState: prefill.beforeState.slice(0, 100),
+        afterState: prefill.afterState.slice(0, 100),
+      }));
+      setShowPrefillBanner(true);
+      onPrefillConsumed?.();
+    }
+  }, [prefill]);
+
   const priceRanges = offerBrief.currency === 'inr' ? PRICE_RANGES_INR : PRICE_RANGES_USD;
 
   const briefValid = offerBrief.productName.trim() && offerBrief.audience.trim() && offerBrief.beforeState.trim() && offerBrief.afterState.trim() && offerBrief.priceRange && offerBrief.platforms.length > 0;
