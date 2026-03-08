@@ -239,7 +239,7 @@ function CountryDropdown({ value, onChange, accentColor }: { value: string; onCh
 }
 
 /* ───────── Main Component ───────── */
-export default function AIResearchEngine() {
+export default function AIResearchEngine({ onUseInOffer }: { onUseInOffer?: (before: string, after: string) => void } = {}) {
   /* ── Shared state ── */
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
   const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
