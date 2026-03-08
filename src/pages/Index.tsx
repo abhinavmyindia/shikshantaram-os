@@ -1520,13 +1520,11 @@ const Index = () => {
     }
   }, [activePage]);
 
-  // Usage value popup — poll AI cost, trigger at $0.01 (testing) / $0.25 (production)
+  // Usage value popup — triggers once per session after user spends ≥$0.005 in AI costs
   useEffect(() => {
-    console.log('[UsagePopup] Effect running. user:', !!user, 'ref:', usagePopupShown.current, 'storage:', sessionStorage.getItem('usagePopupShown'));
     if (!user) return;
-    if (usagePopupShown.current) { console.log('[UsagePopup] Skipped: ref already true'); return; }
+    if (usagePopupShown.current) return;
     if (sessionStorage.getItem('usagePopupShown')) { 
-      console.log('[UsagePopup] Skipped: sessionStorage already set'); 
       usagePopupShown.current = true; 
       return; 
     }
@@ -1535,21 +1533,16 @@ const Index = () => {
 
     const checkCost = async () => {
       if (usagePopupShown.current) return;
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('ai_usage_logs')
         .select('estimated_cost_usd')
         .eq('user_id', user.id)
         .gte('created_at', sessionStart);
-      
-      console.log('[UsagePopup] Query result:', { rows: data?.length, error: error?.message, sessionStart });
-      
+
       const totalCost = (data || []).reduce((sum: number, row: any) => sum + parseFloat(row.estimated_cost_usd || '0'), 0);
       setSessionCostUsd(totalCost);
-      
-      console.log('[UsagePopup] totalCost:', totalCost.toFixed(4), 'threshold: 0.01', 'shown:', usagePopupShown.current);
 
-      if (totalCost >= 0.01 && !usagePopupShown.current) {
-        console.log('[UsagePopup] TRIGGERING POPUP!');
+      if (totalCost >= 0.005 && !usagePopupShown.current) {
         usagePopupShown.current = true;
         setUsageMsg(USAGE_MESSAGES[Math.floor(Math.random() * USAGE_MESSAGES.length)]);
         setShowUsagePopup(true);
