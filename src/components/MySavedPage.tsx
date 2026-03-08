@@ -43,8 +43,7 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
   onNavigate: (page: any) => void;
   onSavedCountChange: (count: number) => void;
   onBuildFunnel?: (data: any) => void;
-}) {
-}) {
+) {
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
