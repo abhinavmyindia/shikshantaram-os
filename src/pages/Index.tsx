@@ -1520,10 +1520,16 @@ const Index = () => {
     }
   }, [activePage]);
 
-  // Usage value popup — poll AI cost, trigger at $0.50
+  // Usage value popup — poll AI cost, trigger at $0.01 (testing) / $0.25 (production)
   useEffect(() => {
-    if (!user || usagePopupShown.current) return;
-    if (sessionStorage.getItem('usagePopupShown')) { usagePopupShown.current = true; return; }
+    console.log('[UsagePopup] Effect running. user:', !!user, 'ref:', usagePopupShown.current, 'storage:', sessionStorage.getItem('usagePopupShown'));
+    if (!user) return;
+    if (usagePopupShown.current) { console.log('[UsagePopup] Skipped: ref already true'); return; }
+    if (sessionStorage.getItem('usagePopupShown')) { 
+      console.log('[UsagePopup] Skipped: sessionStorage already set'); 
+      usagePopupShown.current = true; 
+      return; 
+    }
 
     const sessionStart = sessionStorage.getItem('session_start') || new Date().toISOString();
 
@@ -1535,12 +1541,12 @@ const Index = () => {
         .eq('user_id', user.id)
         .gte('created_at', sessionStart);
       
-      console.log('[UsagePopup] Query result:', { data, error, sessionStart, userId: user.id });
+      console.log('[UsagePopup] Query result:', { rows: data?.length, error: error?.message, sessionStart });
       
       const totalCost = (data || []).reduce((sum: number, row: any) => sum + parseFloat(row.estimated_cost_usd || '0'), 0);
       setSessionCostUsd(totalCost);
       
-      console.log('[UsagePopup] totalCost:', totalCost, 'threshold: 0.01', 'shown:', usagePopupShown.current);
+      console.log('[UsagePopup] totalCost:', totalCost.toFixed(4), 'threshold: 0.01', 'shown:', usagePopupShown.current);
 
       if (totalCost >= 0.01 && !usagePopupShown.current) {
         console.log('[UsagePopup] TRIGGERING POPUP!');
@@ -1552,10 +1558,9 @@ const Index = () => {
     };
 
     const interval = setInterval(checkCost, 15000);
-    // Also check after a short delay for returning sessions
     const initialCheck = setTimeout(checkCost, 3000);
     return () => { clearInterval(interval); clearTimeout(initialCheck); };
-  }, [user, isAdmin]);
+  }, [user]);
 
   // Start session tracking
   useEffect(() => {
