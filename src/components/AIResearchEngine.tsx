@@ -47,6 +47,7 @@ interface ResearchReport {
   marketOverview: any;
   searchDemand: any;
   painPoints: any[];
+  transformation: any;
   deepestDesires: any[];
   empathyMap: any;
   primarySolution: any;
