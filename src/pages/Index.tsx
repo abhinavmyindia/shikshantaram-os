@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, CSSProperties, useCallback } from 'react';
+import { getRetailValue } from '@/utils/calculateResearchValue';
 import { Menu, X } from 'lucide-react';
 import AIResearchEngine from '@/components/AIResearchEngine';
 import OfferCreation from '@/components/OfferCreation';
@@ -1375,20 +1376,14 @@ function getJourneyDay(createdAt?: string | null) {
   return Math.max(1, Math.min(90, diff + 1));
 }
 
-/* ───────── Motivation Popup ───────── */
-function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
-  message: typeof MOTIVATION_MESSAGES[0];
+/* ───────── Usage Value Popup ───────── */
+function UsageValuePopup({ message, onClose, onNavigate, displayValue }: {
+  message: typeof USAGE_MESSAGES[0];
   onClose: () => void;
   onNavigate: (p: PageId) => void;
-  journeyDay: number;
+  displayValue: string;
 }) {
-  const [notified, setNotified] = useState(false);
   const [fadingOut, setFadingOut] = useState(false);
-  const [barWidth, setBarWidth] = useState(0);
-
-  useEffect(() => {
-    requestAnimationFrame(() => setBarWidth(1));
-  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -1415,24 +1410,19 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
       }}>
         {/* Hero Band */}
         <div style={{ height: 180, position: 'relative', overflow: 'hidden', background: message.gradient }}>
-          {/* Decorative circles */}
           <div style={{ position: 'absolute', top: -40, right: -40, width: 220, height: 220, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', animation: 'float 6s ease-in-out infinite' }} />
           <div style={{ position: 'absolute', bottom: -30, left: -20, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', animation: 'float 8s ease-in-out infinite reverse' }} />
-          {/* Dot cluster */}
           <div style={{ position: 'absolute', top: 20, left: 24, display: 'flex', gap: 4 }}>
             {[0, 0.3, 0.6].map((d, i) => (
               <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.4)', animation: `pulse 2s ease-in-out ${d}s infinite` }} />
             ))}
           </div>
-          {/* Time badge */}
           <div style={{ position: 'absolute', top: 14, left: 14, background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 50, padding: '4px 14px', fontSize: 10, fontWeight: 800, color: 'white', letterSpacing: '0.1em' }}>
             {getTimeOfDayBadge()}
           </div>
-          {/* Close */}
           <div onClick={dismiss} style={{ position: 'absolute', top: 14, right: 14, width: 30, height: 30, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}>✕</div>
-          {/* Center emoji + tag */}
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
             <span style={{ fontSize: 52, animation: 'float 3s ease-in-out infinite' }}>{message.emoji}</span>
             <div style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 50, padding: '4px 14px', fontSize: 10, fontWeight: 800, color: 'white', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>
@@ -1444,16 +1434,20 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
         {/* Content Body */}
         <div style={{ background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(20px)', padding: '28px 28px 24px' }}>
           <h2 style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 'clamp(18px, 4vw, 22px)', color: '#0f172a', lineHeight: 1.2, letterSpacing: '-0.03em', marginBottom: 12 }}>
-            {message.headline}
+            {message.headline(displayValue)}
           </h2>
           <p style={{ fontFamily: 'DM Sans', fontSize: 14.5, color: '#475569', lineHeight: 1.75, marginBottom: 20 }}>
             {message.body}
           </p>
-          {/* Hard truth callout */}
+          {/* Value meter */}
           <div style={{ background: message.lightBg, borderLeft: `3px solid ${message.accentColor}`, borderRadius: '0 10px 10px 0', padding: '12px 16px', marginBottom: 22 }}>
-            <p style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#334155', lineHeight: 1.65, fontStyle: 'italic' }}>
-              {message.hardTruth}
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#64748b' }}>Session research value</span>
+              <span style={{ fontFamily: 'Sora', fontSize: 14, fontWeight: 800, color: '#ea580c' }}>{displayValue} generated</span>
+            </div>
+            <div style={{ background: '#e2e8f0', height: 6, borderRadius: 50, overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '100%', background: message.gradient, borderRadius: 50, animation: 'shrinkBar 15s linear reverse' }} />
+            </div>
           </div>
           {/* Action row */}
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -1469,12 +1463,12 @@ function MotivationPopup({ message, onClose, onNavigate, journeyDay }: {
             <button onClick={dismiss} style={{ background: 'none', border: 'none', color: '#94a3b8', fontFamily: 'DM Sans', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
               onMouseEnter={e => (e.currentTarget.style.color = '#64748b')}
               onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}>
-              Maybe later
+              {message.secondaryCta}
             </button>
           </div>
           {/* Bottom strip */}
           <div style={{ borderTop: '1px solid #f1f5f9', marginTop: 20, paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>🔥 Day {journeyDay} of your journey</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>🔥 Powered by Shikshantaram AI</span>
             <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 50, padding: '4px 12px', fontSize: 11, fontWeight: 700, color: '#64748b' }}>4 tools ready to use →</span>
           </div>
         </div>
