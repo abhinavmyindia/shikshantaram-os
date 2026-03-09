@@ -545,6 +545,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   const generateReport = async (product: ProductIdea) => {
     setError('');
     setSelectedProduct(product);
+    setLoadingStartTime(Date.now());
     setAiStep('loading-report');
     try {
       const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
