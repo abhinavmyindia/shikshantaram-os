@@ -1140,7 +1140,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     return (
       <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
         <div>
-          <LoadingScreen type="report" data={{ ...inputData, productName: selectedProduct?.productName, searchKeyword: selectedProduct?.searchKeyword }} />
+          <LoadingScreen type="report" data={{ ...inputData, productName: selectedProduct?.productName, searchKeyword: selectedProduct?.searchKeyword }} startTime={loadingStartTime} />
           <div style={s({ textAlign: 'center', marginTop: 24 })}>
             <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: 'none', fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>← Back to results</button>
           </div>
