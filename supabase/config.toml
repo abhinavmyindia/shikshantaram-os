@@ -17,3 +17,15 @@ verify_jwt = false
 
 [functions.generate-copy]
 verify_jwt = false
+
+[functions.log-error]
+verify_jwt = false
+
+[functions.track-activity]
+verify_jwt = false
+
+[functions.log-session]
+verify_jwt = false
+
+[functions.end-session]
+verify_jwt = false

@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          module: string | null
+          session_id: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          module?: string | null
+          session_id?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          module?: string | null
+          session_id?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       admin_activity_log: {
         Row: {
           action_type: string
@@ -137,6 +176,147 @@ export type Database = {
         }
         Relationships: []
       }
+      error_logs: {
+        Row: {
+          additional_data: Json | null
+          browser: string | null
+          created_at: string | null
+          device_type: string | null
+          error_type: string
+          id: string
+          is_resolved: boolean | null
+          message: string
+          module: string | null
+          os: string | null
+          page_url: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+          stack_trace: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          additional_data?: Json | null
+          browser?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          error_type: string
+          id?: string
+          is_resolved?: boolean | null
+          message: string
+          module?: string | null
+          os?: string | null
+          page_url?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          stack_trace?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          additional_data?: Json | null
+          browser?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          error_type?: string
+          id?: string
+          is_resolved?: boolean | null
+          message?: string
+          module?: string | null
+          os?: string | null
+          page_url?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          stack_trace?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      login_sessions: {
+        Row: {
+          browser: string | null
+          browser_version: string | null
+          created_at: string | null
+          device_type: string | null
+          id: string
+          ip_address: string
+          ip_city: string | null
+          ip_country: string | null
+          ip_isp: string | null
+          ip_lat: number | null
+          ip_lon: number | null
+          ip_org: string | null
+          ip_state: string | null
+          ip_timezone: string | null
+          is_active: boolean | null
+          last_seen: string | null
+          logged_out_at: string | null
+          logout_reason: string | null
+          os: string | null
+          os_version: string | null
+          session_token: string
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          browser_version?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address: string
+          ip_city?: string | null
+          ip_country?: string | null
+          ip_isp?: string | null
+          ip_lat?: number | null
+          ip_lon?: number | null
+          ip_org?: string | null
+          ip_state?: string | null
+          ip_timezone?: string | null
+          is_active?: boolean | null
+          last_seen?: string | null
+          logged_out_at?: string | null
+          logout_reason?: string | null
+          os?: string | null
+          os_version?: string | null
+          session_token: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          browser_version?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          id?: string
+          ip_address?: string
+          ip_city?: string | null
+          ip_country?: string | null
+          ip_isp?: string | null
+          ip_lat?: number | null
+          ip_lon?: number | null
+          ip_org?: string | null
+          ip_state?: string | null
+          ip_timezone?: string | null
+          is_active?: boolean | null
+          last_seen?: string | null
+          logged_out_at?: string | null
+          logout_reason?: string | null
+          os?: string | null
+          os_version?: string | null
+          session_token?: string
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       saved_items: {
         Row: {
           created_at: string | null
@@ -167,6 +347,60 @@ export type Database = {
           title?: string
           tool?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      security_events: {
+        Row: {
+          admin_notes: string | null
+          created_at: string | null
+          description: string | null
+          device_info: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          ip_location: string | null
+          is_reviewed: boolean | null
+          metadata: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          severity: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string | null
+          description?: string | null
+          device_info?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          ip_location?: string | null
+          is_reviewed?: boolean | null
+          metadata?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string | null
+          description?: string | null
+          device_info?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          ip_location?: string | null
+          is_reviewed?: boolean | null
+          metadata?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          severity?: string | null
+          user_email?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -343,6 +577,63 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      user_security_settings: {
+        Row: {
+          block_reason: string | null
+          blocked_at: string | null
+          blocked_by: string | null
+          created_at: string | null
+          id: string
+          ip_whitelist: Json | null
+          is_blocked: boolean | null
+          last_violation_at: string | null
+          max_concurrent_sessions: number | null
+          max_unique_ips: number | null
+          notes: string | null
+          trusted_ips: Json | null
+          updated_at: string | null
+          user_email: string | null
+          user_id: string | null
+          violation_count: number | null
+        }
+        Insert: {
+          block_reason?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          created_at?: string | null
+          id?: string
+          ip_whitelist?: Json | null
+          is_blocked?: boolean | null
+          last_violation_at?: string | null
+          max_concurrent_sessions?: number | null
+          max_unique_ips?: number | null
+          notes?: string | null
+          trusted_ips?: Json | null
+          updated_at?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          violation_count?: number | null
+        }
+        Update: {
+          block_reason?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          created_at?: string | null
+          id?: string
+          ip_whitelist?: Json | null
+          is_blocked?: boolean | null
+          last_violation_at?: string | null
+          max_concurrent_sessions?: number | null
+          max_unique_ips?: number | null
+          notes?: string | null
+          trusted_ips?: Json | null
+          updated_at?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          violation_count?: number | null
         }
         Relationships: []
       }
