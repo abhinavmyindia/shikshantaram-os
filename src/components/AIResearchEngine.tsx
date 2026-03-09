@@ -1132,7 +1132,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
 
   /* ═══════════════════ LOADING IDEAS ═══════════════════ */
   if (aiStep === 'loading-ideas') {
-    return <LoadingScreen type={isRawResultsMode || rawIdeaStep === 'loading-ideas' ? 'raw-ideas' : 'ideas'} data={{ ...inputData, country: rawIdeaData.country || inputData.country }} />;
+    return <LoadingScreen type={isRawResultsMode || rawIdeaStep === 'loading-ideas' ? 'raw-ideas' : 'ideas'} data={{ ...inputData, country: rawIdeaData.country || inputData.country }} startTime={loadingStartTime} />;
   }
 
   /* ═══════════════════ LOADING REPORT ═══════════════════ */
