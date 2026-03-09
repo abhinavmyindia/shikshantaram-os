@@ -1076,7 +1076,7 @@ function OverviewTab({ stats, users, emailMap }: { stats: any; users: UserRow[];
 }
 
 // ─── USERS TAB ───────────────────────────────────────────────
-function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>; adminId: string }) {
+function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId, role }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>; adminId: string; role: AdminRole }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [editUser, setEditUser] = useState<UserRow | null>(null);
