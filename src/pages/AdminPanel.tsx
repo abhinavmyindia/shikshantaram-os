@@ -17,15 +17,6 @@ interface UserRow {
   updated_at: string;
 }
 
-interface FeedbackRow {
-  id: string;
-  user_id: string;
-  rating: number;
-  feedback_text: string;
-  tool_used: string;
-  created_at: string;
-}
-
 interface SignupRow {
   id: string;
   full_name: string;
@@ -66,7 +57,19 @@ const popInKeyframes = `
 @keyframes popIn { 0% { opacity:0; transform: translate(-50%,-50%) scale(0.9); } 100% { opacity:1; transform: translate(-50%,-50%) scale(1); } }
 @keyframes spinSlow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes fadeInToast { 0% { opacity:0; transform: translateX(-50%) translateY(10px); } 100% { opacity:1; transform: translateX(-50%) translateY(0); } }
+@keyframes pulseDot { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.4)} 70%{box-shadow:0 0 0 8px rgba(16,185,129,0)} }
 `;
+
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 // ─── ADMIN TOAST ─────────────────────────────────────────────
 function AdminToast({ toast, onClose }: { toast: { message: string; type: string } | null; onClose: () => void }) {
@@ -96,12 +99,10 @@ function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
   return (
     <div onClick={onCancel} style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.65)', backdropFilter: 'blur(12px)', zIndex: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={e => e.stopPropagation()} style={{ maxWidth: 400, width: '94%', borderRadius: 20, overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.3)', animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)', position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }}>
-        {/* Header */}
         <div style={{ height: 60, background: 'linear-gradient(135deg,#ef4444,#dc2626)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>🗑</span>
           <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: 'white' }}>Delete User</span>
         </div>
-        {/* Body */}
         <div style={{ background: 'white', padding: 24, textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -110,7 +111,6 @@ function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
           <div style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#475569', lineHeight: 1.7, marginBottom: 20 }}>
             This will permanently delete <strong>{userName}</strong>'s account and all their data. This action cannot be undone.
           </div>
-          {/* What gets deleted */}
           <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 14px', textAlign: 'left', marginBottom: 20 }}>
             <div style={{ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#991b1b', marginBottom: 6 }}>The following will be permanently removed:</div>
             <div style={{ fontSize: 12, color: '#7f1d1d', lineHeight: 1.8 }}>
@@ -119,12 +119,10 @@ function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
               ✗ All tool usage and analytics data
             </div>
           </div>
-          {/* Confirm input */}
           <div style={{ textAlign: 'left', marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>Type DELETE to confirm</label>
             <input value={confirmText} onChange={e => setConfirmText(e.target.value)} placeholder="Type DELETE here" style={{ ...inputStyle, border: '1.5px solid #fecaca' }} />
           </div>
-          {/* Footer */}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button onClick={onCancel} style={{ background: 'none', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: 10, padding: '9px 18px', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
             <button onClick={onConfirm} disabled={!canDelete || deleting} style={{
@@ -174,16 +172,10 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
     setSaving(true);
     try {
       await supabase.from('user_profiles').update({
-        full_name: form.fullName.trim(),
-        phone: form.phone.trim(),
-        access_tier: form.accessTier,
-        payment_status: form.paymentStatus,
-        payment_amount: form.paymentAmount || 0,
-        is_beta_user: form.isBetaUser,
-        notes: form.notes.trim(),
-        updated_at: new Date().toISOString(),
+        full_name: form.fullName.trim(), phone: form.phone.trim(), access_tier: form.accessTier,
+        payment_status: form.paymentStatus, payment_amount: form.paymentAmount || 0,
+        is_beta_user: form.isBetaUser, notes: form.notes.trim(), updated_at: new Date().toISOString(),
       } as any).eq('id', user.id);
-
       if (form.email !== originalEmail) {
         const { data, error } = await supabase.functions.invoke('admin-update-user', {
           body: { userId: user.id, newEmail: form.email.toLowerCase().trim() },
@@ -191,7 +183,6 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
         if (error) throw new Error(error.message);
         if (data?.error) throw new Error(data.error);
       }
-
       await logActivity('user_edited', user.id, form.fullName, {
         tier: form.accessTier, payment: form.paymentStatus,
         ...(form.email !== originalEmail ? { email_changed: form.email } : {}),
@@ -213,15 +204,14 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
         });
       } else {
         const tempPwd = 'Shk' + Math.random().toString(36).slice(2, 6).toUpperCase() + Math.random().toString(36).slice(2, 5);
-        await supabase.functions.invoke('admin-reset-password', {
-          body: { user_id: user.id, new_password: tempPwd },
-        });
+        await supabase.functions.invoke('admin-reset-password', { body: { user_id: user.id, new_password: tempPwd } });
         await supabase.functions.invoke('send-welcome-email', {
           body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier, temp_password: tempPwd, login_url: 'https://app.shikshantaram.in' },
         });
       }
       setEmailSent(p => ({ ...p, [type]: true }));
       setTimeout(() => setEmailSent(p => ({ ...p, [type]: false })), 3000);
+      showToast(`📧 Email sent to ${form.email}`);
     } catch (err: any) {
       showToast(`❌ Email failed: ${err.message}`, 'error');
     }
@@ -262,7 +252,6 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
     <>
       <div onClick={handleClose} style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.65)', backdropFilter: 'blur(12px)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div onClick={e => e.stopPropagation()} style={{ maxWidth: 520, width: '94%', borderRadius: 24, overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.3)', animation: 'popIn 0.35s cubic-bezier(0.34,1.56,0.64,1)', position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-          {/* Header */}
           <div style={{ height: 72, background: 'linear-gradient(135deg,#0f172a,#1e293b)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 38, height: 38, borderRadius: '50%', background: tierGradients[form.accessTier] || tierGradients.basic, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: 'white' }}>
@@ -275,10 +264,7 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
             </div>
             <button onClick={handleClose} style={{ width: 30, height: 30, background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>✕</button>
           </div>
-
-          {/* Body */}
           <div style={{ background: 'white', padding: '24px 24px 8px', overflowY: 'auto', flex: 1 }}>
-            {/* Section 1 — Personal Details */}
             <SectionHeader index={0} icon="👤" iconBg="#ede9fe" iconColor="#7c3aed" title="Personal Details" />
             {sections[0] && (
               <div style={{ padding: '12px 0' }}>
@@ -290,7 +276,7 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
                   <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Email Address</label>
                   <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} style={inputStyle} />
                   <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginTop: 6 }}>
-                    <span style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#92400e' }}>⚠ Changing email updates authentication. The user must use the new email to log in.</span>
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#92400e' }}>⚠ Changing email updates authentication.</span>
                   </div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
@@ -303,8 +289,6 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
                 </div>
               </div>
             )}
-
-            {/* Section 2 — Access & Payment */}
             <SectionHeader index={1} icon="🛡️" iconBg="#dcfce7" iconColor="#059669" title="Access & Payment" />
             {sections[1] && (
               <div style={{ padding: '12px 0' }}>
@@ -331,15 +315,9 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
                     </div>
                   ))}
                 </div>
-                <div onClick={() => setForm(f => ({ ...f, accessTier: 'revoked' }))} style={{ cursor: 'pointer', marginTop: 4, marginBottom: form.accessTier === 'revoked' ? 0 : 14 }}>
-                  <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#ef4444' }}>🔒 Revoke access (block this user)</span>
+                <div onClick={() => setForm(f => ({ ...f, accessTier: 'revoked' }))} style={{ cursor: 'pointer', marginTop: 4, marginBottom: 14 }}>
+                  <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#ef4444' }}>🔒 Revoke access</span>
                 </div>
-                {form.accessTier === 'revoked' && (
-                  <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', marginTop: 6, marginBottom: 14 }}>
-                    <span style={{ fontSize: 12, color: '#991b1b', fontWeight: 600 }}>This user will be immediately blocked from logging in.</span>
-                  </div>
-                )}
-
                 <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Payment Status</label>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
                   {paymentStatuses.map(s => (
@@ -349,13 +327,10 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
                     }}>{paymentLabels[s]}</button>
                   ))}
                 </div>
-
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Payment Amount (₹)</label>
                   <input type="number" value={form.paymentAmount} onChange={e => setForm(f => ({ ...f, paymentAmount: parseInt(e.target.value) || 0 }))} placeholder="0" style={inputStyle} />
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Enter 0 for beta users or if not applicable.</div>
                 </div>
-
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
                   <div>
                     <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#0f172a', fontWeight: 600 }}>Show Beta Feedback Widget</div>
@@ -370,30 +345,21 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
                 </div>
               </div>
             )}
-
-            {/* Section 3 — Send Notification */}
             <SectionHeader index={2} icon="🔔" iconBg="#fff7ed" iconColor="#ea580c" title="Send Email Notification"
               pill={<span style={{ background: '#f1f5f9', color: '#94a3b8', fontSize: 10, padding: '2px 8px', borderRadius: 20, marginLeft: 6 }}>Optional</span>} />
             {sections[2] && (
               <div style={{ padding: '12px 0' }}>
-                <div style={{ fontSize: 13, color: '#475569', marginBottom: 14 }}>Send a notification email to this user about their access change.</div>
                 <button onClick={() => sendEmail('access')} style={{ width: '100%', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 10, padding: '10px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left', marginBottom: 10 }}>
-                  📧 Send Access Updated Email {emailSent.access && <span style={{ marginLeft: 8, color: '#059669' }}>✅ Email sent!</span>}
-                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 400, marginTop: 2 }}>Notifies the user that their access tier has been changed.</div>
+                  📧 Send Access Updated Email {emailSent.access && <span style={{ marginLeft: 8, color: '#059669' }}>✅ Sent!</span>}
                 </button>
                 <button onClick={() => sendEmail('password')} style={{ width: '100%', background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0891b2', borderRadius: 10, padding: '10px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
-                  🔑 Send New Password Email {emailSent.password && <span style={{ marginLeft: 8, color: '#059669' }}>✅ Email sent!</span>}
-                  <div style={{ fontSize: 11, color: '#64748b', fontWeight: 400, marginTop: 2 }}>Generates a new password and sends login credentials to the user.</div>
+                  🔑 Send New Password Email {emailSent.password && <span style={{ marginLeft: 8, color: '#059669' }}>✅ Sent!</span>}
                 </button>
               </div>
             )}
           </div>
-
-          {/* Footer */}
           <div style={{ background: '#f8fafc', borderTop: '1px solid #f1f5f9', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-            <button onClick={() => setShowDelete(true)} style={{ background: 'none', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 10, padding: '9px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-              🗑 Delete User
-            </button>
+            <button onClick={() => setShowDelete(true)} style={{ background: 'none', border: '1px solid #fecaca', color: '#ef4444', borderRadius: 10, padding: '9px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>🗑 Delete User</button>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={handleClose} style={{ background: 'none', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: 10, padding: '9px 18px', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving} style={{
@@ -413,6 +379,115 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
   );
 }
 
+// ─── SECURITY PROFILE MODAL ────────────────────────────────
+function SecurityProfileModal({ userId, userEmail, userName, onClose, adminId, showToast }: {
+  userId: string; userEmail: string; userName: string; onClose: () => void; adminId: string; showToast: (msg: string, type?: string) => void;
+}) {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [secSettings, setSecSettings] = useState<any>(null);
+  const [allIps, setAllIps] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const [sessRes, secRes, ipRes] = await Promise.all([
+        supabase.from('login_sessions').select('*').eq('user_id', userId).eq('is_active', true),
+        supabase.from('user_security_settings').select('*').eq('user_id', userId).maybeSingle(),
+        supabase.from('login_sessions').select('ip_address').eq('user_id', userId),
+      ]);
+      setSessions((sessRes.data as any[]) || []);
+      setSecSettings(secRes.data);
+      setAllIps([...new Set((ipRes.data as any[])?.map((r: any) => r.ip_address).filter(Boolean) || [])]);
+      setLoading(false);
+    };
+    load();
+  }, [userId]);
+
+  const forceLogoutAll = async () => {
+    await supabase.from('login_sessions').update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'forced_logout' } as any).eq('user_id', userId);
+    await supabase.from('security_events').insert({ user_id: userId, user_email: userEmail, event_type: 'force_logout', severity: 'medium', description: 'Admin force-logged out all sessions', metadata: { admin_id: adminId } } as any);
+    setSessions([]);
+    showToast(`⚡ All sessions ended for ${userName}`);
+  };
+
+  const toggleBlock = async () => {
+    const isBlocked = secSettings?.is_blocked;
+    if (isBlocked) {
+      await supabase.from('user_security_settings').update({ is_blocked: false, block_reason: null, blocked_at: null, blocked_by: null } as any).eq('user_id', userId);
+      await supabase.from('security_events').insert({ user_id: userId, user_email: userEmail, event_type: 'user_unblocked', severity: 'low', description: 'Admin unblocked user', metadata: { admin_id: adminId } } as any);
+      setSecSettings((s: any) => ({ ...s, is_blocked: false }));
+      showToast(`✅ ${userName} unblocked`);
+    } else {
+      const reason = prompt('Block reason:');
+      if (!reason) return;
+      await supabase.from('user_security_settings').upsert({ user_id: userId, user_email: userEmail, is_blocked: true, block_reason: reason, blocked_at: new Date().toISOString(), blocked_by: adminId } as any, { onConflict: 'user_id' });
+      await supabase.from('security_events').insert({ user_id: userId, user_email: userEmail, event_type: 'user_blocked', severity: 'high', description: `Admin blocked user: ${reason}`, metadata: { admin_id: adminId } } as any);
+      setSecSettings((s: any) => ({ ...(s || {}), is_blocked: true, block_reason: reason }));
+      showToast(`🚫 ${userName} blocked`);
+    }
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.65)', backdropFilter: 'blur(12px)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} style={{ maxWidth: 480, width: '94%', borderRadius: 20, overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.3)', animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)', position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: 56, background: 'linear-gradient(135deg,#0f172a,#334155)', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: 'white' }}>🛡️ Security Profile — {userName}</span>
+          <button onClick={onClose} style={{ width: 28, height: 28, background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '50%', cursor: 'pointer', fontSize: 13 }}>✕</button>
+        </div>
+        <div style={{ background: 'white', padding: 20, overflowY: 'auto', flex: 1 }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 30 }}><div style={{ width: 20, height: 20, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>
+          ) : (
+            <>
+              {/* Status */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                <div style={{ background: sessions.length > 0 ? '#f0fdf4' : '#f8fafc', border: `1px solid ${sessions.length > 0 ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Active Sessions</div>
+                  <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 24, color: sessions.length > 0 ? '#15803d' : '#64748b' }}>{sessions.length}</div>
+                </div>
+                <div style={{ background: secSettings?.is_blocked ? '#fee2e2' : '#f0fdf4', border: `1px solid ${secSettings?.is_blocked ? '#fecaca' : '#bbf7d0'}`, borderRadius: 10, padding: 12 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Status</div>
+                  <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: secSettings?.is_blocked ? '#991b1b' : '#15803d' }}>
+                    {secSettings?.is_blocked ? '🚫 Blocked' : '✅ Active'}
+                  </div>
+                </div>
+              </div>
+              {secSettings?.is_blocked && secSettings?.block_reason && (
+                <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#991b1b' }}>
+                  Block reason: {secSettings.block_reason}
+                </div>
+              )}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>Violations</div>
+                <span style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 16 }}>{secSettings?.violation_count || 0}</span>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 6 }}>All IPs Used ({allIps.length})</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {allIps.map(ip => (
+                    <span key={ip} style={{ fontSize: 11, fontFamily: 'monospace', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '3px 8px', color: '#64748b' }}>{ip}</span>
+                  ))}
+                  {allIps.length === 0 && <span style={{ fontSize: 12, color: '#94a3b8' }}>No IPs recorded</span>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={toggleBlock} style={{
+                  flex: 1, padding: '10px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
+                  background: secSettings?.is_blocked ? '#f0fdf4' : '#fee2e2', color: secSettings?.is_blocked ? '#15803d' : '#991b1b',
+                }}>{secSettings?.is_blocked ? '✅ Unblock User' : '🚫 Block User'}</button>
+                <button onClick={forceLogoutAll} disabled={sessions.length === 0} style={{
+                  flex: 1, padding: '10px 16px', borderRadius: 10, border: 'none', cursor: sessions.length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
+                  background: '#fff7ed', color: '#ea580c', opacity: sessions.length > 0 ? 1 : 0.5,
+                }}>⚡ Force Logout All</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── APPROVE ACCESS MODAL ────────────────────────────────────
 function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivity }: {
   request: SignupRow; onClose: () => void; onApproved: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
@@ -429,29 +504,18 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
       const tempPassword = 'Shk' + Math.random().toString(36).slice(2, 6).toUpperCase() + Math.random().toString(36).slice(2, 5);
       const { data, error } = await supabase.functions.invoke('create-user-and-notify', {
         body: {
-          email: request.email,
-          full_name: request.full_name,
-          phone: request.phone,
-          temp_password: tempPassword,
-          access_tier: selectedTier,
-          payment_status: selectedTier === 'premium' ? 'paid' : selectedTier === 'beta' ? 'beta' : 'reserved',
-          payment_amount: paymentAmount || 0,
-          notes: approvalNotes,
-          is_beta_user: selectedTier === 'beta',
+          email: request.email, full_name: request.full_name, phone: request.phone, temp_password: tempPassword,
+          access_tier: selectedTier, payment_status: selectedTier === 'premium' ? 'paid' : selectedTier === 'beta' ? 'beta' : 'reserved',
+          payment_amount: paymentAmount || 0, notes: approvalNotes, is_beta_user: selectedTier === 'beta',
         },
       });
       if (error) throw new Error(error.message);
       if (data?.error && !data?.already_exists) throw new Error(data.error);
-
-      await supabase.from('signup_requests').update({
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
-      } as any).eq('id', request.id);
-
+      await supabase.from('signup_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() } as any).eq('id', request.id);
       await logActivity('signup_approved', null, request.full_name, { email: request.email, tier: selectedTier, payment: paymentAmount });
       onClose();
       onApproved();
-      showToast(`🎉 ${request.full_name} approved as ${selectedTier}! Email sent to ${request.email}`);
+      showToast(`✅ ${request.full_name} approved as ${selectedTier}! Email sent.`);
     } catch (err: any) {
       showToast(`❌ Error: ${err.message}`, 'error');
     } finally {
@@ -462,7 +526,6 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.65)', backdropFilter: 'blur(12px)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={e => e.stopPropagation()} style={{ maxWidth: 460, width: '94%', borderRadius: 24, overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.3)', animation: 'popIn 0.35s cubic-bezier(0.34,1.56,0.64,1)', position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
         <div style={{ height: 64, background: 'linear-gradient(135deg,#059669,#10b981)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 18 }}>✅</span>
@@ -470,9 +533,7 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
           </div>
           <button onClick={onClose} style={{ width: 30, height: 30, background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>✕</button>
         </div>
-        {/* Body */}
         <div style={{ background: 'white', padding: 24, overflowY: 'auto', flex: 1 }}>
-          {/* User summary */}
           <div style={{ background: '#f8fafc', borderRadius: 12, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 }}>
             <div style={{ width: 38, height: 38, borderRadius: '50%', background: request.payment_type === 'full' ? tierGradients.premium : tierGradients.basic, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: 'white' }}>
               {(request.full_name || 'U').slice(0, 2).toUpperCase()}
@@ -481,58 +542,32 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
               <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{request.full_name}</div>
               <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{request.email}</div>
             </div>
-            <span style={{
-              fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
-              background: request.payment_type === 'full' ? '#ede9fe' : '#fef9c3',
-              color: request.payment_type === 'full' ? '#7c3aed' : '#92400e',
-            }}>{request.payment_type === 'full' ? 'Full Payment' : 'Reserve'}</span>
           </div>
-
-          <div style={{ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Choose Access Tier</div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>You decide what access to grant — regardless of what the user selected during signup.</div>
-
-          {/* Tier cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 16 }}>
             {[
-              { key: 'basic', icon: '🔓', label: 'Basic', desc: 'Niche Clarity + Product Navigator', badge: '2 of 8 tools', color: '#059669' },
-              { key: 'premium', icon: '⚡', label: 'Premium', desc: 'All tools as they unlock', badge: 'Full access ✦', color: '#7c3aed' },
-              { key: 'beta', icon: '🧪', label: 'Beta', desc: 'All tools + feedback widget', badge: 'Beta tester', color: '#ec4899' },
+              { key: 'basic', icon: '🔓', label: 'Basic', color: '#059669' },
+              { key: 'premium', icon: '⚡', label: 'Premium', color: '#7c3aed' },
+              { key: 'beta', icon: '🧪', label: 'Beta', color: '#ec4899' },
             ].map(t => (
               <div key={t.key} onClick={() => setSelectedTier(t.key)} style={{
-                borderRadius: 12, padding: 14, cursor: 'pointer',
+                borderRadius: 12, padding: 14, cursor: 'pointer', textAlign: 'center',
                 border: `2px solid ${selectedTier === t.key ? t.color : '#e2e8f0'}`,
                 background: selectedTier === t.key ? `${t.color}0F` : 'white',
-                boxShadow: selectedTier === t.key ? `0 0 0 3px ${t.color}1F` : 'none',
               }}>
                 <div style={{ fontSize: 20 }}>{t.icon}</div>
                 <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a', marginTop: 6 }}>{t.label}</div>
-                <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b', marginTop: 3 }}>{t.desc}</div>
-                <div style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: t.color, marginTop: 4 }}>{t.badge}</div>
               </div>
             ))}
           </div>
-
-          {/* Payment amount */}
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Payment Amount Received (₹)</label>
-            <input type="number" value={paymentAmount} onChange={e => setPaymentAmount(parseInt(e.target.value) || 0)} placeholder="e.g. 999 or 4999" style={inputStyle} />
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Payment Amount (₹)</label>
+            <input type="number" value={paymentAmount} onChange={e => setPaymentAmount(parseInt(e.target.value) || 0)} placeholder="e.g. 999" style={inputStyle} />
           </div>
-
-          {/* Notes */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Internal Notes (Optional)</label>
-            <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="e.g. Paid on 7 March via UPI, referred by XYZ" style={{ ...inputStyle, minHeight: 60, resize: 'vertical' } as React.CSSProperties} />
-          </div>
-
-          {/* Email preview */}
-          <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 10, padding: '12px 16px' }}>
-            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#7c3aed', fontWeight: 700 }}>📧 Confirmation email will be sent to:</div>
-            <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#0f172a', fontWeight: 600, marginTop: 2 }}>{request.email}</div>
-            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 3 }}>Contains: login credentials + access details + app link</div>
+            <textarea value={approvalNotes} onChange={e => setApprovalNotes(e.target.value)} placeholder="e.g. Paid via UPI" style={{ ...inputStyle, minHeight: 60, resize: 'vertical' } as React.CSSProperties} />
           </div>
         </div>
-
-        {/* Footer */}
         <div style={{ background: '#f8fafc', borderTop: '1px solid #f1f5f9', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <button onClick={onClose} style={{ background: 'none', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: 10, padding: '9px 18px', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
           <button onClick={confirmApprove} disabled={approving} style={{
@@ -542,13 +577,14 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
             display: 'flex', alignItems: 'center', gap: 6, opacity: approving ? 0.7 : 1,
           }}>
             {approving && <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
-            {approving ? 'Creating account & sending email...' : '✅ Approve & Send Email →'}
+            {approving ? 'Creating...' : '✅ Approve & Send Email →'}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
 // ─── AI ANALYTICS TAB ────────────────────────────────────────
 function AIAnalyticsTab() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -561,122 +597,96 @@ function AIAnalyticsTab() {
 
   const fetchAnalytics = async (range: string) => {
     setLoading(true);
-    const fromDate: Record<string, string> = {
-      'today': new Date(new Date().setHours(0,0,0,0)).toISOString(),
-      '7days': new Date(Date.now() - 7*24*60*60*1000).toISOString(),
-      '30days': new Date(Date.now() - 30*24*60*60*1000).toISOString(),
-      'all': '2020-01-01T00:00:00Z',
-    };
-    const { data } = await supabase.from('ai_usage_logs').select('*').gte('created_at', fromDate[range]).order('created_at', { ascending: false });
-    const l = (data || []) as any[];
-    setLogs(l);
+    try {
+      const fromDate: Record<string, string> = {
+        'today': new Date(new Date().setHours(0,0,0,0)).toISOString(),
+        '7days': new Date(Date.now() - 7*24*60*60*1000).toISOString(),
+        '30days': new Date(Date.now() - 30*24*60*60*1000).toISOString(),
+        'all': '2020-01-01T00:00:00Z',
+      };
+      const { data } = await supabase.from('ai_usage_logs').select('*').gte('created_at', fromDate[range]).order('created_at', { ascending: false });
+      const l = (data || []) as any[];
+      setLogs(l);
 
-    const totalCalls = l.length;
-    const totalTokens = l.reduce((s: number, x: any) => s + (x.total_tokens || 0), 0);
-    const totalCostUsd = l.reduce((s: number, x: any) => s + parseFloat(x.estimated_cost_usd || '0'), 0);
-    const uniqueUsers = new Set(l.map((x: any) => x.user_id).filter(Boolean)).size;
+      const totalCalls = l.length;
+      const totalTokens = l.reduce((s: number, x: any) => s + (x.total_tokens || 0), 0);
+      const totalCostUsd = l.reduce((s: number, x: any) => s + parseFloat(x.estimated_cost_usd || '0'), 0);
+      const uniqueUsers = new Set(l.map((x: any) => x.user_id).filter(Boolean)).size;
 
-    const byModule: Record<string, any> = {};
-    const byModel: Record<string, any> = {};
-    const byUser: Record<string, any> = {};
-    const byDay: Record<string, any> = {};
+      const byModule: Record<string, any> = {};
+      const byModel: Record<string, any> = {};
+      const byUser: Record<string, any> = {};
+      const byDay: Record<string, any> = {};
 
-    l.forEach((x: any) => {
-      const mod = x.module || 'unknown';
-      if (!byModule[mod]) byModule[mod] = { calls: 0, tokens: 0, cost: 0 };
-      byModule[mod].calls++; byModule[mod].tokens += x.total_tokens || 0; byModule[mod].cost += parseFloat(x.estimated_cost_usd || '0');
+      l.forEach((x: any) => {
+        const mod = x.module || 'unknown';
+        if (!byModule[mod]) byModule[mod] = { calls: 0, tokens: 0, cost: 0 };
+        byModule[mod].calls++; byModule[mod].tokens += x.total_tokens || 0; byModule[mod].cost += parseFloat(x.estimated_cost_usd || '0');
 
-      const mdl = x.model || 'unknown';
-      if (!byModel[mdl]) byModel[mdl] = { calls: 0, tokens: 0, cost: 0 };
-      byModel[mdl].calls++; byModel[mdl].tokens += x.total_tokens || 0; byModel[mdl].cost += parseFloat(x.estimated_cost_usd || '0');
+        const mdl = x.model || 'unknown';
+        if (!byModel[mdl]) byModel[mdl] = { calls: 0, tokens: 0, cost: 0 };
+        byModel[mdl].calls++; byModel[mdl].tokens += x.total_tokens || 0; byModel[mdl].cost += parseFloat(x.estimated_cost_usd || '0');
 
-      const email = x.user_email || 'anonymous';
-      if (!byUser[email]) byUser[email] = { name: x.user_name, email: x.user_email, calls: 0, tokens: 0, cost: 0, lastActive: x.created_at };
-      byUser[email].calls++; byUser[email].tokens += x.total_tokens || 0; byUser[email].cost += parseFloat(x.estimated_cost_usd || '0');
-      if (x.created_at > byUser[email].lastActive) byUser[email].lastActive = x.created_at;
+        const email = x.user_email || 'anonymous';
+        if (!byUser[email]) byUser[email] = { name: x.user_name, email: x.user_email, calls: 0, tokens: 0, cost: 0, lastActive: x.created_at };
+        byUser[email].calls++; byUser[email].tokens += x.total_tokens || 0; byUser[email].cost += parseFloat(x.estimated_cost_usd || '0');
+        if (x.created_at > byUser[email].lastActive) byUser[email].lastActive = x.created_at;
 
-      const day = (x.created_at || '').slice(0, 10);
-      if (!byDay[day]) byDay[day] = { calls: 0, tokens: 0, cost: 0 };
-      byDay[day].calls++; byDay[day].tokens += x.total_tokens || 0; byDay[day].cost += parseFloat(x.estimated_cost_usd || '0');
-    });
+        const day = (x.created_at || '').slice(0, 10);
+        if (!byDay[day]) byDay[day] = { calls: 0, tokens: 0, cost: 0 };
+        byDay[day].calls++; byDay[day].tokens += x.total_tokens || 0; byDay[day].cost += parseFloat(x.estimated_cost_usd || '0');
+      });
 
-    // Top call types
-    const byCallType: Record<string, number> = {};
-    l.forEach((x: any) => { const ct = x.call_type || 'unknown'; byCallType[ct] = (byCallType[ct] || 0) + 1; });
-    const topCallTypes = Object.entries(byCallType).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      const byCallType: Record<string, number> = {};
+      l.forEach((x: any) => { const ct = x.call_type || 'unknown'; byCallType[ct] = (byCallType[ct] || 0) + 1; });
+      const topCallTypes = Object.entries(byCallType).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-    setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes });
+      setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes });
+    } catch (err) {
+      console.error('AI analytics fetch error:', err);
+    }
     setLoading(false);
   };
 
   const handleRangeChange = (r: string) => { setDateRange(r); fetchAnalytics(r); };
-
-  const relativeTime = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  };
-
   const formatCallType = (ct: string) => ct.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-
   const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed' };
   const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity' };
 
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#06b6d4', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
-  }
-
+  if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#06b6d4', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
   if (!analytics || analytics.totalCalls === 0) {
     return (
       <div style={{ textAlign: 'center', padding: 60 }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🤖</div>
         <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a', marginBottom: 8 }}>No AI calls logged yet</div>
-        <div style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#94a3b8', lineHeight: 1.7 }}>Usage will appear here as your users start using the AI tools.</div>
+        <div style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#94a3b8' }}>Usage will appear here as users use AI tools.</div>
       </div>
     );
   }
 
   const { totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes } = analytics;
-
-  // Daily chart data (last 14 days)
   const dayEntries = Object.entries(byDay).sort((a, b) => a[0].localeCompare(b[0])).slice(-14) as [string, any][];
   const maxDayTokens = Math.max(...dayEntries.map(([, d]) => d.tokens), 1);
-
-  // Users sorted by cost
-  const userEntries = Object.values(byUser).sort((a: any, b: any) => b.cost - a.cost).slice(0, 20) as any[];
-
-  // Modules sorted by cost
+  const userEntries = Object.values(byUser).sort((a: any, b: any) => b.cost - a.cost).slice(0, 10) as any[];
   const moduleEntries = Object.entries(byModule).sort((a, b) => (b[1] as any).cost - (a[1] as any).cost) as [string, any][];
-
   const costDisplay = totalCostUsd < 0.01 ? `$${totalCostUsd.toFixed(6)}` : `$${totalCostUsd.toFixed(4)}`;
 
-  const kpiCards = [
-    { label: 'Total AI Calls', value: totalCalls.toLocaleString(), sub: 'in selected period', icon: '🤖', bg: 'rgba(6,182,212,0.1)' },
-    { label: 'Tokens Consumed', value: `${(totalTokens/1000).toFixed(1)}K`, sub: 'across all modules', icon: '⚡', bg: 'rgba(245,158,11,0.1)' },
-    { label: 'Estimated API Cost', value: costDisplay, sub: 'based on model pricing', icon: '💰', bg: 'rgba(34,197,94,0.1)' },
-    { label: 'Users Made AI Calls', value: uniqueUsers, sub: 'unique users in period', icon: '👥', bg: 'rgba(124,58,237,0.1)' },
-  ];
-
-  const ranges = [
-    { id: 'today', label: 'Today' }, { id: '7days', label: '7 Days' },
-    { id: '30days', label: '30 Days' }, { id: 'all', label: 'All Time' },
-  ];
-
-  // Model cards
   const flashModels = Object.entries(byModel).filter(([k]) => k.includes('flash'));
   const proModels = Object.entries(byModel).filter(([k]) => !k.includes('flash'));
   const flashTotal = flashModels.reduce((s, [, v]: any) => ({ calls: s.calls + v.calls, tokens: s.tokens + v.tokens, cost: s.cost + v.cost }), { calls: 0, tokens: 0, cost: 0 });
   const proTotal = proModels.reduce((s, [, v]: any) => ({ calls: s.calls + v.calls, tokens: s.tokens + v.tokens, cost: s.cost + v.cost }), { calls: 0, tokens: 0, cost: 0 });
 
+  const ranges = [{ id: 'today', label: 'Today' }, { id: '7days', label: '7 Days' }, { id: '30days', label: '30 Days' }, { id: 'all', label: 'All Time' }];
+
   return (
     <div>
-      {/* KPI Strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
-        {kpiCards.map(k => (
+        {[
+          { label: 'Total AI Calls', value: totalCalls.toLocaleString(), sub: 'in selected period', icon: '🤖', bg: 'rgba(6,182,212,0.1)' },
+          { label: 'Tokens Consumed', value: `${(totalTokens/1000).toFixed(1)}K`, sub: 'across all modules', icon: '⚡', bg: 'rgba(245,158,11,0.1)' },
+          { label: 'Estimated API Cost', value: costDisplay, sub: 'based on model pricing', icon: '💰', bg: 'rgba(34,197,94,0.1)' },
+          { label: 'Unique Users', value: uniqueUsers, sub: 'users who called AI', icon: '👥', bg: 'rgba(124,58,237,0.1)' },
+        ].map(k => (
           <div key={k.label} style={{ ...glassCard, padding: '18px 20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{k.label}</span>
@@ -688,9 +698,8 @@ function AIAnalyticsTab() {
         ))}
       </div>
 
-      {/* Date Range Filter */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>Filter by period:</span>
+        <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>Period:</span>
         {ranges.map(r => (
           <button key={r.id} onClick={() => handleRangeChange(r.id)} style={{
             padding: '6px 16px', borderRadius: 50, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'DM Sans',
@@ -699,15 +708,12 @@ function AIAnalyticsTab() {
           }}>{r.label}</button>
         ))}
         <div style={{ flex: 1 }} />
-        <button onClick={() => fetchAnalytics(dateRange)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b', fontFamily: 'DM Sans' }}>🔄 Refresh</button>
+        <button onClick={() => fetchAnalytics(dateRange)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b' }}>🔄 Refresh</button>
       </div>
 
-      {/* Middle Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-        {/* Usage by Module */}
         <div style={{ ...glassCard, padding: 20 }}>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>Usage by Module</div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Which tools are consuming the most AI</div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 16 }}>Usage by Module</div>
           {moduleEntries.map(([mod, data]) => (
             <div key={mod} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: moduleColors[mod] || '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'white', fontWeight: 800, fontFamily: 'Sora', flexShrink: 0 }}>
@@ -716,7 +722,7 @@ function AIAnalyticsTab() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a', marginBottom: 4 }}>{moduleNames[mod] || mod}</div>
                 <div style={{ background: '#f1f5f9', height: 8, borderRadius: 50, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.max(2, (data.cost / totalCostUsd) * 100)}%`, height: '100%', background: moduleColors[mod] || '#64748b', borderRadius: 50, transition: 'width 0.8s ease' }} />
+                  <div style={{ width: `${Math.max(2, (data.cost / totalCostUsd) * 100)}%`, height: '100%', background: moduleColors[mod] || '#64748b', borderRadius: 50 }} />
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -727,25 +733,24 @@ function AIAnalyticsTab() {
           ))}
         </div>
 
-        {/* Model Breakdown */}
         <div style={{ ...glassCard, padding: 20 }}>
           <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 16 }}>Model Breakdown</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
             <div style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.2)', borderRadius: 12, padding: 14 }}>
-              <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#0891b2', marginBottom: 4 }}>⚡ Flash Models</div>
+              <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#0891b2', marginBottom: 4 }}>⚡ Flash</div>
               <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 20, color: '#0f172a' }}>{flashTotal.calls}</div>
               <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{(flashTotal.tokens/1000).toFixed(1)}K tokens</div>
               <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#059669' }}>${flashTotal.cost.toFixed(4)}</div>
             </div>
             <div style={{ background: 'rgba(234,88,12,0.06)', border: '1px solid rgba(234,88,12,0.2)', borderRadius: 12, padding: 14 }}>
-              <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#ea580c', marginBottom: 4 }}>🧠 Pro Models</div>
+              <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#ea580c', marginBottom: 4 }}>🧠 Pro</div>
               <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 20, color: '#0f172a' }}>{proTotal.calls}</div>
               <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{(proTotal.tokens/1000).toFixed(1)}K tokens</div>
               <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#059669' }}>${proTotal.cost.toFixed(4)}</div>
             </div>
           </div>
           <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 14 }}>
-            <div style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>MOST USED OPERATIONS</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>TOP OPERATIONS</div>
             {topCallTypes.map(([ct, count]) => (
               <div key={ct} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#334155' }}>{formatCallType(ct)}</span>
@@ -756,67 +761,51 @@ function AIAnalyticsTab() {
         </div>
       </div>
 
-      {/* Bottom Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-        {/* Per-User Table */}
         <div style={{ ...glassCard, padding: 20 }}>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>Usage by User</div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>Most active AI users in your platform</div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 14 }}>Top Users by Cost</div>
           <div style={{ overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 70px 80px 70px', gap: 0, background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-              {['User', 'Calls', 'Tokens', 'Est. Cost', 'Last'].map(h => (
-                <div key={h} style={{ padding: '8px 12px', fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{h}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 60px 70px 80px', gap: 0, background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+              {['#', 'User', 'Calls', 'Tokens', 'Cost'].map(h => (
+                <div key={h} style={{ padding: '8px 8px', fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{h}</div>
               ))}
             </div>
             <div style={{ maxHeight: 320, overflowY: 'auto' }}>
               {userEntries.map((u, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 70px 80px 70px', gap: 0, borderBottom: '1px solid #f8fafc', padding: '2px 0' }}>
-                  <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 9, color: 'white', flexShrink: 0 }}>
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '30px 1fr 60px 70px 80px', gap: 0, borderBottom: '1px solid #f8fafc', padding: '2px 0' }}>
+                  <div style={{ padding: '10px 8px', fontFamily: 'Sora', fontWeight: 700, fontSize: 12, color: '#94a3b8' }}>{i + 1}</div>
+                  <div style={{ padding: '10px 8px', display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 8, color: 'white', flexShrink: 0 }}>
                       {(u.name || 'U').charAt(0).toUpperCase()}
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12.5, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name || 'Unknown'}</div>
-                      <div style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
-                    </div>
+                    <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name || u.email?.split('@')[0] || 'Unknown'}</span>
                   </div>
-                  <div style={{ padding: '10px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a', display: 'flex', alignItems: 'center' }}>{u.calls}</div>
-                  <div style={{ padding: '10px 12px', fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', display: 'flex', alignItems: 'center' }}>{(u.tokens/1000).toFixed(1)}K</div>
-                  <div style={{ padding: '10px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#059669', display: 'flex', alignItems: 'center' }}>${u.cost.toFixed(4)}</div>
-                  <div style={{ padding: '10px 12px', fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center' }}>{relativeTime(u.lastActive)}</div>
+                  <div style={{ padding: '10px 8px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a', display: 'flex', alignItems: 'center' }}>{u.calls}</div>
+                  <div style={{ padding: '10px 8px', fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', display: 'flex', alignItems: 'center' }}>{(u.tokens/1000).toFixed(1)}K</div>
+                  <div style={{ padding: '10px 8px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#059669', display: 'flex', alignItems: 'center' }}>${u.cost.toFixed(4)}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Daily Trend Chart */}
         <div style={{ ...glassCard, padding: 20 }}>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>Daily AI Usage</div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Token consumption over time</div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 16 }}>Daily AI Usage</div>
           <div style={{ width: '100%', height: 180, display: 'flex', alignItems: 'flex-end', gap: 4 }}>
             {dayEntries.map(([day, data]) => {
               const pct = (data.tokens / maxDayTokens) * 100;
+              const isToday = day === new Date().toISOString().slice(0, 10);
               return (
-                <div key={day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }} title={`${day}\n${data.calls} calls\n${(data.tokens/1000).toFixed(1)}K tokens\n$${data.cost.toFixed(4)}`}>
-                  <div style={{ width: '100%', minHeight: 4, height: `${Math.max(2, pct)}%`, background: 'linear-gradient(180deg,#06b6d4,#3b82f6)', borderRadius: '4px 4px 0 0', transition: 'height 0.5s ease' }} />
+                <div key={day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }} title={`${day}\n${data.calls} calls\n${(data.tokens/1000).toFixed(1)}K tokens`}>
+                  <div style={{ width: '100%', minHeight: 4, height: `${Math.max(2, pct)}%`, background: isToday ? 'linear-gradient(180deg,#ea580c,#f59e0b)' : 'linear-gradient(180deg,#06b6d4,#3b82f6)', borderRadius: '4px 4px 0 0' }} />
                   <span style={{ fontFamily: 'DM Sans', fontSize: 9, color: '#94a3b8', whiteSpace: 'nowrap' }}>{day.slice(5)}</span>
                 </div>
               );
             })}
           </div>
-          {dayEntries.length > 0 && (
-            <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
-              <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b' }}>🟦 Tokens consumed</span>
-              <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' }}>
-                Peak: {dayEntries.reduce((best, [day, d]) => d.tokens > best.tokens ? { day, ...d } : best, { day: '', tokens: 0, calls: 0 }).day?.slice(5)} ({dayEntries.reduce((best, [, d]) => d.calls > best ? d.calls : best, 0)} calls)
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Live Log Feed */}
       <div style={{ ...glassCard, overflow: 'hidden' }}>
         <button onClick={() => setShowLogFeed(!showLogFeed)} style={{ width: '100%', padding: '14px 20px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#64748b' }}>📋 Live API Call Log ({logs.length} entries)</span>
@@ -832,7 +821,6 @@ function AIAnalyticsTab() {
                 <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b', width: 100, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.user_name || log.user_email}</span>
                 <span style={{ width: 18, height: 18, borderRadius: '50%', background: log.model?.includes('flash') ? '#06b6d4' : '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 700, fontSize: 9, color: 'white', flexShrink: 0 }}>{log.model?.includes('flash') ? 'F' : 'P'}</span>
                 <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#64748b', width: 50, flexShrink: 0, textAlign: 'right' }}>{(log.total_tokens || 0).toLocaleString()}t</span>
-                <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#059669', width: 60, flexShrink: 0, textAlign: 'right' }}>${parseFloat(log.estimated_cost_usd || '0').toFixed(4)}</span>
               </div>
             ))}
           </div>
@@ -842,15 +830,498 @@ function AIAnalyticsTab() {
   );
 }
 
+// ─── OVERVIEW TAB ────────────────────────────────────────────
+function OverviewTab({ stats, users, emailMap }: { stats: any; users: UserRow[]; emailMap: Record<string, string> }) {
+  const [presenceData, setPresenceData] = useState<any[]>([]);
+  const [todayStats, setTodayStats] = useState<any>({ activeToday: 0, aiCallsToday: 0, tokensToday: 0, topModule: null });
+  const [hourlyData, setHourlyData] = useState<number[]>(new Array(24).fill(0));
+  const [peakHour, setPeakHour] = useState<{ hour: number; count: number }>({ hour: 0, count: 0 });
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [newUsers, setNewUsers] = useState<UserRow[]>([]);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
+  const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed' };
+  const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity' };
+
+  const formatPageName = (page: string) => {
+    const map: Record<string, string> = {
+      'dashboard': '🏠 Dashboard', 'niche_clarity': '🎯 Niche Clarity', 'product_navigator': '🧭 Product Navigator',
+      'offer_creation': '🎁 Offer Creation', 'funnel_builder': '🔀 Funnel Builder', 'copywriting_suite': '✍️ Copy Suite',
+      'my_saved': '🔖 My Saved', 'profile': '👤 Profile', 'settings': '⚙️ Settings',
+    };
+    return map[page] || page?.replace(/_/g, ' ')?.replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown';
+  };
+
+  const formatCallType = (ct: string) => ct?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || '';
+
+  const fetchOverviewData = async () => {
+    try {
+      const now = new Date();
+      const twoMinAgo = new Date(now.getTime() - 2 * 60 * 1000).toISOString();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes] = await Promise.all([
+        supabase.from('user_presence').select('user_id, user_email, user_name, last_seen, current_page, session_start').gte('last_seen', twoMinAgo).order('last_seen', { ascending: false }),
+        supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', todayStart),
+        supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', weekStart),
+        supabase.from('user_presence').select('*', { count: 'exact', head: true }),
+        supabase.from('ai_usage_logs').select('total_tokens, module, created_at, call_type, user_name, user_email, model').gte('created_at', todayStart).order('created_at', { ascending: false }),
+        supabase.from('ai_usage_logs').select('*').order('created_at', { ascending: false }).limit(20),
+      ]);
+
+      setPresenceData(presRes.data || []);
+
+      const tokenData = aiTodayRes.data || [];
+      const tokensToday = (tokenData as any[]).reduce((s: number, l: any) => s + (l.total_tokens || 0), 0);
+      const moduleCounts: Record<string, number> = {};
+      (tokenData as any[]).forEach((l: any) => { moduleCounts[l.module] = (moduleCounts[l.module] || 0) + 1; });
+      const topModule = Object.entries(moduleCounts).sort((a, b) => b[1] - a[1])[0] || null;
+
+      const hourly = new Array(24).fill(0);
+      (tokenData as any[]).forEach((l: any) => { hourly[new Date(l.created_at).getHours()]++; });
+      setHourlyData(hourly);
+      const maxHourIdx = hourly.indexOf(Math.max(...hourly));
+      setPeakHour({ hour: maxHourIdx, count: hourly[maxHourIdx] });
+
+      setRecentLogs(((recentRes.data || []) as any[]).slice(0, 20));
+      setTodayStats({
+        activeToday: activeTodayRes.count || 0,
+        activeWeek: activeWeekRes.count || 0,
+        totalUsers: totalRes.count || 0,
+        aiCallsToday: (tokenData as any[]).length,
+        tokensToday,
+        topModule,
+      });
+
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      setNewUsers(users.filter(u => u.created_at >= weekAgo));
+      setLastRefreshed(new Date());
+    } catch (err) {
+      console.error('Overview fetch error:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOverviewData();
+    const interval = setInterval(fetchOverviewData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const onlineUsers = presenceData;
+  const onlineCount = onlineUsers.length;
+  const maxHourly = Math.max(...hourlyData, 1);
+  const currentHour = new Date().getHours();
+  const hourLabels = ['12am', '', '', '', '4am', '', '', '', '8am', '', '', '', '12pm', '', '', '', '4pm', '', '', '', '8pm', '', '', ''];
+
+  return (
+    <div>
+      {/* STRIP 1 — ACTIVE IN APP NOW */}
+      <div style={{
+        background: 'linear-gradient(135deg,rgba(5,150,105,0.08),rgba(16,185,129,0.05))',
+        border: '1px solid rgba(5,150,105,0.2)', borderRadius: 20, padding: '20px 24px', marginBottom: 20,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', marginRight: 8, animation: 'pulseDot 2s infinite' }} />
+            <div>
+              <div style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, color: '#059669', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>ACTIVE IN APP NOW</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 48, color: '#059669' }} title="Users who have sent a heartbeat in the last 2 minutes. Refreshes every 30s.">{onlineCount}</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b' }}>users right now</span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {[
+              { value: todayStats.activeToday || 0, label: 'Active Today' },
+              { value: todayStats.activeWeek || 0, label: 'This Week' },
+              { value: todayStats.totalUsers || stats.total, label: 'All Time' },
+            ].map(m => (
+              <div key={m.label} style={{ textAlign: 'center' as const }}>
+                <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 22, color: '#0f172a' }}>{m.value}</div>
+                <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' as const, marginTop: 8 }}>
+          <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>🔄 Refreshes every 30s · Last: {lastRefreshed.toLocaleTimeString('en-IN')}</span>
+        </div>
+      </div>
+
+      {/* STRIP 2 — WHO'S ACTIVE */}
+      {onlineCount > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>👥 Who's Active Right Now</div>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto' as const, paddingBottom: 4 }}>
+            {onlineUsers.slice(0, 8).map((u: any) => (
+              <div key={u.user_id} style={{
+                background: 'white', border: '1px solid #e2e8f0', borderRadius: 50, padding: '6px 14px 6px 8px',
+                display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0,
+              }}>
+                <div style={{ position: 'relative' as const }}>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 700, fontSize: 10, color: 'white' }}>{(u.user_name || 'U').charAt(0).toUpperCase()}</div>
+                  <div style={{ position: 'absolute' as const, bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#10b981', border: '2px solid white' }} />
+                </div>
+                <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#0f172a' }}>{u.user_name || 'User'}</span>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>· {formatPageName(u.current_page)}</span>
+              </div>
+            ))}
+            {onlineCount > 8 && (
+              <div style={{ background: '#f1f5f9', borderRadius: 50, padding: '6px 14px', display: 'flex', alignItems: 'center', flexShrink: 0, fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                +{onlineCount - 8} more
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* STRIP 3 — KPI CARDS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+        {[
+          { icon: '👤', bg: 'rgba(5,150,105,0.1)', value: todayStats.activeToday || 0, label: 'Users Active Today', sub: 'unique since midnight' },
+          { icon: '🤖', bg: 'rgba(6,182,212,0.1)', value: todayStats.aiCallsToday || 0, label: 'AI Calls Today', sub: 'across all modules' },
+          { icon: '⚡', bg: 'rgba(245,158,11,0.1)', value: `${((todayStats.tokensToday || 0) / 1000).toFixed(1)}K`, label: 'Tokens Today', sub: 'input + output' },
+          { icon: '🔥', bg: 'rgba(234,88,12,0.1)', value: todayStats.topModule ? (moduleNames[todayStats.topModule[0]] || todayStats.topModule[0]) : '—', label: 'Hottest Tool Today', sub: `${todayStats.topModule?.[1] || 0} calls` },
+        ].map(k => (
+          <div key={k.label} style={{ ...glassCard, padding: '18px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{k.label}</span>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: k.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{k.icon}</div>
+            </div>
+            <div style={{ fontFamily: 'Sora', fontSize: typeof k.value === 'string' && k.value.length > 8 ? 16 : 28, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>{k.value}</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* STRIP 4 — HOURLY ACTIVITY */}
+      <div style={{ ...glassCard, padding: 20, marginBottom: 20 }}>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>⏰ Today's Activity by Hour</div>
+        <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>When are your users most active?</div>
+        <div style={{ width: '100%', height: 120, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
+          {hourlyData.map((count, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }} title={`${i}:00 — ${count} calls`}>
+              <div style={{
+                width: '100%', minHeight: 2, height: `${Math.max(2, (count / maxHourly) * 100)}%`,
+                background: i === currentHour ? 'linear-gradient(180deg,#ea580c,#f59e0b)' : 'linear-gradient(180deg,#06b6d4,#3b82f6)',
+                borderRadius: '3px 3px 0 0',
+              }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          {hourLabels.map((l, i) => (
+            <span key={i} style={{ fontFamily: 'DM Sans', fontSize: 9, color: '#94a3b8', flex: 1, textAlign: 'center' as const }}>{l}</span>
+          ))}
+        </div>
+        {peakHour.count > 0 && (
+          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', marginTop: 10 }}>
+            🔥 Peak hour today: {peakHour.hour}:00 ({peakHour.count} calls)
+          </div>
+        )}
+      </div>
+
+      {/* STRIP 5 — RECENT ACTIVITY */}
+      <div style={{ ...glassCard, padding: 20, marginBottom: 20 }}>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>📋 Recent Activity</div>
+        {recentLogs.length === 0 ? (
+          <div style={{ textAlign: 'center' as const, padding: 20, color: '#94a3b8', fontSize: 13 }}>No AI activity today yet.</div>
+        ) : (
+          recentLogs.map((log: any, i: number) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #f8fafc' }}>
+              <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', width: 60, flexShrink: 0 }}>{formatDate(log.created_at)}</span>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 8, color: 'white', flexShrink: 0 }}>{(log.user_name || 'U').charAt(0).toUpperCase()}</div>
+              <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12.5, color: '#0f172a', width: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{log.user_name || 'Unknown'}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: 'white', background: moduleColors[log.module] || '#64748b', flexShrink: 0 }}>{(moduleNames[log.module] || log.module || '').replace(/_/g, ' ')}</span>
+              <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', flex: 1 }}>{formatCallType(log.call_type)}</span>
+              <span style={{ width: 18, height: 18, borderRadius: '50%', background: log.model?.includes('flash') ? '#06b6d4' : '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 700, fontSize: 9, color: 'white', flexShrink: 0 }}>{log.model?.includes('flash') ? 'F' : 'P'}</span>
+              <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{(log.total_tokens || 0).toLocaleString()}t</span>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* STRIP 6 — NEW THIS WEEK */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>🆕 New Signups This Week</div>
+        {newUsers.length === 0 ? (
+          <div style={{ textAlign: 'center' as const, padding: 20, color: '#94a3b8', fontFamily: 'DM Sans', fontSize: 13 }}>No new signups this week.</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+            {newUsers.slice(0, 6).map(u => {
+              const tc = tierColors[u.access_tier] || tierColors.basic;
+              return (
+                <div key={u.id} style={{ background: 'white', borderRadius: 12, padding: '12px 14px', border: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 9, color: 'white' }}>{(u.full_name || 'U').slice(0, 2).toUpperCase()}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12.5, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{u.full_name}</div>
+                      <div style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>{emailMap[u.id] || '—'}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const }}>{u.access_tier}</span>
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>Joined {formatDate(u.created_at)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── USERS TAB ───────────────────────────────────────────────
+function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>; adminId: string }) {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
+  const [securityUser, setSecurityUser] = useState<UserRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const filtered = users.filter(u => {
+    if (filter !== 'All' && u.access_tier !== filter.toLowerCase()) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      const matchName = u.full_name.toLowerCase().includes(s);
+      const matchEmail = (emailMap[u.id] || '').toLowerCase().includes(s);
+      if (!matchName && !matchEmail) return false;
+    }
+    return true;
+  });
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteUser) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { userId: deleteUser.id } });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      await logActivity('user_deleted', deleteUser.id, deleteUser.full_name);
+      setDeleteUser(null);
+      onRefresh();
+      showToast(`🗑 ${deleteUser.full_name}'s account has been permanently deleted.`, 'warning');
+    } catch (err: any) {
+      showToast(`❌ Delete failed: ${err.message}`, 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '8px 12px', border: '1.5px solid #e2e8f0' }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: 13, fontFamily: 'DM Sans' }} />
+        </div>
+        {['All', 'Basic', 'Premium', 'Beta', 'Revoked'].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+            background: filter === f ? '#7c3aed' : '#f1f5f9', color: filter === f ? 'white' : '#64748b',
+          }}>{f}</button>
+        ))}
+        <span style={{ fontSize: 12, color: '#94a3b8' }}>Showing {filtered.length} of {users.length}</span>
+      </div>
+
+      <div style={{ ...glassCard, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8fafc' }}>
+              {['Avatar', 'Name', 'Email', 'Tier', 'Joined', 'Actions'].map(h => (
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(u => {
+              const tc = tierColors[u.access_tier] || tierColors.basic;
+              return (
+                <tr key={u.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '10px 16px' }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: tierGradients[u.access_tier] || tierGradients.basic, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 10, color: 'white' }}>
+                      {(u.full_name || 'U').slice(0, 2).toUpperCase()}
+                    </div>
+                  </td>
+                  <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{u.full_name || 'Unknown'}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{emailMap[u.id] || '—'}</td>
+                  <td style={{ padding: '10px 16px' }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
+                  </td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(u.created_at)}</td>
+                  <td style={{ padding: '10px 16px' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => setEditUser(u)} title="Edit" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✏️</button>
+                      <button onClick={() => setSecurityUser(u)} title="View Security" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🛡️</button>
+                      <button onClick={() => setDeleteUser(u)} title="Delete" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🗑</button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {editUser && (
+        <EditUserModal user={editUser} email={emailMap[editUser.id] || ''} onClose={() => setEditUser(null)}
+          onSave={() => { setEditUser(null); onRefresh(); }}
+          onDelete={(id, name) => { onRefresh(); showToast(`🗑 ${name} deleted.`, 'warning'); }}
+          showToast={showToast} logActivity={logActivity} />
+      )}
+      {deleteUser && <DeleteConfirmModal userName={deleteUser.full_name} onConfirm={handleDeleteConfirm} onCancel={() => setDeleteUser(null)} deleting={deleting} />}
+      {securityUser && (
+        <SecurityProfileModal userId={securityUser.id} userEmail={emailMap[securityUser.id] || ''} userName={securityUser.full_name}
+          onClose={() => setSecurityUser(null)} adminId={adminId} showToast={showToast} />
+      )}
+    </div>
+  );
+}
+
+// ─── SIGNUPS TAB ─────────────────────────────────────────────
+function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
+  const [signups, setSignups] = useState<SignupRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [approveRequest, setApproveRequest] = useState<SignupRow | null>(null);
+
+  useEffect(() => { fetchSignups(); }, []);
+
+  const fetchSignups = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('signup_requests').select('*').order('submitted_at', { ascending: false });
+    setSignups((data || []) as unknown as SignupRow[]);
+    setLoading(false);
+  };
+
+  const pendingSignups = signups.filter(s => s.status === 'pending');
+  const otherSignups = signups.filter(s => s.status !== 'pending');
+  const pendingCount = pendingSignups.length;
+  const approvedCount = signups.filter(s => s.status === 'approved').length;
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+  const approvedThisWeek = signups.filter(s => s.status === 'approved' && s.reviewed_at && s.reviewed_at >= weekAgo).length;
+
+  const rejectSignup = async (requestId: string) => {
+    const req = signups.find(s => s.id === requestId);
+    if (!confirm(`Reject ${req?.full_name}?`)) return;
+    await supabase.from('signup_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString() } as any).eq('id', requestId);
+    await logActivity('signup_rejected', null, req?.full_name || null, { email: req?.email });
+    fetchSignups();
+    showToast('❌ Request rejected.', 'warning');
+  };
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+
+  const SignupRow = ({ s }: { s: SignupRow }) => (
+    <tr style={{ borderTop: '1px solid #f1f5f9' }}>
+      <td style={{ padding: '10px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>{s.full_name}</td>
+      <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.email}</td>
+      <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.phone}</td>
+      <td style={{ padding: '10px 16px' }}>
+        <span style={{
+          fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
+          background: s.payment_type === 'full' ? '#ede9fe' : '#fef9c3',
+          color: s.payment_type === 'full' ? '#7c3aed' : '#92400e',
+        }}>{s.payment_type === 'full' ? 'FULL' : 'RESERVE'}</span>
+      </td>
+      <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(s.submitted_at)}</td>
+      <td style={{ padding: '10px 16px' }}>
+        <span style={{
+          fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
+          background: s.status === 'pending' ? '#fef9c3' : s.status === 'approved' ? '#dcfce7' : '#fee2e2',
+          color: s.status === 'pending' ? '#92400e' : s.status === 'approved' ? '#15803d' : '#991b1b',
+        }}>{s.status}</span>
+      </td>
+      <td style={{ padding: '10px 16px' }}>
+        {s.status === 'pending' && (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => setApproveRequest(s)} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✅ Approve</button>
+            <button onClick={() => rejectSignup(s.id)} style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✗ Reject</button>
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#fef9c3', color: '#92400e' }}>⏳ {pendingCount} Pending</span>
+        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#dcfce7', color: '#15803d' }}>✅ {approvedThisWeek} Approved This Week</span>
+        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#f0f9ff', color: '#0891b2' }}>📊 {approvedCount} All Time Approved</span>
+      </div>
+
+      {/* Pending Section */}
+      {pendingSignups.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>⏳ Pending Approval</div>
+          <div style={{ ...glassCard, overflow: 'hidden', border: '1.5px solid #fde68a' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#fffbeb' }}>
+                  {['Name', 'Email', 'Phone', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pendingSignups.map(s => <SignupRow key={s.id} s={s} />)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Approved/Rejected Section */}
+      {otherSignups.length > 0 && (
+        <div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>📋 Approved / Rejected</div>
+          <div style={{ ...glassCard, overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc' }}>
+                  {['Name', 'Email', 'Phone', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {otherSignups.map(s => <SignupRow key={s.id} s={s} />)}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {signups.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 60, color: '#94a3b8' }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16 }}>No signup requests yet</div>
+        </div>
+      )}
+
+      {approveRequest && (
+        <ApproveAccessModal request={approveRequest} onClose={() => setApproveRequest(null)}
+          onApproved={() => { fetchSignups(); onRefresh(); }} showToast={showToast} logActivity={logActivity} />
+      )}
+    </div>
+  );
+}
+
+// ─── MAIN ADMIN PANEL ────────────────────────────────────────
 export default function AdminPanel() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
   const [users, setUsers] = useState<UserRow[]>([]);
   const [emailMap, setEmailMap] = useState<Record<string, string>>({});
-  const [feedback, setFeedback] = useState<FeedbackRow[]>([]);
-  const [stats, setStats] = useState({ total: 0, activeToday: 0, basic: 0, premium: 0 });
+  const [stats, setStats] = useState({ total: 0, basic: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
   const [adminToast, setAdminToast] = useState<{ message: string; type: string } | null>(null);
 
@@ -866,37 +1337,31 @@ export default function AdminPanel() {
 
   const loadData = async () => {
     setLoading(true);
-    const [usersRes, feedbackRes, sessionsRes, emailsRes] = await Promise.all([
+    const [usersRes, emailsRes] = await Promise.all([
       supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
-      supabase.from('beta_feedback').select('*').order('created_at', { ascending: false }),
-      supabase.from('user_sessions').select('id, session_start').gte('session_start', new Date(Date.now() - 86400000).toISOString()),
       supabase.functions.invoke('admin-list-emails'),
     ]);
     const u = (usersRes.data || []) as unknown as UserRow[];
     setUsers(u);
     setEmailMap(emailsRes.data?.emails || {});
-    setFeedback((feedbackRes.data || []) as unknown as FeedbackRow[]);
-    setStats({
-      total: u.length,
-      activeToday: new Set((sessionsRes.data || []).map((s: any) => s.user_id)).size,
-      basic: u.filter(x => x.access_tier === 'basic').length,
-      premium: u.filter(x => x.access_tier === 'premium').length,
-    });
+    setStats({ total: u.length, basic: u.filter(x => x.access_tier === 'basic').length, premium: u.filter(x => x.access_tier === 'premium').length });
     setLoading(false);
   };
 
-  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups', '📋 Activity Log', '⚡ AI Analytics', '🔒 Security'];
+  const adminId = user?.id || '';
 
   const logActivity = async (action_type: string, target_user_id: string | null, target_user_name: string | null, details: Record<string, any> = {}) => {
     if (!user) return;
-    await supabase.from('admin_activity_log').insert({
-      admin_id: user.id,
-      action_type,
-      target_user_id,
-      target_user_name,
-      details,
-    } as any);
+    await supabase.from('admin_activity_log').insert({ admin_id: user.id, action_type, target_user_id, target_user_name, details } as any);
   };
+
+  const tabDefs = [
+    { id: 'overview', label: '📊 Overview' },
+    { id: 'users', label: '👥 Users' },
+    { id: 'signups', label: '📝 Signups' },
+    { id: 'ai-analytics', label: '⚡ AI Analytics' },
+    { id: 'security', label: '🔒 Security' },
+  ];
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}>
@@ -924,20 +1389,20 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, padding: '12px 24px', background: 'rgba(255,255,255,0.8)', borderBottom: '1px solid #f1f5f9' }}>
-        {tabs.map(t => {
-          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : t.includes('Signups') ? 'signups' : t.includes('Activity') ? 'activity' : t.includes('AI Analytics') ? 'ai-analytics' : t.includes('Security') ? 'security' : 'feedback';
-          return (
-            <button key={t} onClick={() => setTab(tabId)} style={{
-              padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
-              fontWeight: tab === tabId ? 700 : 500, fontSize: 13,
-              background: tab === tabId ? 'rgba(124,58,237,0.08)' : 'transparent',
-              color: tab === tabId ? '#7c3aed' : '#64748b',
-              borderBottom: tab === tabId ? '2px solid #7c3aed' : '2px solid transparent',
-            }}>{t}</button>
-          );
-        })}
+      {/* Tab bar — exactly 5 tabs per spec */}
+      <div style={{ display: 'flex', gap: 4, padding: '8px 24px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', borderRadius: 0 }}>
+        {tabDefs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
+            fontWeight: tab === t.id ? 800 : 500, fontSize: 13,
+            background: tab === t.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'transparent',
+            color: tab === t.id ? 'white' : '#64748b',
+            transition: 'all 0.2s',
+          }}
+            onMouseEnter={e => { if (tab !== t.id) (e.currentTarget.style.color = '#374151'); }}
+            onMouseLeave={e => { if (tab !== t.id) (e.currentTarget.style.color = '#64748b'); }}
+          >{t.label}</button>
+        ))}
       </div>
 
       {/* Content */}
@@ -949,923 +1414,11 @@ export default function AdminPanel() {
         ) : (
           <>
             {tab === 'overview' && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
-            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
-            {tab === 'add' && <AddUserTab onSuccess={loadData} logActivity={logActivity} />}
-            {tab === 'password' && <ResetPasswordTab users={users} logActivity={logActivity} />}
-            {tab === 'feedback' && <FeedbackTab feedback={feedback} users={users} />}
+            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} />}
             {tab === 'signups' && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
-            {tab === 'activity' && <ActivityLogTab users={users} emailMap={emailMap} />}
             {tab === 'ai-analytics' && <AIAnalyticsTab />}
-            {tab === 'security' && <SecurityTab />}
+            {tab === 'security' && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
           </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── OVERVIEW TAB (upgraded with live presence + analytics) ──
-function OverviewTab({ stats, users, emailMap }: { stats: any; users: UserRow[]; emailMap: Record<string, string> }) {
-  const [presenceData, setPresenceData] = useState<any[]>([]);
-  const [todayStats, setTodayStats] = useState<any>({ activeToday: 0, aiCallsToday: 0, tokensToday: 0, topModule: null });
-  const [hourlyData, setHourlyData] = useState<number[]>(new Array(24).fill(0));
-  const [peakHour, setPeakHour] = useState<{ hour: number; count: number }>({ hour: 0, count: 0 });
-  const [recentLogs, setRecentLogs] = useState<any[]>([]);
-  const [newUsers, setNewUsers] = useState<UserRow[]>([]);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
-
-  const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed' };
-  const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity' };
-  const formatPageName = (p: string) => p?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || 'Dashboard';
-  const formatCallType = (ct: string) => ct?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) || '';
-
-  const relativeTime = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  };
-
-  const fetchPresenceData = async () => {
-    const { data } = await supabase.from('user_presence').select('*').order('last_seen', { ascending: false });
-    setPresenceData(data || []);
-    setLastRefresh(new Date());
-  };
-
-  const fetchTodayStats = async () => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const { count: activeToday } = await supabase
-      .from('user_presence')
-      .select('*', { count: 'exact', head: true })
-      .gte('last_seen', todayStart.toISOString());
-
-    const { data: tokenData } = await supabase
-      .from('ai_usage_logs')
-      .select('total_tokens, module, created_at, call_type, user_name, user_email, model')
-      .gte('created_at', todayStart.toISOString())
-      .order('created_at', { ascending: false });
-
-    const aiCallsToday = tokenData?.length || 0;
-    const tokensToday = tokenData?.reduce((s: number, l: any) => s + (l.total_tokens || 0), 0) || 0;
-
-    const moduleCounts: Record<string, number> = {};
-    tokenData?.forEach((l: any) => { moduleCounts[l.module] = (moduleCounts[l.module] || 0) + 1; });
-    const topModule = Object.entries(moduleCounts).sort((a, b) => b[1] - a[1])[0] || null;
-
-    // Hourly data
-    const hourly = new Array(24).fill(0);
-    tokenData?.forEach((l: any) => {
-      const h = new Date(l.created_at).getHours();
-      hourly[h]++;
-    });
-    setHourlyData(hourly);
-    const maxHourIdx = hourly.indexOf(Math.max(...hourly));
-    setPeakHour({ hour: maxHourIdx, count: hourly[maxHourIdx] });
-
-    setRecentLogs((tokenData || []).slice(0, 20));
-    setTodayStats({ activeToday: activeToday || 0, aiCallsToday, tokensToday, topModule });
-  };
-
-  useEffect(() => {
-    fetchPresenceData();
-    fetchTodayStats();
-    // New users this week
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    setNewUsers(users.filter(u => u.created_at >= weekAgo));
-
-    const interval = setInterval(() => { fetchPresenceData(); fetchTodayStats(); }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const twoMinAgo = new Date(Date.now() - 120000).toISOString();
-  const onlineUsers = presenceData.filter(p => p.last_seen >= twoMinAgo);
-  const onlineCount = onlineUsers.length;
-
-  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-  const activeThisWeek = presenceData.filter(p => p.last_seen >= sevenDaysAgo).length;
-
-  const maxHourly = Math.max(...hourlyData, 1);
-  const currentHour = new Date().getHours();
-  const hourLabels = ['12am', '', '', '', '4am', '', '', '', '8am', '', '', '', '12pm', '', '', '', '4pm', '', '', '', '8pm', '', '', ''];
-
-  const tierColors: Record<string, { bg: string; color: string }> = {
-    basic: { bg: '#dcfce7', color: '#15803d' },
-    premium: { bg: '#ede9fe', color: '#7c3aed' },
-    beta: { bg: '#fce7f3', color: '#be185d' },
-  };
-
-  return (
-    <div>
-      {/* SECTION 1 — LIVE NOW STRIP */}
-      <div style={{
-        background: 'linear-gradient(135deg,rgba(5,150,105,0.08),rgba(16,185,129,0.05))',
-        border: '1px solid rgba(5,150,105,0.2)', borderRadius: 20, padding: '20px 24px', marginBottom: 20,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', marginRight: 8, animation: 'pulse 2s infinite' }} />
-            <span style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, color: '#059669', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>LIVE NOW</span>
-            <span style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 48, color: '#059669', marginLeft: 12 }}>{onlineCount}</span>
-            <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginLeft: 8, alignSelf: 'flex-end', marginBottom: 8 }}>users currently active</span>
-          </div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            {[
-              { value: todayStats.activeToday, label: 'Active Today' },
-              { value: activeThisWeek, label: 'This Week' },
-              { value: stats.total, label: 'All Time' },
-            ].map(m => (
-              <div key={m.label} style={{ textAlign: 'center' as const }}>
-                <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 22, color: '#0f172a' }}>{m.value}</div>
-                <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{m.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' as const, marginTop: 8 }}>
-          <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>🔄 Live · refreshes every 30s · {lastRefresh.toLocaleTimeString()}</span>
-        </div>
-      </div>
-
-      {/* SECTION 2 — WHO'S ONLINE */}
-      {onlineCount > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>👥 Who's Online Right Now</div>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto' as const, paddingBottom: 4 }}>
-            {onlineUsers.slice(0, 8).map(u => (
-              <div key={u.user_id} style={{
-                background: 'white', border: '1px solid #e2e8f0', borderRadius: 50, padding: '6px 14px 6px 8px',
-                display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0,
-              }}>
-                <div style={{ position: 'relative' as const }}>
-                  <div style={{
-                    width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontFamily: 'Sora', fontWeight: 700, fontSize: 10, color: 'white',
-                  }}>{(u.user_name || 'U').charAt(0).toUpperCase()}</div>
-                  <div style={{ position: 'absolute' as const, bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#10b981', border: '2px solid white' }} />
-                </div>
-                <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#0f172a' }}>{u.user_name || 'User'}</span>
-                <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>· {formatPageName(u.current_page)}</span>
-              </div>
-            ))}
-            {onlineCount > 8 && (
-              <div style={{ background: '#f1f5f9', borderRadius: 50, padding: '6px 14px', display: 'flex', alignItems: 'center', flexShrink: 0, fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
-                +{onlineCount - 8} more
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* SECTION 3 — TODAY'S STATS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-        {[
-          { icon: '👤', bg: 'rgba(5,150,105,0.1)', value: todayStats.activeToday, label: 'Users Active Today', sub: 'unique logins since midnight' },
-          { icon: '🤖', bg: 'rgba(6,182,212,0.1)', value: todayStats.aiCallsToday, label: 'AI Calls Today', sub: 'across all modules' },
-          { icon: '⚡', bg: 'rgba(245,158,11,0.1)', value: `${(todayStats.tokensToday / 1000).toFixed(1)}K`, label: 'Tokens Today', sub: 'input + output combined' },
-          { icon: '🔥', bg: 'rgba(234,88,12,0.1)', value: todayStats.topModule ? (moduleNames[todayStats.topModule[0]] || todayStats.topModule[0]) : '—', label: 'Most Used Today', sub: `${todayStats.topModule?.[1] || 0} calls` },
-        ].map(k => (
-          <div key={k.label} style={{ ...glassCard, padding: '18px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{k.label}</span>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: k.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{k.icon}</div>
-            </div>
-            <div style={{ fontFamily: 'Sora', fontSize: typeof k.value === 'string' && k.value.length > 8 ? 16 : 28, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>{k.value}</div>
-            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{k.sub}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* SECTION 4 — HOURLY ACTIVITY */}
-      <div style={{ ...glassCard, padding: 20, marginBottom: 20 }}>
-        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>⏰ Today's Activity by Hour</div>
-        <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>When are your users most active?</div>
-        <div style={{ width: '100%', height: 120, display: 'flex', alignItems: 'flex-end', gap: 2 }}>
-          {hourlyData.map((count, i) => (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}
-              title={`${i}:00 — ${count} calls`}>
-              <div style={{
-                width: '100%', minHeight: 2, height: `${Math.max(2, (count / maxHourly) * 100)}%`,
-                background: i === currentHour ? 'linear-gradient(180deg,#ea580c,#f59e0b)' : 'linear-gradient(180deg,#06b6d4,#3b82f6)',
-                borderRadius: '3px 3px 0 0', transition: 'height 0.5s ease',
-              }} />
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-          {hourLabels.map((l, i) => (
-            <span key={i} style={{ fontFamily: 'DM Sans', fontSize: 9, color: '#94a3b8', flex: 1, textAlign: 'center' as const }}>{l}</span>
-          ))}
-        </div>
-        {peakHour.count > 0 && (
-          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', marginTop: 10 }}>
-            🔥 Peak hour today: {peakHour.hour}:00 ({peakHour.count} calls)
-          </div>
-        )}
-      </div>
-
-      {/* SECTION 5 — RECENT ACTIVITY FEED */}
-      <div style={{ ...glassCard, padding: 20, marginBottom: 20 }}>
-        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>📋 Recent Activity</div>
-        {recentLogs.length === 0 ? (
-          <div style={{ textAlign: 'center' as const, padding: 20, color: '#94a3b8', fontSize: 13 }}>No AI activity today yet.</div>
-        ) : (
-          <>
-            {recentLogs.map((log: any, i: number) => (
-              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '9px 0', borderBottom: '1px solid #f8fafc' }}>
-                <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', width: 60, flexShrink: 0 }}>{relativeTime(log.created_at)}</span>
-                <div style={{
-                  width: 22, height: 22, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'Sora', fontWeight: 800, fontSize: 8, color: 'white', flexShrink: 0,
-                }}>{(log.user_name || 'U').charAt(0).toUpperCase()}</div>
-                <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12.5, color: '#0f172a', width: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{log.user_name || 'Unknown'}</span>
-                <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, color: 'white', background: moduleColors[log.module] || '#64748b', flexShrink: 0, fontFamily: 'DM Sans' }}>
-                  {(moduleNames[log.module] || log.module || '').replace(/_/g, ' ')}
-                </span>
-                <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', flex: 1 }}>{formatCallType(log.call_type)}</span>
-                <span style={{
-                  width: 18, height: 18, borderRadius: '50%',
-                  background: log.model?.includes('flash') ? '#06b6d4' : '#ea580c',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'Sora', fontWeight: 700, fontSize: 9, color: 'white', flexShrink: 0,
-                }}>{log.model?.includes('flash') ? 'F' : 'P'}</span>
-                <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>{(log.total_tokens || 0).toLocaleString()}t</span>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* SECTION 6 — NEW THIS WEEK */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 }}>🆕 New This Week</div>
-        {newUsers.length === 0 ? (
-          <div style={{ textAlign: 'center' as const, padding: 20, color: '#94a3b8', fontFamily: 'DM Sans', fontSize: 13 }}>No new signups this week yet.</div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-            {newUsers.slice(0, 9).map(u => {
-              const tc = tierColors[u.access_tier] || tierColors.basic;
-              return (
-                <div key={u.id} style={{ background: 'white', borderRadius: 12, padding: '12px 14px', border: '1px solid #f1f5f9' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'Sora', fontWeight: 800, fontSize: 9, color: 'white',
-                    }}>{(u.full_name || 'U').slice(0, 2).toUpperCase()}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12.5, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{u.full_name}</div>
-                      <div style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{emailMap[u.id] || '—'}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const }}>{u.access_tier}</span>
-                    <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>Joined {relativeTime(u.created_at)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── USERS TAB ───────────────────────────────────────────────
-function UsersTab({ users, emailMap, onRefresh, showToast, logActivity }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('All');
-  const [editUser, setEditUser] = useState<UserRow | null>(null);
-  const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const filtered = users.filter(u => {
-    if (filter !== 'All' && u.access_tier !== filter.toLowerCase()) return false;
-    if (search && !u.full_name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteUser) return;
-    setDeleting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { userId: deleteUser.id } });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      await logActivity('user_deleted', deleteUser.id, deleteUser.full_name);
-      setDeleteUser(null);
-      onRefresh();
-      showToast(`🗑 ${deleteUser.full_name}'s account has been permanently deleted.`, 'warning');
-    } catch (err: any) {
-      showToast(`❌ Delete failed: ${err.message}`, 'error');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '8px 12px', border: '1.5px solid #e2e8f0' }}>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name..." style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: 13, fontFamily: 'DM Sans' }} />
-        </div>
-        {['All', 'Basic', 'Premium', 'Beta', 'Revoked'].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{
-            padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-            background: filter === f ? '#7c3aed' : '#f1f5f9', color: filter === f ? 'white' : '#64748b',
-          }}>{f}</button>
-        ))}
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>Showing {filtered.length} of {users.length}</span>
-      </div>
-
-      <div style={{ ...glassCard, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8fafc' }}>
-              {['Name', 'Email', 'Tier', 'Payment', 'Beta', 'Joined', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(u => {
-              const tc = tierColors[u.access_tier] || tierColors.basic;
-              return (
-                <tr key={u.id} style={{ borderTop: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: tierGradients[u.access_tier] || tierGradients.basic, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 10, color: 'white', flexShrink: 0 }}>
-                        {(u.full_name || 'U').slice(0, 2).toUpperCase()}
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{u.full_name || 'Unknown'}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{emailMap[u.id] || '—'}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#059669' }}>₹{u.payment_amount}</td>
-                  <td style={{ padding: '10px 16px' }}>{u.is_beta_user ? '✅' : '—'}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {/* Edit */}
-                      <button onClick={() => setEditUser(u)} style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#64748b' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.borderColor = '#7c3aed'; e.currentTarget.style.color = '#7c3aed'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }}
-                      >✏️</button>
-                      {/* Delete */}
-                      <button onClick={() => setDeleteUser(u)} style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#64748b' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b'; }}
-                      >🗑</button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {editUser && (
-        <EditUserModal
-          user={editUser}
-          email={emailMap[editUser.id] || ''}
-          onClose={() => setEditUser(null)}
-          onSave={() => { setEditUser(null); onRefresh(); }}
-          onDelete={(id, name) => { onRefresh(); showToast(`🗑 ${name}'s account has been permanently deleted.`, 'warning'); }}
-          showToast={showToast}
-          logActivity={logActivity}
-        />
-      )}
-
-      {deleteUser && (
-        <DeleteConfirmModal
-          userName={deleteUser.full_name}
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeleteUser(null)}
-          deleting={deleting}
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── ADD USER TAB (unchanged) ────────────────────────────────
-function AddUserTab({ onSuccess, logActivity }: { onSuccess: () => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
-  const [form, setForm] = useState({ fullName: '', email: '', phone: '', tier: 'basic', paymentAmount: 0, notes: '', isBeta: false });
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setResult(null);
-    try {
-      const normalizedEmail = form.email.toLowerCase().trim();
-      const { data, error } = await supabase.functions.invoke('admin-create-user', {
-        body: { email: normalizedEmail, full_name: form.fullName, phone: form.phone, access_tier: form.tier, payment_amount: form.paymentAmount, notes: form.notes, is_beta_user: form.isBeta },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.already_exists) {
-        setResult({ success: false, message: `${normalizedEmail} already has an account. Use Reset Password if needed.` });
-      } else {
-        if (data?.error) throw new Error(data.error);
-        await supabase.functions.invoke('send-welcome-email', {
-          body: { email: normalizedEmail, full_name: form.fullName, access_tier: form.tier, temp_password: data.temp_password, login_url: 'https://app.shikshantaram.in' },
-        });
-        setResult({ success: true, message: `User added! Welcome email sent to ${normalizedEmail}` });
-        await logActivity('user_created', null, form.fullName, { email: normalizedEmail, tier: form.tier });
-        onSuccess();
-      }
-    } catch (err: any) {
-      setResult({ success: false, message: err.message || 'Failed to create user' });
-    }
-    setLoading(false);
-  };
-
-  const reset = () => { setForm({ fullName: '', email: '', phone: '', tier: 'basic', paymentAmount: 0, notes: '', isBeta: false }); setResult(null); };
-
-  return (
-    <div style={{ maxWidth: 560, margin: '0 auto' }}>
-      <div style={{ ...glassCard, padding: '32px 28px' }}>
-        <h2 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 4 }}>Add New User</h2>
-        <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8', marginBottom: 24 }}>Manually add a user and they'll receive a welcome email instantly.</p>
-        {result ? (
-          <div style={{ textAlign: 'center', padding: 24 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>{result.success ? '✅' : '❌'}</div>
-            <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 16, color: result.success ? '#15803d' : '#991b1b', marginBottom: 8 }}>{result.success ? 'Success!' : 'Error'}</div>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>{result.message}</div>
-            <button onClick={reset} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Add Another User</button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Full Name *</label>
-              <input required value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} style={inputStyle} placeholder="John Doe" />
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Email Address *</label>
-              <input required type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} placeholder="user@example.com" />
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Phone Number</label>
-              <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} style={inputStyle} placeholder="+91 98765 43210" />
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Access Tier *</label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {['basic', 'premium', 'beta'].map(t => (
-                  <button key={t} type="button" onClick={() => setForm({ ...form, tier: t })} style={{
-                    padding: '8px 18px', borderRadius: 50, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-                    background: form.tier === t ? '#7c3aed' : '#f1f5f9', color: form.tier === t ? 'white' : '#475569', textTransform: 'capitalize',
-                  }}>{t}</button>
-                ))}
-              </div>
-            </div>
-            {form.tier !== 'beta' && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Payment Amount (₹)</label>
-                <input type="number" value={form.paymentAmount} onChange={e => setForm({ ...form, paymentAmount: parseInt(e.target.value) || 0 })} style={inputStyle} placeholder="e.g. 999" />
-              </div>
-            )}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Admin Notes</label>
-              <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ ...inputStyle, minHeight: 60, resize: 'vertical' } as React.CSSProperties} placeholder="e.g. Referred by XYZ..." />
-            </div>
-            <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <input type="checkbox" checked={form.isBeta} onChange={e => setForm({ ...form, isBeta: e.target.checked })} />
-              <div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>Mark as Beta User</span>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>Beta users see the feedback widget.</div>
-              </div>
-            </div>
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
-              <div style={{ fontWeight: 700, color: '#15803d', fontSize: 12, marginBottom: 4 }}>✅ What happens next:</div>
-              <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.8 }}>
-                • An account is created with a temporary password<br/>
-                • A welcome email is sent immediately<br/>
-                • They can log in and change their password
-              </div>
-            </div>
-            <button type="submit" disabled={loading} style={{
-              width: '100%', padding: 13, borderRadius: 12, border: 'none', cursor: loading ? 'wait' : 'pointer',
-              background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', fontFamily: 'Sora',
-              fontWeight: 700, fontSize: 14, opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}>
-              {loading && <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
-              {loading ? 'Creating account & sending email...' : 'Add User & Send Welcome Email →'}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── RESET PASSWORD TAB (unchanged) ──────────────────────────
-function ResetPasswordTab({ users, logActivity }: { users: UserRow[]; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
-  const [selectedUser, setSelectedUser] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [search, setSearch] = useState('');
-
-  const filteredUsers = users.filter(u => u.full_name.toLowerCase().includes(search.toLowerCase()));
-
-  const handleReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUser || !newPassword) return;
-    setLoading(true); setResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-reset-password', { body: { user_id: selectedUser, new_password: newPassword } });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      const userName = users.find(u => u.id === selectedUser)?.full_name || 'User';
-      await logActivity('password_reset', selectedUser, userName);
-      setResult({ success: true, message: `Password updated for ${userName}` });
-      setNewPassword(''); setSelectedUser(''); setSearch('');
-    } catch (err: any) {
-      setResult({ success: false, message: err.message || 'Failed to reset password' });
-    }
-    setLoading(false);
-  };
-
-  const generatePassword = () => { setNewPassword('Shk' + Math.random().toString(36).slice(2, 9).toUpperCase()); };
-
-  return (
-    <div style={{ maxWidth: 560, margin: '0 auto' }}>
-      <div style={{ ...glassCard, padding: '32px 28px' }}>
-        <h2 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 4 }}>Reset User Password</h2>
-        <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8', marginBottom: 24 }}>Select a user and set a new password for them.</p>
-        {result && (
-          <div style={{ background: result.success ? '#f0fdf4' : '#fef2f2', border: `1px solid ${result.success ? '#bbf7d0' : '#fecaca'}`, borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
-            <div style={{ fontWeight: 700, color: result.success ? '#15803d' : '#991b1b', fontSize: 13 }}>{result.success ? '✅ ' : '❌ '}{result.message}</div>
-          </div>
-        )}
-        <form onSubmit={handleReset}>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Select User *</label>
-            <input value={search} onChange={e => { setSearch(e.target.value); setSelectedUser(''); }} placeholder="Search by name..." style={inputStyle} />
-            {search && !selectedUser && (
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, marginTop: 4, maxHeight: 180, overflow: 'auto', background: 'white' }}>
-                {filteredUsers.length === 0 ? (
-                  <div style={{ padding: '10px 14px', fontSize: 13, color: '#94a3b8' }}>No users found</div>
-                ) : filteredUsers.map(u => {
-                  const tc = tierColors[u.access_tier] || tierColors.basic;
-                  return (
-                    <div key={u.id} onClick={() => { setSelectedUser(u.id); setSearch(u.full_name); }} style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #f1f5f9' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      <div style={{ width: 26, height: 26, borderRadius: '50%', background: `linear-gradient(135deg,${tc.color},${tc.bg})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 9, color: 'white', flexShrink: 0 }}>
-                        {(u.full_name || 'U').slice(0, 2).toUpperCase()}
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', flex: 1 }}>{u.full_name}</span>
-                      <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>New Password *</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input required value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="Min 6 characters" minLength={6} />
-              <button type="button" onClick={generatePassword} style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e2e8f0', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: '#f8fafc', color: '#7c3aed', whiteSpace: 'nowrap' }}>🎲 Generate</button>
-            </div>
-          </div>
-          <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 20 }}>
-            <div style={{ fontWeight: 700, color: '#92400e', fontSize: 12, marginBottom: 4 }}>⚠️ Important:</div>
-            <div style={{ fontSize: 12, color: '#78350f', lineHeight: 1.8 }}>• The user will need to use this new password to log in<br/>• Make sure to communicate the new password securely</div>
-          </div>
-          <button type="submit" disabled={loading || !selectedUser || !newPassword} style={{
-            width: '100%', padding: 13, borderRadius: 12, border: 'none',
-            cursor: (loading || !selectedUser || !newPassword) ? 'not-allowed' : 'pointer',
-            background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', fontFamily: 'Sora',
-            fontWeight: 700, fontSize: 14, opacity: (loading || !selectedUser || !newPassword) ? 0.5 : 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}>
-            {loading && <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
-            {loading ? 'Updating password...' : '🔑 Reset Password'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── FEEDBACK TAB (unchanged) ────────────────────────────────
-function FeedbackTab({ feedback, users }: { feedback: FeedbackRow[]; users: UserRow[] }) {
-  const [toolFilter, setToolFilter] = useState('all');
-  const [ratingFilter, setRatingFilter] = useState(0);
-  const userMap = new Map(users.map(u => [u.id, u]));
-  const filtered = feedback.filter(f => {
-    if (toolFilter !== 'all' && f.tool_used !== toolFilter) return false;
-    if (ratingFilter > 0 && f.rating !== ratingFilter) return false;
-    return true;
-  });
-  const avgRating = feedback.length ? (feedback.reduce((s, f) => s + f.rating, 0) / feedback.length).toFixed(1) : '0';
-  const ratingColors = ['', '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e'];
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-        <div style={{ ...glassCard, padding: '16px 20px', flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Average Rating</div>
-          <div style={{ fontFamily: 'Sora', fontSize: 28, fontWeight: 800, color: '#f59e0b', marginTop: 4 }}>★ {avgRating}</div>
-        </div>
-        <div style={{ ...glassCard, padding: '16px 20px', flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total Responses</div>
-          <div style={{ fontFamily: 'Sora', fontSize: 28, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>{feedback.length}</div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {['all', 'niche-clarity', 'product-navigator', 'overall'].map(t => (
-          <button key={t} onClick={() => setToolFilter(t)} style={{
-            padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-            background: toolFilter === t ? '#7c3aed' : '#f1f5f9', color: toolFilter === t ? 'white' : '#64748b', textTransform: 'capitalize',
-          }}>{t.replace('-', ' ')}</button>
-        ))}
-        <div style={{ width: 1, height: 24, background: '#e2e8f0', margin: '0 4px' }} />
-        {[0,5,4,3,2,1].map(r => (
-          <button key={r} onClick={() => setRatingFilter(r)} style={{
-            padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-            background: ratingFilter === r ? '#f59e0b' : '#f1f5f9', color: ratingFilter === r ? 'white' : '#64748b',
-          }}>{r === 0 ? 'All' : `${r}★`}</button>
-        ))}
-      </div>
-      {filtered.map(f => {
-        const u = userMap.get(f.user_id);
-        return (
-          <div key={f.id} style={{ ...glassCard, padding: '16px 20px', marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 9, color: 'white' }}>
-                {(u?.full_name || 'U').slice(0, 2).toUpperCase()}
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', flex: 1 }}>{u?.full_name || 'Unknown'}</span>
-              <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(f.created_at!).toLocaleDateString()}</span>
-              <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: ratingColors[f.rating] }}>{f.rating}★</span>
-            </div>
-            <span style={{ fontSize: 10, fontWeight: 700, background: '#ede9fe', color: '#7c3aed', padding: '2px 8px', borderRadius: 20, textTransform: 'capitalize' }}>{f.tool_used?.replace('-', ' ')}</span>
-            <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.7, marginTop: 8 }}>{f.feedback_text}</div>
-          </div>
-        );
-      })}
-      {filtered.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No feedback yet.</div>}
-    </div>
-  );
-}
-
-// ─── SIGNUPS TAB ─────────────────────────────────────────────
-function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
-  const [signups, setSignups] = useState<SignupRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [approveRequest, setApproveRequest] = useState<SignupRow | null>(null);
-
-  useEffect(() => { fetchSignups(); }, []);
-
-  const fetchSignups = async () => {
-    setLoading(true);
-    const { data } = await supabase.from('signup_requests').select('*').order('submitted_at', { ascending: false });
-    setSignups((data || []) as unknown as SignupRow[]);
-    setLoading(false);
-  };
-
-  const pendingCount = signups.filter(s => s.status === 'pending').length;
-  const approvedCount = signups.filter(s => s.status === 'approved').length;
-  const rejectedCount = signups.filter(s => s.status === 'rejected').length;
-  const filtered = signups.filter(s => filter === 'all' || s.status === filter);
-
-  const rejectSignup = async (requestId: string) => {
-    const req = signups.find(s => s.id === requestId);
-    await supabase.from('signup_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString() } as any).eq('id', requestId);
-    await logActivity('signup_rejected', null, req?.full_name || null, { email: req?.email });
-    fetchSignups();
-    showToast('Request rejected.', 'warning');
-  };
-
-  const relativeTime = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  };
-
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
-  }
-
-  return (
-    <div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#fef9c3', color: '#92400e' }}>⏳ {pendingCount} Pending</span>
-        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#dcfce7', color: '#15803d' }}>✅ {approvedCount} Approved</span>
-        <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#fee2e2', color: '#991b1b' }}>❌ {rejectedCount} Rejected</span>
-      </div>
-
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
-        {['all', 'pending', 'approved', 'rejected'].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{
-            padding: '6px 16px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-            background: 'transparent', color: filter === f ? '#7c3aed' : '#64748b',
-            borderBottom: filter === f ? '2px solid #7c3aed' : '2px solid transparent', textTransform: 'capitalize',
-          }}>{f}</button>
-        ))}
-      </div>
-
-      <div style={{ ...glassCard, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8fafc' }}>
-              {['Name', 'Email', 'Phone', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.id} style={{ borderTop: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '10px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>{s.full_name}</td>
-                <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.email}</td>
-                <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.phone}</td>
-                <td style={{ padding: '10px 16px' }}>
-                  <span style={{
-                    fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
-                    background: s.payment_type === 'full' ? '#ede9fe' : '#fef9c3',
-                    color: s.payment_type === 'full' ? '#7c3aed' : '#92400e',
-                  }}>{s.payment_type === 'full' ? 'FULL PAYMENT' : 'RESERVE'}</span>
-                </td>
-                <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{relativeTime(s.submitted_at)}</td>
-                <td style={{ padding: '10px 16px' }}>
-                  <span style={{
-                    fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
-                    background: s.status === 'pending' ? '#fef9c3' : s.status === 'approved' ? '#dcfce7' : '#fee2e2',
-                    color: s.status === 'pending' ? '#92400e' : s.status === 'approved' ? '#15803d' : '#991b1b',
-                  }}>{s.status}</span>
-                  {s.status !== 'pending' && s.reviewed_at && (
-                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{s.status === 'approved' ? 'Approved' : 'Rejected'} {relativeTime(s.reviewed_at)}</div>
-                  )}
-                </td>
-                <td style={{ padding: '10px 16px' }}>
-                  {s.status === 'pending' && (
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setApproveRequest(s)} style={{
-                        background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0',
-                        borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700,
-                        fontSize: 12, cursor: 'pointer', transition: 'all 0.18s',
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#059669'; e.currentTarget.style.color = 'white'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#dcfce7'; e.currentTarget.style.color = '#15803d'; }}
-                      >✅ Approve</button>
-                      <button onClick={() => rejectSignup(s.id)} style={{
-                        background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca',
-                        borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700,
-                        fontSize: 12, cursor: 'pointer', transition: 'all 0.18s',
-                      }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = 'white'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#991b1b'; }}
-                      >✗ Reject</button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No signup requests found.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {approveRequest && (
-        <ApproveAccessModal
-          request={approveRequest}
-          onClose={() => setApproveRequest(null)}
-          onApproved={() => { fetchSignups(); onRefresh(); }}
-          showToast={showToast}
-          logActivity={logActivity}
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── ACTIVITY LOG TAB ────────────────────────────────────────
-function ActivityLogTab({ users, emailMap }: { users: UserRow[]; emailMap: Record<string, string> }) {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-
-  useEffect(() => { fetchLogs(); }, []);
-
-  const fetchLogs = async () => {
-    setLoading(true);
-    const { data } = await supabase.from('admin_activity_log').select('*').order('created_at', { ascending: false }).limit(200);
-    setLogs((data || []) as any[]);
-    setLoading(false);
-  };
-
-  const actionIcons: Record<string, string> = {
-    user_edited: '✏️', user_deleted: '🗑', signup_approved: '✅', signup_rejected: '❌',
-    user_created: '➕', password_reset: '🔑', email_sent: '📧',
-  };
-  const actionColors: Record<string, { bg: string; color: string }> = {
-    user_edited: { bg: '#ede9fe', color: '#7c3aed' },
-    user_deleted: { bg: '#fee2e2', color: '#991b1b' },
-    signup_approved: { bg: '#dcfce7', color: '#15803d' },
-    signup_rejected: { bg: '#fef9c3', color: '#92400e' },
-    user_created: { bg: '#dcfce7', color: '#059669' },
-    password_reset: { bg: '#fef9c3', color: '#92400e' },
-    email_sent: { bg: '#f0f9ff', color: '#0891b2' },
-  };
-
-  const actionTypes = ['all', 'user_edited', 'user_deleted', 'signup_approved', 'signup_rejected', 'user_created', 'password_reset'];
-  const filtered = filter === 'all' ? logs : logs.filter(l => l.action_type === filter);
-
-  const relativeTime = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  };
-
-  const getAdminName = (adminId: string) => {
-    const u = users.find(x => x.id === adminId);
-    return u?.full_name || emailMap[adminId] || 'Admin';
-  };
-
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
-  }
-
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <h2 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 2 }}>Activity Log</h2>
-          <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' }}>All admin actions tracked with timestamps</p>
-        </div>
-        <button onClick={fetchLogs} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b' }}>🔄 Refresh</button>
-      </div>
-
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, flexWrap: 'wrap' }}>
-        {actionTypes.map(a => (
-          <button key={a} onClick={() => setFilter(a)} style={{
-            padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-            background: filter === a ? '#7c3aed' : '#f1f5f9', color: filter === a ? 'white' : '#64748b',
-            textTransform: 'capitalize',
-          }}>{a === 'all' ? 'All' : a.replace(/_/g, ' ')}</button>
-        ))}
-      </div>
-
-      <div style={{ ...glassCard, overflow: 'hidden' }}>
-        {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No activity logged yet.</div>
-        ) : (
-          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
-            {filtered.map((log: any) => {
-              const ac = actionColors[log.action_type] || { bg: '#f1f5f9', color: '#64748b' };
-              const icon = actionIcons[log.action_type] || '📋';
-              return (
-                <div key={log.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 20px', borderBottom: '1px solid #f1f5f9' }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 8, background: ac.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{icon}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 9, fontWeight: 800, background: ac.bg, color: ac.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{log.action_type.replace(/_/g, ' ')}</span>
-                      {log.target_user_name && <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{log.target_user_name}</span>}
-                    </div>
-                    {log.details && Object.keys(log.details).length > 0 && (
-                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, lineHeight: 1.6 }}>
-                        {Object.entries(log.details).map(([k, v]) => (
-                          <span key={k} style={{ marginRight: 12 }}><strong style={{ color: '#94a3b8' }}>{k}:</strong> {String(v)}</span>
-                        ))}
-                      </div>
-                    )}
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                      by {getAdminName(log.admin_id)} · {relativeTime(log.created_at)} · {new Date(log.created_at).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         )}
       </div>
     </div>
