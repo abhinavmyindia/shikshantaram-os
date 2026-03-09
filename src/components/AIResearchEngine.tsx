@@ -410,6 +410,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   /* ── Shared state ── */
   const { saveItem, isSaved, isSaving } = useSaveItem();
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
+  const [loadingStartTime, setLoadingStartTime] = useState<number>(Date.now());
   const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
   const [productIdeas, setProductIdeas] = useState<ProductIdea[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductIdea | null>(null);
