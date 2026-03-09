@@ -125,6 +125,7 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
   };
 
   return (
+    <>
     <div style={card}>
       <LogoBlock />
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -218,6 +219,14 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
         >Request Access →</button>
       </div>
     </div>
+    {securityBlock && (
+      <SecurityBlockPopup
+        reason={securityBlock.reason}
+        message={securityBlock.message}
+        onClose={() => setSecurityBlock(null)}
+      />
+    )}
+    </>
   );
 }
 
