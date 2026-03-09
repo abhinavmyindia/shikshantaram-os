@@ -37,8 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase.from('user_profiles').select('*').eq('id', userId).single();
-    if (data) setProfile(data as unknown as UserProfile);
+    console.log('[AUTH DEBUG] Loading profile for userId:', userId);
+    const { data, error } = await supabase.from('user_profiles').select('*').eq('id', userId).maybeSingle();
+    console.log('[AUTH DEBUG] Profile query result:', { data, error, access_tier: data?.access_tier });
+    if (data) {
+      setProfile(data as unknown as UserProfile);
+      console.log('[AUTH DEBUG] Profile set with access_tier:', data.access_tier);
+    } else {
+      console.log('[AUTH DEBUG] No profile data returned. Error:', error?.message);
+    }
   }, []);
 
   const checkAdmin = useCallback(async (userId: string) => {
