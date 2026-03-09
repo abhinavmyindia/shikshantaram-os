@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import SecurityTab from '@/components/AdminSecurityTab';
-
+import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 interface UserRow {
   id: string;
   full_name: string;
