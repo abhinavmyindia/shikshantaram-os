@@ -104,7 +104,22 @@ const ANGLE_COLORS: Record<string, string> = { A: '#ea580c', B: '#7c3aed', C: '#
 const s = (styles: CSSProperties): CSSProperties => styles;
 
 /* ───────── Loading Screen ───────── */
-function LoadingScreen({ type, data }: { type: 'ideas' | 'report' | 'raw-ideas'; data: any }) {
+function LoadingScreen({ type, data, startTime }: { type: 'ideas' | 'report' | 'raw-ideas'; data: any; startTime?: number }) {
+  const [elapsed, setElapsed] = useState(0);
+  const ESTIMATED_SECONDS = type === 'report' ? 90 : type === 'raw-ideas' ? 45 : 40;
+
+  useEffect(() => {
+    const start = startTime || Date.now();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
+
+  const progress = Math.min(95, (elapsed / ESTIMATED_SECONDS) * 100);
+  const remaining = Math.max(0, ESTIMATED_SECONDS - elapsed);
+  const timeLabel = remaining > 60 ? `~${Math.ceil(remaining / 60)}m remaining` : remaining > 0 ? `~${remaining}s remaining` : 'Almost done...';
+
   const steps = type === 'ideas'
     ? [
         `Scanning ${data.country} market trends...`,
@@ -126,6 +141,9 @@ function LoadingScreen({ type, data }: { type: 'ideas' | 'report' | 'raw-ideas';
         `Building your full research report...`,
       ];
 
+  // Which step is "active" based on elapsed time
+  const activeStep = Math.min(steps.length - 1, Math.floor((elapsed / ESTIMATED_SECONDS) * steps.length));
+
   return (
     <div style={s({ textAlign: 'center', padding: '60px 20px', maxWidth: 500, margin: '0 auto', animation: 'fadeUp 0.4s ease' })}>
       <div style={s({ width: 80, height: 80, margin: '0 auto 24px', position: 'relative' })}>
@@ -135,23 +153,58 @@ function LoadingScreen({ type, data }: { type: 'ideas' | 'report' | 'raw-ideas';
         </div>
       </div>
       <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 8 })}>
-        {type === 'ideas' ? 'Researching your market...' : type === 'raw-ideas' ? 'Building ideas from your concept...' : `Researching ${data.productName}...`}
+        {type === 'ideas' ? 'Researching your market...' : type === 'raw-ideas' ? 'Building ideas from your concept...' : `Deep Research in progress...`}
       </div>
       <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' })}>
         {type === 'ideas'
           ? `Our AI is analyzing ${data.country} market data, buyer psychology, and product opportunities for ${data.niche}.`
           : type === 'raw-ideas'
           ? `Generating 30 product ideas anchored to your original concept for ${data.country}...`
-          : `Pulling real market data, search trends & buyer psychology for ${data.country}...`}
+          : `Analyzing market data, buyer psychology & competitive landscape for "${data.productName}"`}
       </div>
-      <div style={s({ marginTop: 28, maxWidth: 360, margin: '28px auto 0' })}>
-        {steps.map((step, i) => (
-          <div key={i} style={s({ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 0', animation: `fadeUp 0.4s ease ${i * 0.6}s both` })}>
-            <div style={s({ width: 16, height: 16, borderRadius: '50%', border: '2px solid #f1f5f9', borderTop: '2px solid #ea580c', animation: 'spinSlow 0.8s linear infinite', flexShrink: 0 })} />
-            <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#475569' })}>{step}</span>
-          </div>
-        ))}
+
+      {/* Progress bar */}
+      <div style={s({ marginTop: 24, maxWidth: 360, margin: '24px auto 0' })}>
+        <div style={s({ background: '#f1f5f9', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 8 })}>
+          <div style={s({
+            height: '100%',
+            borderRadius: 999,
+            background: type === 'report' ? 'linear-gradient(90deg, #ea580c, #f59e0b)' : '#ea580c',
+            width: `${progress}%`,
+            transition: 'width 1s linear',
+          })} />
+        </div>
+        <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+          <span style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: '#ea580c' })}>{Math.round(progress)}%</span>
+          <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>{timeLabel}</span>
+        </div>
       </div>
+
+      {/* Steps with active indicator */}
+      <div style={s({ marginTop: 20, maxWidth: 360, margin: '20px auto 0' })}>
+        {steps.map((step, i) => {
+          const isDone = i < activeStep;
+          const isActive = i === activeStep;
+          return (
+            <div key={i} style={s({ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 0', opacity: isDone ? 0.5 : 1, animation: `fadeUp 0.4s ease ${i * 0.3}s both` })}>
+              {isDone ? (
+                <div style={s({ width: 16, height: 16, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>
+                  <span style={s({ color: 'white', fontSize: 10, fontWeight: 900 })}>✓</span>
+                </div>
+              ) : (
+                <div style={s({ width: 16, height: 16, borderRadius: '50%', border: '2px solid #f1f5f9', borderTop: `2px solid ${isActive ? '#ea580c' : '#cbd5e1'}`, animation: isActive ? 'spinSlow 0.8s linear infinite' : 'none', flexShrink: 0 })} />
+              )}
+              <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: isActive ? '#0f172a' : isDone ? '#94a3b8' : '#475569', fontWeight: isActive ? 700 : 400 })}>{step}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {type === 'report' && (
+        <div style={s({ marginTop: 20, fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>
+          ⏱ Deep Research typically takes 60–90 seconds
+        </div>
+      )}
     </div>
   );
 }
@@ -357,6 +410,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   /* ── Shared state ── */
   const { saveItem, isSaved, isSaving } = useSaveItem();
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
+  const [loadingStartTime, setLoadingStartTime] = useState<number>(Date.now());
   const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
   const [productIdeas, setProductIdeas] = useState<ProductIdea[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductIdea | null>(null);
@@ -417,6 +471,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   /* ───── API Calls ───── */
   const generateIdeas = async () => {
     setError('');
+    setLoadingStartTime(Date.now());
     setAiStep('loading-ideas');
     try {
       const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
@@ -456,6 +511,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     if (!ideaAnalysis || !selectedAngle) return;
     setError('');
     setRawIdeaStep('loading-ideas');
+    setLoadingStartTime(Date.now());
     setAiStep('loading-ideas');
     const chosenAngle = ideaAnalysis.angles.find(a => a.angleId === selectedAngle);
     try {
@@ -491,6 +547,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   const generateReport = async (product: ProductIdea) => {
     setError('');
     setSelectedProduct(product);
+    setLoadingStartTime(Date.now());
     setAiStep('loading-report');
     try {
       const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
@@ -1077,7 +1134,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
 
   /* ═══════════════════ LOADING IDEAS ═══════════════════ */
   if (aiStep === 'loading-ideas') {
-    return <LoadingScreen type={isRawResultsMode || rawIdeaStep === 'loading-ideas' ? 'raw-ideas' : 'ideas'} data={{ ...inputData, country: rawIdeaData.country || inputData.country }} />;
+    return <LoadingScreen type={isRawResultsMode || rawIdeaStep === 'loading-ideas' ? 'raw-ideas' : 'ideas'} data={{ ...inputData, country: rawIdeaData.country || inputData.country }} startTime={loadingStartTime} />;
   }
 
   /* ═══════════════════ LOADING REPORT ═══════════════════ */
@@ -1085,7 +1142,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     return (
       <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
         <div>
-          <LoadingScreen type="report" data={{ ...inputData, productName: selectedProduct?.productName, searchKeyword: selectedProduct?.searchKeyword }} />
+          <LoadingScreen type="report" data={{ ...inputData, productName: selectedProduct?.productName, searchKeyword: selectedProduct?.searchKeyword }} startTime={loadingStartTime} />
           <div style={s({ textAlign: 'center', marginTop: 24 })}>
             <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: 'none', fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>← Back to results</button>
           </div>
