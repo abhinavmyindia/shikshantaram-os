@@ -737,8 +737,14 @@ export type Database = {
     Functions: {
       get_my_admin_role: { Args: never; Returns: string }
       get_signup_count: { Args: never; Returns: number }
+      has_admin_role: {
+        Args: { _roles: string[]; _user_id: string }
+        Returns: boolean
+      }
       increment_tool_actions: { Args: { row_id: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_owner: { Args: { _user_id: string }; Returns: boolean }
+      is_team_member: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
