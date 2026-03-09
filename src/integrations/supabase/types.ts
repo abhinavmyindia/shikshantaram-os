@@ -86,16 +86,34 @@ export type Database = {
       admin_users: {
         Row: {
           created_at: string | null
+          display_name: string | null
+          email: string | null
+          invited_at: string | null
+          invited_by: string | null
+          is_owner: boolean | null
+          last_active: string | null
           role: string
           user_id: string
         }
         Insert: {
           created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
+          is_owner?: boolean | null
+          last_active?: string | null
           role?: string
           user_id: string
         }
         Update: {
           created_at?: string | null
+          display_name?: string | null
+          email?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
+          is_owner?: boolean | null
+          last_active?: string | null
           role?: string
           user_id?: string
         }
