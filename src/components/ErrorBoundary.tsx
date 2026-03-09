@@ -1,28 +1,61 @@
 import React from 'react';
-import { logError } from '@/utils/errorTracker';
+import { supabase } from '@/integrations/supabase/client';
 
-interface ErrorBoundaryState {
+interface State {
   hasError: boolean;
   error: Error | null;
+  errorId: string | null;
 }
 
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  ErrorBoundaryState
-> {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, State> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorId: null };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    logError('react_error_boundary', error.message, error.stack, {
-      componentStack: info.componentStack,
-    });
+  async componentDidCatch(error: Error, info: React.ErrorInfo) {
+    const errorId = crypto.randomUUID();
+    this.setState({ errorId });
+
+    // Try Edge Function first
+    try {
+      const { error: fnErr } = await supabase.functions.invoke('log-error', {
+        body: {
+          errorType: 'react_error_boundary',
+          severity: 'critical',
+          message: error.message,
+          stackTrace: error.stack,
+          module: window.location.href.includes('admin') ? 'admin' : 'app',
+          pageUrl: window.location.href,
+          additionalData: {
+            componentStack: info.componentStack?.substring(0, 2000),
+            errorId,
+          },
+        },
+      });
+      if (!fnErr) return;
+    } catch (_) {}
+
+    // Fallback: direct insert
+    try {
+      await supabase.from('error_logs').insert({
+        error_type: 'react_error_boundary',
+        severity: 'critical',
+        message: error.message,
+        stack_trace: (error.stack || '').substring(0, 5000),
+        module: window.location.href.includes('admin') ? 'admin' : 'app',
+        page_url: window.location.href,
+        additional_data: {
+          componentStack: info.componentStack?.substring(0, 2000),
+          errorId,
+        },
+        is_resolved: false,
+      });
+    } catch (_) {}
   }
 
   render() {
@@ -42,16 +75,21 @@ class ErrorBoundary extends React.Component<
             <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 8 }}>
               Something went wrong
             </div>
-            <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#64748b', lineHeight: 1.7, marginBottom: 24 }}>
-              Our team has been notified automatically. Please refresh the page.
+            <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#64748b', lineHeight: 1.7, marginBottom: 8 }}>
+              Our team has been notified automatically and will fix this soon.
             </div>
+            {this.state.errorId && (
+              <div style={{ fontFamily: 'monospace', fontSize: 10, color: '#94a3b8', marginBottom: 20 }}>
+                Error ID: {this.state.errorId}
+              </div>
+            )}
             <button
               onClick={() => window.location.reload()}
               style={{
                 background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white',
-                border: 'none', padding: '12px 28px', borderRadius: 12,
-                cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 14,
-                boxShadow: '0 4px 16px rgba(124,58,237,0.4)',
+                border: 'none', padding: '14px 32px', borderRadius: 12,
+                cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 15,
+                boxShadow: '0 4px 16px rgba(124,58,237,0.3)',
               }}
             >
               Refresh Page
