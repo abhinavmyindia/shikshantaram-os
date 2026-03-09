@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import SecurityTab from '@/components/AdminSecurityTab';
-
+import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 interface UserRow {
   id: string;
   full_name: string;
@@ -1076,7 +1076,7 @@ function OverviewTab({ stats, users, emailMap }: { stats: any; users: UserRow[];
 }
 
 // ─── USERS TAB ───────────────────────────────────────────────
-function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>; adminId: string }) {
+function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId, role }: { users: UserRow[]; emailMap: Record<string, string>; onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>; adminId: string; role: AdminRole }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [editUser, setEditUser] = useState<UserRow | null>(null);
@@ -1155,9 +1155,9 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId 
                   <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(u.created_at)}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setEditUser(u)} title="Edit" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✏️</button>
-                      <button onClick={() => setSecurityUser(u)} title="View Security" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🛡️</button>
-                      <button onClick={() => setDeleteUser(u)} title="Delete" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🗑</button>
+                      {canDo.editUsers(role) && <button onClick={() => setEditUser(u)} title="Edit" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✏️</button>}
+                      {canDo.blockUsers(role) && <button onClick={() => setSecurityUser(u)} title="View Security" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🛡️</button>}
+                      {canDo.deleteUsers(role) && <button onClick={() => setDeleteUser(u)} title="Delete" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🗑</button>}
                     </div>
                   </td>
                 </tr>
@@ -1314,21 +1314,322 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
   );
 }
 
+// ─── ROLE BADGE ──────────────────────────────────────────────
+function RoleBadge({ role, displayName }: { role: AdminRole; displayName: string }) {
+  const meta = roleMeta[role!] || roleMeta.operator;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'DM Sans' }}>Logged in as {displayName}</span>
+      <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: meta.bg, color: meta.color, fontFamily: 'DM Sans' }}>{meta.label}</span>
+    </div>
+  );
+}
+
+// ─── PERMISSIONS TABLE ───────────────────────────────────────
+function PermissionsTable() {
+  const rows = [
+    { action: 'View Overview & Analytics dashboard', owner: true, admin: true, manager: false, operator: false },
+    { action: 'View & manage Users', owner: true, admin: true, manager: true, operator: false },
+    { action: 'Approve / reject Signups', owner: true, admin: true, manager: true, operator: true },
+    { action: 'Edit user details & tier', owner: true, admin: true, manager: true, operator: false },
+    { action: 'Block / unblock users', owner: true, admin: true, manager: false, operator: false },
+    { action: 'View AI Analytics', owner: true, admin: false, manager: false, operator: false },
+    { action: 'View Security & error logs', owner: true, admin: false, manager: false, operator: false },
+    { action: 'Force logout sessions', owner: true, admin: false, manager: false, operator: false },
+    { action: 'Manage team access', owner: true, admin: false, manager: false, operator: false },
+    { action: "Change anyone's role", owner: true, admin: false, manager: false, operator: false },
+  ];
+  return (
+    <div style={{ ...glassCard, padding: 20, marginTop: 20 }}>
+      <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 14 }}>📋 Permissions Reference</div>
+      <div style={{ overflow: 'hidden', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8fafc' }}>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const }}>Permission</th>
+              {['👑 Owner', '🔧 Admin', '📋 Manager', '⚡ Operator'].map(r => (
+                <th key={r} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#64748b' }}>{r}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} style={{ borderTop: '1px solid #f1f5f9' }}>
+                <td style={{ padding: '8px 14px', fontSize: 12.5, color: '#334155', fontFamily: 'DM Sans' }}>{row.action}</td>
+                {[row.owner, row.admin, row.manager, row.operator].map((can, j) => (
+                  <td key={j} style={{ padding: '8px', textAlign: 'center', fontSize: 14 }}>{can ? '✅' : '❌'}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── TEAM ACCESS TAB ─────────────────────────────────────────
+function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) => void }) {
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [rolePickerFor, setRolePickerFor] = useState<string | null>(null);
+
+  const fetchTeam = async () => {
+    setLoading(true);
+    const [{ data: members }, { data: invites }] = await Promise.all([
+      supabase.from('admin_users').select('*').order('created_at', { ascending: true }),
+      supabase.from('team_invitations').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
+    ]);
+    setTeamMembers((members || []) as any[]);
+    setPendingInvites((invites || []) as any[]);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchTeam(); }, []);
+
+  const changeRole = async (targetUserId: string, newRole: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const result = await supabase.functions.invoke('manage-team', {
+        body: { action: 'change_role', targetUserId, newRole },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (result.data?.success) { showToast(`✅ ${result.data.message}`); fetchTeam(); }
+      else showToast(`❌ ${result.data?.error || 'Failed'}`, 'error');
+    } catch (err: any) { showToast(`❌ ${err.message}`, 'error'); }
+    setRolePickerFor(null);
+  };
+
+  const removeMember = async (targetUserId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const result = await supabase.functions.invoke('manage-team', {
+        body: { action: 'remove_member', targetUserId },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (result.data?.success) { showToast(`✅ ${result.data.message}`); fetchTeam(); }
+      else showToast(`❌ ${result.data?.error || 'Failed'}`, 'error');
+    } catch (err: any) { showToast(`❌ ${err.message}`, 'error'); }
+  };
+
+  const cancelInvite = async (invitationId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await supabase.functions.invoke('manage-team', {
+        body: { action: 'cancel_invitation', invitationId },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      showToast('✅ Invitation cancelled.');
+      fetchTeam();
+    } catch (err: any) { showToast(`❌ ${err.message}`, 'error'); }
+  };
+
+  const handleAddSuccess = (msg: string) => { showToast(`✅ ${msg}`); fetchTeam(); };
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a' }}>🔑 Team Access</div>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8', marginTop: 4 }}>Only you (Owner) can manage who has access to this panel</div>
+        </div>
+        <button onClick={() => setShowAddModal(true)} style={{
+          background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 12,
+          padding: '10px 20px', fontFamily: 'Sora', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+          boxShadow: '0 4px 14px rgba(124,58,237,0.3)',
+        }}>+ Add Team Member</button>
+      </div>
+
+      {/* Current Team */}
+      <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>Current Team ({teamMembers.length} members)</div>
+      <div style={{ ...glassCard, overflow: 'hidden', marginBottom: 20 }}>
+        {teamMembers.map((member: any, i: number) => {
+          const meta = roleMeta[member.role] || roleMeta.operator;
+          const isOwnerRow = member.is_owner;
+          return (
+            <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: 'white', flexShrink: 0 }}>
+                {(member.display_name || member.email || 'U')[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13.5, color: '#0f172a' }}>{member.display_name || member.email?.split('@')[0] || 'Unknown'}</span>
+                  {isOwnerRow && <span style={{ fontSize: 10, color: '#7c3aed', fontWeight: 700 }}>(You)</span>}
+                </div>
+                <div style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#94a3b8' }}>{member.email || '—'} · Added {formatDate(member.invited_at || member.created_at)}</div>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: meta.bg, color: meta.color, fontFamily: 'DM Sans', flexShrink: 0 }}>{meta.label}</span>
+              {isOwnerRow ? (
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', background: '#f1f5f9', padding: '4px 10px', borderRadius: 8 }}>🔒 Protected</span>
+              ) : (
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0, position: 'relative' }}>
+                  <div style={{ position: 'relative' }}>
+                    <button onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
+                      background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                      fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151',
+                    }}>Change Role ▾</button>
+                    {rolePickerFor === member.user_id && (
+                      <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 10, background: 'white', borderRadius: 12, boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1px solid #e2e8f0', padding: 6, marginTop: 4, minWidth: 160 }}>
+                        {(['admin', 'manager', 'operator'] as const).map(r => (
+                          <button key={r} onClick={() => changeRole(member.user_id, r)} disabled={member.role === r} style={{
+                            display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', borderRadius: 8,
+                            cursor: member.role === r ? 'default' : 'pointer',
+                            background: member.role === r ? '#f8fafc' : 'transparent',
+                            fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
+                            color: member.role === r ? '#94a3b8' : '#374151',
+                          }}>{roleMeta[r].label} {member.role === r ? '✓' : ''}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={() => { if (confirm(`Remove ${member.display_name || member.email} from the team?`)) removeMember(member.user_id); }} style={{
+                    background: 'rgba(239,68,68,0.08)', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                    fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#dc2626',
+                  }}>Remove</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Pending Invitations */}
+      {pendingInvites.length > 0 && (
+        <>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>Pending Invitations ({pendingInvites.length})</div>
+          <div style={{ ...glassCard, overflow: 'hidden', marginBottom: 20 }}>
+            {pendingInvites.map((inv: any, i: number) => {
+              const meta = roleMeta[inv.role] || roleMeta.operator;
+              return (
+                <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>📧</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{inv.email}</div>
+                    <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' }}>Expires {formatDate(inv.expires_at)}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: meta.bg, color: meta.color, fontFamily: 'DM Sans' }}>{meta.label}</span>
+                  <button onClick={() => cancelInvite(inv.id)} style={{ background: '#fee2e2', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#dc2626' }}>Cancel</button>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <PermissionsTable />
+
+      {showAddModal && <AddTeamMemberModal onClose={() => setShowAddModal(false)} onSuccess={handleAddSuccess} />}
+    </div>
+  );
+}
+
+// ─── ADD TEAM MEMBER MODAL ───────────────────────────────────
+function AddTeamMemberModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (msg: string) => void }) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<'admin' | 'manager' | 'operator'>('operator');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleAdd = async () => {
+    if (!email.trim()) { setError('Email is required.'); return; }
+    setLoading(true); setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const result = await supabase.functions.invoke('manage-team', {
+        body: { action: 'add_member', email: email.trim().toLowerCase(), role },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (result.data?.success) { onSuccess(result.data.message); onClose(); }
+      else setError(result.data?.error || 'Failed to add team member.');
+    } catch (err: any) { setError(err.message); }
+    setLoading(false);
+  };
+
+  const roleDescriptions: Record<string, string> = {
+    admin: '🔧 Full access to Overview, Users, and Signups. Cannot see AI Analytics or Security.',
+    manager: '📋 Can view Users and Signups. Can approve signups and edit user details. Cannot block users.',
+    operator: '⚡ Can only approve or reject new signup requests. No access to Users or other data.',
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.65)', backdropFilter: 'blur(12px)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} style={{ maxWidth: 460, width: '94%', borderRadius: 24, overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.3)', animation: 'popIn 0.35s cubic-bezier(0.34,1.56,0.64,1)', position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }}>
+        <div style={{ height: 60, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <span style={{ fontSize: 18 }}>➕</span>
+          <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: 'white' }}>Add Team Member</span>
+        </div>
+        <div style={{ background: 'white', padding: 24 }}>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginBottom: 20, lineHeight: 1.6 }}>
+            Enter the email of the person you want to give access to. They must already have a Shikshantaram OS account.
+          </div>
+
+          <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: 6 }}>Email Address</label>
+          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="team@example.com" style={{ ...inputStyle, marginBottom: 20 }} />
+
+          <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: 8 }}>Assign Role</label>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {(['admin', 'manager', 'operator'] as const).map(r => (
+              <button key={r} onClick={() => setRole(r)} style={{
+                flex: 1, padding: '10px 8px', borderRadius: 12, cursor: 'pointer',
+                border: role === r ? 'none' : '1.5px solid #e2e8f0',
+                background: role === r ? roleMeta[r].bg : 'transparent',
+                color: role === r ? 'white' : '#64748b',
+                fontFamily: 'DM Sans', fontWeight: 800, fontSize: 12,
+                transition: 'all 0.15s',
+              }}>{roleMeta[r].label}</button>
+            ))}
+          </div>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6 }}>
+            {roleDescriptions[role]}
+          </div>
+
+          {error && <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#991b1b' }}>❌ {error}</div>}
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={onClose} style={{ background: 'none', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: 10, padding: '9px 18px', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+            <button onClick={handleAdd} disabled={loading} style={{
+              background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10,
+              padding: '10px 22px', fontFamily: 'Sora', fontWeight: 700, fontSize: 13.5, cursor: loading ? 'wait' : 'pointer',
+              boxShadow: '0 4px 14px rgba(124,58,237,0.3)', display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              {loading && <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
+              {loading ? 'Adding...' : `Add as ${role.charAt(0).toUpperCase() + role.slice(1)}`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN ADMIN PANEL ────────────────────────────────────────
 export default function AdminPanel() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState('overview');
+  const { role, isOwner, displayName, loading: roleLoading } = useAdminRole();
+  const [tab, setTab] = useState('');
   const [users, setUsers] = useState<UserRow[]>([]);
   const [emailMap, setEmailMap] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({ total: 0, basic: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
   const [adminToast, setAdminToast] = useState<{ message: string; type: string } | null>(null);
 
+  // Set default tab based on role
   useEffect(() => {
-    if (!isAdmin) { navigate('/'); return; }
-    loadData();
-  }, [isAdmin]);
+    if (!role) return;
+    if (canDo.viewOverview(role)) setTab('overview');
+    else if (canDo.viewUsers(role)) setTab('users');
+    else setTab('signups');
+  }, [role]);
+
+  useEffect(() => {
+    if (!isAdmin && !roleLoading) { navigate('/'); return; }
+    if (role) loadData();
+  }, [isAdmin, role]);
 
   const showAdminToast = (message: string, type = 'success') => {
     setAdminToast({ message, type });
@@ -1355,13 +1656,28 @@ export default function AdminPanel() {
     await supabase.from('admin_activity_log').insert({ admin_id: user.id, action_type, target_user_id, target_user_name, details } as any);
   };
 
-  const tabDefs = [
-    { id: 'overview', label: '📊 Overview' },
-    { id: 'users', label: '👥 Users' },
-    { id: 'signups', label: '📝 Signups' },
-    { id: 'ai-analytics', label: '⚡ AI Analytics' },
-    { id: 'security', label: '🔒 Security' },
-  ];
+  if (roleLoading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} /></div>;
+
+  if (!role) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 8 }}>Access Denied</div>
+        <div style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginBottom: 20 }}>You don't have permission to access the admin panel.</div>
+        <button onClick={() => navigate('/')} style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 12, padding: '10px 24px', fontFamily: 'Sora', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Back to App</button>
+      </div>
+    </div>
+  );
+
+  // Build visible tabs dynamically based on role
+  const tabs = [
+    canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview' },
+    canDo.viewUsers(role) && { id: 'users', label: '👥 Users' },
+    canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups' },
+    canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics' },
+    canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security' },
+    canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access' },
+  ].filter(Boolean) as { id: string; label: string }[];
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}>
@@ -1383,15 +1699,30 @@ export default function AdminPanel() {
           <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>Shikshantaram OS — Admin Panel</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 12, color: '#64748b' }}>{user?.email}</span>
+          <RoleBadge role={role} displayName={displayName || user?.email || ''} />
           <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Back to App</button>
           <button onClick={signOut} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Sign Out</button>
         </div>
       </div>
 
-      {/* Tab bar — exactly 5 tabs per spec */}
-      <div style={{ display: 'flex', gap: 4, padding: '8px 24px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9', borderRadius: 0 }}>
-        {tabDefs.map(t => (
+      {/* Role welcome strip for non-owner roles */}
+      {role !== 'owner' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 24px', background: 'rgba(124,58,237,0.04)', borderBottom: '1px solid rgba(124,58,237,0.08)' }}>
+          <span style={{ fontSize: 20 }}>{role === 'admin' ? '🔧' : role === 'manager' ? '📋' : '⚡'}</span>
+          <div>
+            <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>You have {role} access</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' }}>
+              {role === 'operator' && 'You can approve or reject new signup requests below.'}
+              {role === 'manager' && 'You can manage signups and user details.'}
+              {role === 'admin' && 'You have full operational access.'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab bar */}
+      <div style={{ display: 'flex', gap: 4, padding: '8px 24px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+        {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
             fontWeight: tab === t.id ? 800 : 500, fontSize: 13,
@@ -1407,17 +1738,18 @@ export default function AdminPanel() {
 
       {/* Content */}
       <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }}>
-        {loading ? (
+        {loading && tab !== 'team' ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
             <div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} />
           </div>
         ) : (
           <>
-            {tab === 'overview' && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
-            {tab === 'users' && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} />}
-            {tab === 'signups' && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
-            {tab === 'ai-analytics' && <AIAnalyticsTab />}
-            {tab === 'security' && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
+            {tab === 'overview' && canDo.viewOverview(role) && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
+            {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
+            {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+            {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab />}
+            {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
+            {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
           </>
         )}
       </div>
