@@ -685,7 +685,7 @@ export default function SecurityTab({ adminId, showToast }: { adminId: string; s
         ))}
       </div>
 
-      {subTab === 'errors' && <ErrorLogsSubTab adminId={adminId} />}
+      {subTab === 'errors' && <ErrorLogsSubTab adminId={adminId} showToast={showToast} />}
       {subTab === 'sessions' && <AuthenticatedSessionsSubTab adminId={adminId} showToast={showToast} />}
       {subTab === 'history' && <LoginHistorySubTab />}
       {subTab === 'events' && <SecurityEventsSubTab adminId={adminId} showToast={showToast} />}
