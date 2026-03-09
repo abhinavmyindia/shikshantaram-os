@@ -511,6 +511,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     if (!ideaAnalysis || !selectedAngle) return;
     setError('');
     setRawIdeaStep('loading-ideas');
+    setLoadingStartTime(Date.now());
     setAiStep('loading-ideas');
     const chosenAngle = ideaAnalysis.angles.find(a => a.angleId === selectedAngle);
     try {
