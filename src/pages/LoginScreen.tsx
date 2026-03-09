@@ -80,13 +80,29 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
+  const [securityBlock, setSecurityBlock] = useState<{ reason: string; message: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     const { error: err } = await signIn(email, password);
-    if (err) setError(err);
+    if (err) {
+      setError(err);
+      setLoading(false);
+      return;
+    }
+    // After successful auth, check session security
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { allowed, reason, message } = await initSession(user.id, user.email || email);
+      if (!allowed) {
+        await supabase.auth.signOut();
+        setSecurityBlock({ reason: reason || 'blocked', message: message || 'Access denied.' });
+        setLoading(false);
+        return;
+      }
+    }
     setLoading(false);
   };
 
