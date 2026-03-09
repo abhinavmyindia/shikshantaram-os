@@ -461,6 +461,48 @@ export type Database = {
         }
         Relationships: []
       }
+      team_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string | null
+          invited_by_name: string | null
+          role: string
+          status: string | null
+          token: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          invited_by_name?: string | null
+          role: string
+          status?: string | null
+          token?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string | null
+          invited_by_name?: string | null
+          role?: string
+          status?: string | null
+          token?: string | null
+        }
+        Relationships: []
+      }
       tool_usage: {
         Row: {
           actions_count: number | null
@@ -693,6 +735,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_admin_role: { Args: never; Returns: string }
       get_signup_count: { Args: never; Returns: number }
       increment_tool_actions: { Args: { row_id: string }; Returns: undefined }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
