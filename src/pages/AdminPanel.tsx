@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import SecurityTab from '@/components/AdminSecurityTab';
 
 interface UserRow {
   id: string;
@@ -884,7 +885,7 @@ export default function AdminPanel() {
     setLoading(false);
   };
 
-  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups', '📋 Activity Log', '⚡ AI Analytics'];
+  const tabs = ['📊 Overview', '👥 Users', '➕ Add User', '🔑 Reset Password', '💬 Feedback', '📝 Signups', '📋 Activity Log', '⚡ AI Analytics', '🔒 Security'];
 
   const logActivity = async (action_type: string, target_user_id: string | null, target_user_name: string | null, details: Record<string, any> = {}) => {
     if (!user) return;
@@ -926,7 +927,7 @@ export default function AdminPanel() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, padding: '12px 24px', background: 'rgba(255,255,255,0.8)', borderBottom: '1px solid #f1f5f9' }}>
         {tabs.map(t => {
-          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : t.includes('Signups') ? 'signups' : t.includes('Activity') ? 'activity' : t.includes('AI Analytics') ? 'ai-analytics' : 'feedback';
+          const tabId = t.includes('Overview') ? 'overview' : t.includes('Users') ? 'users' : t.includes('Add') ? 'add' : t.includes('Reset') ? 'password' : t.includes('Signups') ? 'signups' : t.includes('Activity') ? 'activity' : t.includes('AI Analytics') ? 'ai-analytics' : t.includes('Security') ? 'security' : 'feedback';
           return (
             <button key={t} onClick={() => setTab(tabId)} style={{
               padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
@@ -955,6 +956,7 @@ export default function AdminPanel() {
             {tab === 'signups' && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
             {tab === 'activity' && <ActivityLogTab users={users} emailMap={emailMap} />}
             {tab === 'ai-analytics' && <AIAnalyticsTab />}
+            {tab === 'security' && <SecurityTab />}
           </>
         )}
       </div>
