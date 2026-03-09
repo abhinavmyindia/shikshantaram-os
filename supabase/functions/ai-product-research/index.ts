@@ -534,7 +534,7 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       const { product, inputData } = body;
       prompt = buildDeepResearchPrompt(product, inputData);
       model = "google/gemini-2.5-flash";
-      maxTokens = 16000;
+      maxTokens = 30000;
       callType = "deep_research_report";
     } else {
       return new Response(JSON.stringify({ error: "Invalid action" }), {
