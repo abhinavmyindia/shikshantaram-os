@@ -1155,9 +1155,9 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                   <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(u.created_at)}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => setEditUser(u)} title="Edit" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✏️</button>
-                      <button onClick={() => setSecurityUser(u)} title="View Security" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🛡️</button>
-                      <button onClick={() => setDeleteUser(u)} title="Delete" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🗑</button>
+                      {canDo.editUsers(role) && <button onClick={() => setEditUser(u)} title="Edit" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✏️</button>}
+                      {canDo.blockUsers(role) && <button onClick={() => setSecurityUser(u)} title="View Security" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🛡️</button>}
+                      {canDo.deleteUsers(role) && <button onClick={() => setDeleteUser(u)} title="Delete" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🗑</button>}
                     </div>
                   </td>
                 </tr>
