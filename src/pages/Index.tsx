@@ -14,6 +14,7 @@ import { useTracking } from '@/hooks/useTracking';
 import BetaFeedback from '@/components/BetaFeedback';
 import ProfilePage from '@/components/ProfilePage';
 import { supabase } from '@/integrations/supabase/client';
+import { trackPageView } from '@/utils/activityTracker';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
@@ -1602,6 +1603,7 @@ const Index = () => {
   const navigateTo = (page: PageId) => {
     tracking.closeToolTracking();
     setActivePage(page);
+    trackPageView(page);
     if (page !== 'dashboard') {
       tracking.trackToolOpen(page);
     }
