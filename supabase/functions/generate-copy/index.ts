@@ -233,6 +233,12 @@ Return ONLY a JSON object:
     });
   } catch (e) {
     console.error('generate-copy error:', e);
+    await supabaseAdmin.from('error_logs').insert({
+      error_type: 'edge_function_error', severity: 'error',
+      message: e instanceof Error ? e.message : 'Unknown error',
+      stack_trace: e instanceof Error ? e.stack : undefined,
+      module: 'copywriting_suite', additional_data: { function: 'generate-copy' },
+    }).catch(() => {});
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

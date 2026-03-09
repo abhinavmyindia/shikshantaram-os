@@ -563,6 +563,11 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
   } catch (err) {
     console.error("Edge function error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
+    await supabaseAdmin.from('error_logs').insert({
+      error_type: 'edge_function_error', severity: 'error',
+      message, stack_trace: err instanceof Error ? err.stack : undefined,
+      module: 'product_navigator', additional_data: { function: 'ai-product-research' },
+    }).catch(() => {});
     const status = message.includes("credits") ? 402 : 500;
     return new Response(JSON.stringify({ error: message }), {
       status, headers: { ...corsHeaders, "Content-Type": "application/json" },
