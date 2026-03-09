@@ -69,7 +69,7 @@ function EmptyState({ icon = '📭', title = 'No data yet', sub = 'This will pop
 }
 
 // ─── SUB-TAB 1: ERROR LOGS ───
-function ErrorLogsSubTab({ adminId }: { adminId: string }) {
+function ErrorLogsSubTab({ adminId, showToast }: { adminId: string; showToast: (msg: string, type?: string) => void }) {
   const [errors, setErrors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
@@ -83,12 +83,19 @@ function ErrorLogsSubTab({ adminId }: { adminId: string }) {
     try {
       setLoading(true);
       setFetchError('');
-      let query = supabase.from('error_logs').select('*').order('created_at', { ascending: false }).limit(100);
+      let query = supabase.from('error_logs').select('*').order('created_at', { ascending: false }).limit(200);
       if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
       if (moduleFilter !== 'all') query = query.eq('module', moduleFilter);
       if (!showResolved) query = query.eq('is_resolved', false);
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42501') {
+          setFetchError('Permission denied. Make sure your user ID is in the admin_users table.');
+        } else {
+          setFetchError(`Failed to load: ${error.message}`);
+        }
+        return;
+      }
       setErrors((data as any[]) || []);
     } catch (err: any) {
       console.error('Admin fetch error:', err);
@@ -122,8 +129,36 @@ function ErrorLogsSubTab({ adminId }: { adminId: string }) {
     await supabase.from('error_logs').update({
       is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminId,
     } as any).eq('id', errorId);
+    showToast('✅ Error marked as resolved');
     fetchErrors();
     fetchKPIs();
+  };
+
+  const testErrorLogging = async () => {
+    try {
+      const { error } = await supabase.functions.invoke('log-error', {
+        body: {
+          errorType: 'test_error',
+          severity: 'warning',
+          message: 'Admin manually triggered test error to verify logging pipeline',
+          module: 'admin',
+          pageUrl: window.location.href,
+          browser: 'Admin Test',
+          os: 'Admin Test',
+          deviceType: 'desktop',
+          additionalData: { test: true, triggeredBy: 'admin_test_button', timestamp: new Date().toISOString() },
+        }
+      });
+      if (error) {
+        showToast(`❌ Edge Function failed: ${error.message}`, 'error');
+        return;
+      }
+      await fetchErrors();
+      await fetchKPIs();
+      showToast('✅ Test error logged successfully! Check the list.');
+    } catch (err: any) {
+      showToast(`❌ Test failed: ${err.message}`, 'error');
+    }
   };
 
   if (loading) return <LoadingSpinner color="#ef4444" />;
@@ -146,6 +181,10 @@ function ErrorLogsSubTab({ adminId }: { adminId: string }) {
             textTransform: 'capitalize',
           }}>{s}</button>
         ))}
+        <button onClick={testErrorLogging} style={{
+          padding: '5px 14px', borderRadius: 20, border: '1px solid #e2e8f0', background: '#f8fafc',
+          color: '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+        }}>🧪 Test Error Log</button>
         <div style={{ flex: 1 }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b', cursor: 'pointer' }}>
           <input type="checkbox" checked={showResolved} onChange={e => setShowResolved(e.target.checked)} />
@@ -155,7 +194,7 @@ function ErrorLogsSubTab({ adminId }: { adminId: string }) {
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
         {errors.length === 0 ? (
-          <EmptyState icon="🎉" title="No errors found" sub="All clear! No matching error logs." />
+          <EmptyState icon="✅" title="No errors logged yet" sub="Errors will appear here automatically. Use the 🧪 Test button to verify the pipeline." />
         ) : (
           <div style={{ maxHeight: 600, overflowY: 'auto' }}>
             {errors.map(err => {
