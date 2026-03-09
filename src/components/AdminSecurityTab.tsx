@@ -23,16 +23,18 @@ const eventLabels: Record<string, string> = {
   user_blocked: '❌ User Blocked',
   user_unblocked: '✅ User Unblocked',
   force_logout: '⚡ Force Logout',
+  suspicious_activity: '🔴 Suspicious Activity',
 };
 
-function relativeTime(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function KPICard({ label, value, sub, icon, bg }: { label: string; value: string | number; sub: string; icon: string; bg: string }) {
@@ -48,49 +50,92 @@ function KPICard({ label, value, sub, icon, bg }: { label: string; value: string
   );
 }
 
+function LoadingSpinner({ color = '#7c3aed' }: { color?: string }) {
+  return (
+    <div style={{ textAlign: 'center', padding: 40 }}>
+      <div style={{ width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: color, borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} />
+    </div>
+  );
+}
+
+function EmptyState({ icon = '📭', title = 'No data yet', sub = 'This will populate as users interact with the app.' }: { icon?: string; title?: string; sub?: string }) {
+  return (
+    <div style={{ textAlign: 'center', padding: 40 }}>
+      <div style={{ fontSize: 40, marginBottom: 12 }}>{icon}</div>
+      <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 6 }}>{title}</div>
+      <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' }}>{sub}</div>
+    </div>
+  );
+}
+
 // ─── SUB-TAB 1: ERROR LOGS ───
-function ErrorLogsSubTab() {
+function ErrorLogsSubTab({ adminId }: { adminId: string }) {
   const [errors, setErrors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
-  const [dateRange, setDateRange] = useState('7days');
+  const [moduleFilter] = useState('all');
+  const [showResolved, setShowResolved] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [kpis, setKpis] = useState({ errorsToday: 0, critical: 0, unresolved: 0, affected: 0 });
 
   const fetchErrors = async () => {
-    setLoading(true);
-    const fromDate: Record<string, string> = {
-      today: new Date(new Date().setHours(0,0,0,0)).toISOString(),
-      '7days': new Date(Date.now() - 7*24*60*60*1000).toISOString(),
-      '30days': new Date(Date.now() - 30*24*60*60*1000).toISOString(),
-    };
-    let query = supabase.from('error_logs').select('*').gte('created_at', fromDate[dateRange]).order('created_at', { ascending: false }).limit(200);
-    if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
-    const { data } = await query;
-    setErrors((data as any[]) || []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setFetchError('');
+      let query = supabase.from('error_logs').select('*').order('created_at', { ascending: false }).limit(100);
+      if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
+      if (moduleFilter !== 'all') query = query.eq('module', moduleFilter);
+      if (!showResolved) query = query.eq('is_resolved', false);
+      const { data, error } = await query;
+      if (error) throw error;
+      setErrors((data as any[]) || []);
+    } catch (err: any) {
+      console.error('Admin fetch error:', err);
+      setFetchError('Failed to load error logs.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchErrors(); }, [severityFilter, dateRange]);
+  const fetchKPIs = async () => {
+    try {
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const [r1, r2, r3, r4] = await Promise.all([
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false),
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('is_resolved', false),
+        supabase.from('error_logs').select('user_id').eq('is_resolved', false).not('user_id', 'is', null),
+      ]);
+      setKpis({
+        errorsToday: r1.count || 0,
+        critical: r2.count || 0,
+        unresolved: r3.count || 0,
+        affected: new Set((r4.data as any[])?.map((e: any) => e.user_id)).size,
+      });
+    } catch { /* ignore */ }
+  };
 
-  const markResolved = async (id: string) => {
-    await supabase.from('error_logs').update({ is_resolved: true, resolved_at: new Date().toISOString() } as any).eq('id', id);
+  useEffect(() => { fetchErrors(); fetchKPIs(); }, [severityFilter, showResolved]);
+
+  const markResolved = async (errorId: string) => {
+    await supabase.from('error_logs').update({
+      is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminId,
+    } as any).eq('id', errorId);
     fetchErrors();
+    fetchKPIs();
   };
 
-  const todayErrors = errors.filter(e => new Date(e.created_at).toDateString() === new Date().toDateString());
-  const criticalCount = errors.filter(e => e.severity === 'critical').length;
-  const unresolvedCount = errors.filter(e => !e.is_resolved).length;
-  const affectedUsers = new Set(errors.map(e => e.user_id).filter(Boolean)).size;
-
-  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><div style={{ width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: '#ef4444', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+  if (loading) return <LoadingSpinner color="#ef4444" />;
+  if (fetchError) return <div style={{ color: '#991b1b', textAlign: 'center', padding: 20 }}>❌ {fetchError}</div>;
 
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
-        <KPICard label="Errors Today" value={todayErrors.length} sub="in last 24h" icon="🔴" bg="rgba(239,68,68,0.1)" />
-        <KPICard label="Critical Errors" value={criticalCount} sub="need attention" icon="🟠" bg="rgba(249,115,22,0.1)" />
-        <KPICard label="Unresolved" value={unresolvedCount} sub="pending review" icon="🟡" bg="rgba(245,158,11,0.1)" />
-        <KPICard label="Affected Users" value={affectedUsers} sub="unique users" icon="🟣" bg="rgba(124,58,237,0.1)" />
+        <KPICard label="Errors Today" value={kpis.errorsToday} sub="in last 24h" icon="🔴" bg="rgba(239,68,68,0.1)" />
+        <KPICard label="Critical Errors" value={kpis.critical} sub="need attention" icon="🟠" bg="rgba(249,115,22,0.1)" />
+        <KPICard label="Unresolved" value={kpis.unresolved} sub="pending review" icon="🟡" bg="rgba(245,158,11,0.1)" />
+        <KPICard label="Affected Users" value={kpis.affected} sub="unique users" icon="🟣" bg="rgba(124,58,237,0.1)" />
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -102,17 +147,15 @@ function ErrorLogsSubTab() {
           }}>{s}</button>
         ))}
         <div style={{ flex: 1 }} />
-        {['today', '7days', '30days'].map(r => (
-          <button key={r} onClick={() => setDateRange(r)} style={{
-            padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-            background: dateRange === r ? '#0f172a' : '#f1f5f9', color: dateRange === r ? 'white' : '#64748b',
-          }}>{r === 'today' ? 'Today' : r === '7days' ? '7 Days' : '30 Days'}</button>
-        ))}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b', cursor: 'pointer' }}>
+          <input type="checkbox" checked={showResolved} onChange={e => setShowResolved(e.target.checked)} />
+          Show resolved
+        </label>
       </div>
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
         {errors.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>No errors found 🎉</div>
+          <EmptyState icon="🎉" title="No errors found" sub="All clear! No matching error logs." />
         ) : (
           <div style={{ maxHeight: 600, overflowY: 'auto' }}>
             {errors.map(err => {
@@ -124,7 +167,7 @@ function ErrorLogsSubTab() {
                     <span style={{ fontSize: 12, color: '#64748b', flexShrink: 0, width: 60 }}>{err.module}</span>
                     <span style={{ fontSize: 12.5, color: '#0f172a', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{err.message}</span>
                     <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>{err.user_email?.split('@')[0] || '—'}</span>
-                    <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0, width: 60 }}>{relativeTime(err.created_at)}</span>
+                    <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0, width: 60 }}>{formatDate(err.created_at)}</span>
                     {!err.is_resolved && (
                       <button onClick={e => { e.stopPropagation(); markResolved(err.id); }} style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>Resolve</button>
                     )}
@@ -145,16 +188,25 @@ function ErrorLogsSubTab() {
   );
 }
 
-// ─── SUB-TAB 2: ACTIVE SESSIONS ───
-function ActiveSessionsSubTab() {
+// ─── SUB-TAB 2: AUTHENTICATED SESSIONS ───
+function AuthenticatedSessionsSubTab({ adminId, showToast }: { adminId: string; showToast: (msg: string, type?: string) => void }) {
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
 
   const fetchSessions = async () => {
-    setLoading(true);
-    const { data } = await supabase.from('login_sessions').select('*').eq('is_active', true).order('last_seen', { ascending: false });
-    setSessions((data as any[]) || []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setFetchError('');
+      const { data, error } = await supabase.from('login_sessions').select('*').eq('is_active', true).order('created_at', { ascending: false });
+      if (error) throw error;
+      setSessions((data as any[]) || []);
+    } catch (err: any) {
+      console.error('Admin fetch error:', err);
+      setFetchError('Failed to load sessions.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -163,57 +215,75 @@ function ActiveSessionsSubTab() {
     return () => clearInterval(interval);
   }, []);
 
-  const forceLogout = async (sessionToken: string, userId: string, userEmail: string) => {
-    await supabase.functions.invoke('end-session', { body: { sessionToken, reason: 'forced_logout' } });
+  const forceLogout = async (sessionId: string, userId: string, userEmail: string) => {
+    await supabase.from('login_sessions').update({
+      is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'forced_logout',
+    } as any).eq('id', sessionId);
     await supabase.from('security_events').insert({
       user_id: userId, user_email: userEmail,
       event_type: 'force_logout', severity: 'medium',
-      description: 'Admin forced logout of active session',
+      description: 'Admin force-logged out user',
+      metadata: { session_id: sessionId, admin_id: adminId },
     } as any);
     fetchSessions();
+    showToast(`⚡ Force logged out ${userEmail?.split('@')[0] || 'user'}`);
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><div style={{ width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: '#06b6d4', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
-
   const deviceIcon = (d: string) => d === 'mobile' ? '📱' : d === 'tablet' ? '📋' : '💻';
+  const formatLocation = (s: any) => {
+    const parts = [s.ip_city, s.ip_state].filter(Boolean);
+    return parts.length > 0 ? `${parts.join(', ')} 🇮🇳` : s.ip_country || '—';
+  };
+
+  if (loading) return <LoadingSpinner color="#06b6d4" />;
+  if (fetchError) return <div style={{ color: '#991b1b', textAlign: 'center', padding: 20 }}>❌ {fetchError}</div>;
 
   return (
     <div>
+      <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 16px', marginBottom: 16 }}>
+        <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#0891b2' }}>
+          Users with an open login session (may be idle). For real-time activity, see the <strong>Overview</strong> tab.
+        </div>
+      </div>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
-        <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{sessions.length} user{sessions.length !== 1 ? 's' : ''} online right now</span>
+        <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{sessions.length} authenticated session{sessions.length !== 1 ? 's' : ''}</span>
       </div>
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
         {sessions.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>No active sessions</div>
+          <EmptyState icon="🔐" title="No active sessions" sub="No users are currently logged in." />
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc' }}>
-                {['User', 'IP', 'Location', 'Device', 'Browser', 'OS', 'Started', 'Last Seen', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 12px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map(s => (
-                <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 12px', fontSize: 12.5, fontWeight: 600, color: '#0f172a' }}>{s.user_email?.split('@')[0] || '—'}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{s.ip_address}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{[s.ip_city, s.ip_state, s.ip_country].filter(Boolean).join(', ')}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 14 }}>{deviceIcon(s.device_type)}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.browser}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.os}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8' }}>{relativeTime(s.created_at)}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8' }}>{relativeTime(s.last_seen)}</td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <button onClick={() => forceLogout(s.session_token, s.user_id, s.user_email)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fee2e2', color: '#991b1b', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Force Logout</button>
-                  </td>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+              <thead>
+                <tr style={{ background: '#f8fafc' }}>
+                  {['User', 'IP Address', 'Location', 'ISP', 'Device', 'Browser', 'OS', 'Started', 'Last Seen', ''].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sessions.map(s => (
+                  <tr key={s.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '10px 12px', fontSize: 12.5, fontWeight: 600, color: '#0f172a' }}>{s.user_email?.split('@')[0] || '—'}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{s.ip_address}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{formatLocation(s)}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.ip_isp || '—'}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 14 }}>{deviceIcon(s.device_type)}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.browser}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.os}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8' }}>{formatDate(s.created_at)}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8' }}>{formatDate(s.last_seen)}</td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <button onClick={() => forceLogout(s.id, s.user_id, s.user_email)} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fee2e2', color: '#991b1b', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>Force Logout</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
@@ -224,48 +294,63 @@ function ActiveSessionsSubTab() {
 function LoginHistorySubTab() {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState('7days');
+  const [fetchError, setFetchError] = useState('');
+  const [dateFilter, setDateFilter] = useState('7d');
+  const [userFilter, setUserFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchHistory = async () => {
-    setLoading(true);
-    const fromDate: Record<string, string> = {
-      today: new Date(new Date().setHours(0,0,0,0)).toISOString(),
-      '7days': new Date(Date.now() - 7*24*60*60*1000).toISOString(),
-      '30days': new Date(Date.now() - 30*24*60*60*1000).toISOString(),
-    };
-    const { data } = await supabase.from('login_sessions').select('*').gte('created_at', fromDate[dateRange]).order('created_at', { ascending: false }).limit(200);
-    setHistory((data as any[]) || []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setFetchError('');
+      let query = supabase.from('login_sessions').select('*').order('created_at', { ascending: false }).limit(200);
+      if (userFilter) query = query.ilike('user_email', `%${userFilter}%`);
+      if (dateFilter === '7d') query = query.gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+      if (dateFilter === '30d') query = query.gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+      const { data, error } = await query;
+      if (error) throw error;
+      setHistory((data as any[]) || []);
+    } catch (err: any) {
+      console.error('Admin fetch error:', err);
+      setFetchError('Failed to load login history.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchHistory(); }, [dateRange]);
-
-  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><div style={{ width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+  useEffect(() => { fetchHistory(); }, [dateFilter, userFilter]);
 
   const statusBadge = (s: any) => {
-    if (s.is_active) return <span style={{ fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 20 }}>Active</span>;
-    if (s.logout_reason === 'forced_logout' || s.logout_reason === 'security_block') return <span style={{ fontSize: 10, fontWeight: 700, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 20 }}>Force Ended</span>;
+    if (s.is_active) return <span style={{ fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 20 }}>🟢 Active</span>;
+    if (s.logout_reason === 'forced_logout') return <span style={{ fontSize: 10, fontWeight: 700, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 20 }}>⚡ Force Ended</span>;
+    if (s.logout_reason === 'security_block') return <span style={{ fontSize: 10, fontWeight: 700, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 20 }}>🚫 Blocked</span>;
     return <span style={{ fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: 20 }}>Logged Out</span>;
   };
 
+  const deviceIcon = (d: string) => d === 'mobile' ? '📱' : d === 'tablet' ? '📋' : '💻';
+
+  if (loading) return <LoadingSpinner color="#3b82f6" />;
+  if (fetchError) return <div style={{ color: '#991b1b', textAlign: 'center', padding: 20 }}>❌ {fetchError}</div>;
+
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {['today', '7days', '30days'].map(r => (
-          <button key={r} onClick={() => setDateRange(r)} style={{
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+        <input value={userFilter} onChange={e => setUserFilter(e.target.value)} placeholder="Search by email..." style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 12, fontFamily: 'DM Sans', outline: 'none', width: 200 }} />
+        <div style={{ flex: 1 }} />
+        {['7d', '30d', 'all'].map(r => (
+          <button key={r} onClick={() => setDateFilter(r)} style={{
             padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-            background: dateRange === r ? '#0f172a' : '#f1f5f9', color: dateRange === r ? 'white' : '#64748b',
-          }}>{r === 'today' ? 'Today' : r === '7days' ? '7 Days' : '30 Days'}</button>
+            background: dateFilter === r ? '#0f172a' : '#f1f5f9', color: dateFilter === r ? 'white' : '#64748b',
+          }}>{r === '7d' ? '7 Days' : r === '30d' ? '30 Days' : 'All Time'}</button>
         ))}
       </div>
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
         {history.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>No login history found</div>
+          <EmptyState icon="📋" title="No login history found" sub="Adjust filters to see more results." />
         ) : (
-          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ maxHeight: 600, overflowY: 'auto', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   {['Time', 'User', 'IP', 'Location', 'ISP', 'Device', 'Browser', 'OS', 'Status'].map(h => (
@@ -276,12 +361,12 @@ function LoginHistorySubTab() {
               <tbody>
                 {history.map(s => (
                   <tr key={s.id} onClick={() => setExpandedId(expandedId === s.id ? null : s.id)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8' }}>{relativeTime(s.created_at)}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8' }}>{formatDate(s.created_at)}</td>
                     <td style={{ padding: '10px 12px', fontSize: 12, fontWeight: 600, color: '#0f172a' }}>{s.user_email?.split('@')[0] || '—'}</td>
                     <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{s.ip_address}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{[s.ip_city, s.ip_state].filter(Boolean).join(', ')}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{[s.ip_city, s.ip_state].filter(Boolean).join(', ') || '—'}</td>
                     <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.ip_isp || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 14 }}>{s.device_type === 'mobile' ? '📱' : s.device_type === 'tablet' ? '📋' : '💻'}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 14 }}>{deviceIcon(s.device_type)}</td>
                     <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.browser}</td>
                     <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.os}</td>
                     <td style={{ padding: '10px 12px' }}>{statusBadge(s)}</td>
@@ -297,47 +382,71 @@ function LoginHistorySubTab() {
 }
 
 // ─── SUB-TAB 4: SECURITY EVENTS ───
-function SecurityEventsSubTab() {
+function SecurityEventsSubTab({ adminId, showToast }: { adminId: string; showToast: (msg: string, type?: string) => void }) {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
-  const [dateRange, setDateRange] = useState('7days');
+  const [showReviewed, setShowReviewed] = useState(false);
+  const [kpis, setKpis] = useState({ eventsToday: 0, unreviewed: 0, highSeverity: 0, blockedAttempts: 0 });
 
   const fetchEvents = async () => {
-    setLoading(true);
-    const fromDate: Record<string, string> = {
-      today: new Date(new Date().setHours(0,0,0,0)).toISOString(),
-      '7days': new Date(Date.now() - 7*24*60*60*1000).toISOString(),
-      '30days': new Date(Date.now() - 30*24*60*60*1000).toISOString(),
-    };
-    let query = supabase.from('security_events').select('*').gte('created_at', fromDate[dateRange]).order('created_at', { ascending: false }).limit(200);
-    if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
-    const { data } = await query;
-    setEvents((data as any[]) || []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setFetchError('');
+      let query = supabase.from('security_events').select('*').order('created_at', { ascending: false }).limit(100);
+      if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
+      if (!showReviewed) query = query.eq('is_reviewed', false);
+      const { data, error } = await query;
+      if (error) throw error;
+      setEvents((data as any[]) || []);
+    } catch (err: any) {
+      console.error('Admin fetch error:', err);
+      setFetchError('Failed to load security events.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchEvents(); }, [severityFilter, dateRange]);
+  const fetchKPIs = async () => {
+    try {
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const [r1, r2, r3, r4] = await Promise.all([
+        supabase.from('security_events').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+        supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('is_reviewed', false),
+        supabase.from('security_events').select('*', { count: 'exact', head: true }).in('severity', ['high', 'critical']).eq('is_reviewed', false),
+        supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('event_type', 'blocked_login_attempt'),
+      ]);
+      setKpis({
+        eventsToday: r1.count || 0,
+        unreviewed: r2.count || 0,
+        highSeverity: r3.count || 0,
+        blockedAttempts: r4.count || 0,
+      });
+    } catch { /* ignore */ }
+  };
 
-  const markReviewed = async (id: string) => {
-    await supabase.from('security_events').update({ is_reviewed: true, reviewed_at: new Date().toISOString() } as any).eq('id', id);
+  useEffect(() => { fetchEvents(); fetchKPIs(); }, [severityFilter, showReviewed]);
+
+  const markReviewed = async (eventId: string, notes = '') => {
+    await supabase.from('security_events').update({
+      is_reviewed: true, reviewed_by: adminId, reviewed_at: new Date().toISOString(), admin_notes: notes,
+    } as any).eq('id', eventId);
     fetchEvents();
+    fetchKPIs();
+    showToast('✅ Event marked as reviewed');
   };
 
-  const todayEvents = events.filter(e => new Date(e.created_at).toDateString() === new Date().toDateString());
-  const unreviewedCount = events.filter(e => !e.is_reviewed).length;
-  const highSeverity = events.filter(e => e.severity === 'high' || e.severity === 'critical').length;
-  const blockedAttempts = events.filter(e => e.event_type === 'blocked_login_attempt').length;
-
-  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><div style={{ width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: '#f59e0b', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+  if (loading) return <LoadingSpinner color="#f59e0b" />;
+  if (fetchError) return <div style={{ color: '#991b1b', textAlign: 'center', padding: 20 }}>❌ {fetchError}</div>;
 
   return (
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
-        <KPICard label="Events Today" value={todayEvents.length} sub="in last 24h" icon="🛡" bg="rgba(6,182,212,0.1)" />
-        <KPICard label="Unreviewed" value={unreviewedCount} sub="pending review" icon="📋" bg="rgba(245,158,11,0.1)" />
-        <KPICard label="High Severity" value={highSeverity} sub="need attention" icon="⚠️" bg="rgba(249,115,22,0.1)" />
-        <KPICard label="Blocked Attempts" value={blockedAttempts} sub="login denied" icon="🚫" bg="rgba(239,68,68,0.1)" />
+        <KPICard label="Events Today" value={kpis.eventsToday} sub="in last 24h" icon="🛡" bg="rgba(6,182,212,0.1)" />
+        <KPICard label="Unreviewed" value={kpis.unreviewed} sub="pending review" icon="📋" bg="rgba(245,158,11,0.1)" />
+        <KPICard label="High Severity" value={kpis.highSeverity} sub="need attention" icon="⚠️" bg="rgba(249,115,22,0.1)" />
+        <KPICard label="Blocked Attempts" value={kpis.blockedAttempts} sub="login denied" icon="🚫" bg="rgba(239,68,68,0.1)" />
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -349,24 +458,22 @@ function SecurityEventsSubTab() {
           }}>{s}</button>
         ))}
         <div style={{ flex: 1 }} />
-        {['today', '7days', '30days'].map(r => (
-          <button key={r} onClick={() => setDateRange(r)} style={{
-            padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-            background: dateRange === r ? '#0f172a' : '#f1f5f9', color: dateRange === r ? 'white' : '#64748b',
-          }}>{r === 'today' ? 'Today' : r === '7days' ? '7 Days' : '30 Days'}</button>
-        ))}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b', cursor: 'pointer' }}>
+          <input type="checkbox" checked={showReviewed} onChange={e => setShowReviewed(e.target.checked)} />
+          Show reviewed
+        </label>
       </div>
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
         {events.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>No security events 🎉</div>
+          <EmptyState icon="🎉" title="No security events" sub="No matching events found." />
         ) : (
           <div style={{ maxHeight: 600, overflowY: 'auto' }}>
             {events.map(ev => {
               const sev = severityColors[ev.severity] || severityColors.medium;
               return (
                 <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid #f1f5f9' }}>
-                  <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0, width: 60 }}>{relativeTime(ev.created_at)}</span>
+                  <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0, width: 60 }}>{formatDate(ev.created_at)}</span>
                   <span style={{ fontSize: 9, fontWeight: 800, background: sev.bg, color: sev.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase', flexShrink: 0 }}>{ev.severity}</span>
                   <span style={{ fontSize: 11, color: '#0f172a', fontWeight: 600, flexShrink: 0, minWidth: 140 }}>{eventLabels[ev.event_type] || ev.event_type}</span>
                   <span style={{ fontSize: 12, color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.user_email?.split('@')[0] || '—'}</span>
@@ -388,64 +495,83 @@ function SecurityEventsSubTab() {
 }
 
 // ─── SUB-TAB 5: BLOCKED USERS ───
-function BlockedUsersSubTab() {
+function BlockedUsersSubTab({ adminId, showToast }: { adminId: string; showToast: (msg: string, type?: string) => void }) {
   const [blocked, setBlocked] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
   const [blockEmail, setBlockEmail] = useState('');
   const [blockReason, setBlockReason] = useState('');
   const [blocking, setBlocking] = useState(false);
 
   const fetchBlocked = async () => {
-    setLoading(true);
-    const { data } = await supabase.from('user_security_settings').select('*').eq('is_blocked', true);
-    setBlocked((data as any[]) || []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      setFetchError('');
+      const { data, error } = await supabase.from('user_security_settings').select('*').eq('is_blocked', true).order('blocked_at', { ascending: false });
+      if (error) throw error;
+      setBlocked((data as any[]) || []);
+    } catch (err: any) {
+      console.error('Admin fetch error:', err);
+      setFetchError('Failed to load blocked users.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchBlocked(); }, []);
 
   const unblockUser = async (userId: string, email: string) => {
-    await supabase.from('user_security_settings').update({ is_blocked: false, block_reason: null, blocked_at: null, updated_at: new Date().toISOString() } as any).eq('user_id', userId);
+    await supabase.from('user_security_settings').update({
+      is_blocked: false, block_reason: null, blocked_at: null, blocked_by: null,
+    } as any).eq('user_id', userId);
     await supabase.from('security_events').insert({
       user_id: userId, user_email: email,
-      event_type: 'user_unblocked', severity: 'medium',
-      description: 'User unblocked by admin',
+      event_type: 'user_unblocked', severity: 'low',
+      description: 'Admin manually unblocked user',
+      metadata: { admin_id: adminId },
     } as any);
     fetchBlocked();
+    showToast(`✅ ${email} unblocked successfully`);
   };
 
   const blockNewUser = async () => {
     if (!blockEmail.trim()) return;
     setBlocking(true);
-    // Lookup user by email from login_sessions
-    const { data: sessionData } = await supabase.from('login_sessions').select('user_id').eq('user_email', blockEmail.trim().toLowerCase()).limit(1);
-    const userId = (sessionData as any[])?.[0]?.user_id;
-    if (!userId) {
-      alert('User not found. They must have logged in at least once.');
+    try {
+      const { data: sessionData } = await supabase.from('login_sessions').select('user_id').eq('user_email', blockEmail.trim().toLowerCase()).limit(1);
+      const userId = (sessionData as any[])?.[0]?.user_id;
+      if (!userId) {
+        showToast('User not found. They must have logged in at least once.', 'error');
+        setBlocking(false);
+        return;
+      }
+      await supabase.from('user_security_settings').upsert({
+        user_id: userId, user_email: blockEmail.trim(),
+        is_blocked: true, block_reason: blockReason || 'Blocked by admin',
+        blocked_at: new Date().toISOString(), blocked_by: adminId,
+      } as any, { onConflict: 'user_id' });
+      await supabase.from('security_events').insert({
+        user_id: userId, user_email: blockEmail.trim(),
+        event_type: 'user_blocked', severity: 'high',
+        description: `Admin manually blocked user: ${blockReason || 'No reason specified'}`,
+        metadata: { admin_id: adminId },
+      } as any);
+      setBlockEmail('');
+      setBlockReason('');
+      fetchBlocked();
+      showToast(`🚫 ${blockEmail.trim()} blocked successfully`);
+    } catch (err: any) {
+      showToast(`❌ ${err.message}`, 'error');
+    } finally {
       setBlocking(false);
-      return;
     }
-    await supabase.from('user_security_settings').upsert({
-      user_id: userId, user_email: blockEmail.trim(),
-      is_blocked: true, block_reason: blockReason || 'Blocked by admin',
-      blocked_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    } as any, { onConflict: 'user_id' });
-    await supabase.from('security_events').insert({
-      user_id: userId, user_email: blockEmail.trim(),
-      event_type: 'user_blocked', severity: 'high',
-      description: `User blocked by admin: ${blockReason || 'No reason specified'}`,
-    } as any);
-    setBlockEmail('');
-    setBlockReason('');
-    setBlocking(false);
-    fetchBlocked();
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 40 }}><div style={{ width: 24, height: 24, border: '3px solid #e2e8f0', borderTopColor: '#ef4444', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+  if (loading) return <LoadingSpinner color="#ef4444" />;
+  if (fetchError) return <div style={{ color: '#991b1b', textAlign: 'center', padding: 20 }}>❌ {fetchError}</div>;
 
   return (
     <div>
-      {/* Block New User */}
       <div style={{ ...glassCard, padding: 20, marginBottom: 16 }}>
         <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a', marginBottom: 12 }}>🚫 Block New User</div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
@@ -463,9 +589,8 @@ function BlockedUsersSubTab() {
         </div>
       </div>
 
-      {/* Blocked Users List */}
       {blocked.length === 0 ? (
-        <div style={{ ...glassCard, padding: 40, textAlign: 'center', color: '#94a3b8' }}>No blocked users 🎉</div>
+        <div style={{ ...glassCard }}><EmptyState icon="🎉" title="No blocked users" sub="All users are currently allowed access." /></div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
           {blocked.map(u => (
@@ -475,12 +600,10 @@ function BlockedUsersSubTab() {
                   <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{u.user_email || 'Unknown'}</div>
                   <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#ef4444', marginTop: 4 }}>🚫 {u.block_reason || 'No reason specified'}</div>
                   <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                    Blocked: {u.blocked_at ? new Date(u.blocked_at).toLocaleString() : '—'} · Violations: {u.violation_count || 0}
+                    Blocked: {u.blocked_at ? formatDate(u.blocked_at) : '—'} · Violations: {u.violation_count || 0}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => unblockUser(u.user_id, u.user_email)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✅ Unblock</button>
-                </div>
+                <button onClick={() => unblockUser(u.user_id, u.user_email)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✅ Unblock</button>
               </div>
             </div>
           ))}
@@ -491,12 +614,12 @@ function BlockedUsersSubTab() {
 }
 
 // ─── MAIN SECURITY TAB ───
-export default function SecurityTab() {
+export default function SecurityTab({ adminId, showToast }: { adminId: string; showToast: (msg: string, type?: string) => void }) {
   const [subTab, setSubTab] = useState('errors');
 
   const subTabs = [
     { id: 'errors', label: '🔴 Error Logs' },
-    { id: 'active', label: '🟢 Active Sessions' },
+    { id: 'sessions', label: '🔐 Authenticated Sessions' },
     { id: 'history', label: '📋 Login History' },
     { id: 'events', label: '🛡 Security Events' },
     { id: 'blocked', label: '🚫 Blocked Users' },
@@ -511,7 +634,6 @@ export default function SecurityTab() {
         </div>
       </div>
 
-      {/* Sub-tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, flexWrap: 'wrap' }}>
         {subTabs.map(t => (
           <button key={t.id} onClick={() => setSubTab(t.id)} style={{
@@ -524,11 +646,11 @@ export default function SecurityTab() {
         ))}
       </div>
 
-      {subTab === 'errors' && <ErrorLogsSubTab />}
-      {subTab === 'active' && <ActiveSessionsSubTab />}
+      {subTab === 'errors' && <ErrorLogsSubTab adminId={adminId} />}
+      {subTab === 'sessions' && <AuthenticatedSessionsSubTab adminId={adminId} showToast={showToast} />}
       {subTab === 'history' && <LoginHistorySubTab />}
-      {subTab === 'events' && <SecurityEventsSubTab />}
-      {subTab === 'blocked' && <BlockedUsersSubTab />}
+      {subTab === 'events' && <SecurityEventsSubTab adminId={adminId} showToast={showToast} />}
+      {subTab === 'blocked' && <BlockedUsersSubTab adminId={adminId} showToast={showToast} />}
     </div>
   );
 }
