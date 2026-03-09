@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.end-session]
 verify_jwt = false
+
+[functions.manage-team]
+verify_jwt = false
