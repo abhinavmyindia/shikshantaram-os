@@ -1,6 +1,8 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { initSession } from '@/utils/sessionSecurity';
+import SecurityBlockPopup from '@/components/SecurityBlockPopup';
 
 const bg: CSSProperties = {
   minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
