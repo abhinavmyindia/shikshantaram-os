@@ -269,7 +269,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   const generateStepCopy = async (step: FunnelStep) => {
     setGeneratingCopy(step.stepId);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke('funnel-builder', {
+      const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-step-copy', step, brief: funnelBrief }
       });
       if (fnErr) throw new Error(fnErr.message);
