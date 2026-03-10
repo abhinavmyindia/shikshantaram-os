@@ -36,6 +36,9 @@ const getModuleFromUrl = (url: string): string => {
   return 'dashboard';
 };
 
+// ─── DEDUPLICATION CACHE ───
+const recentErrors = new Map<string, number>();
+
 // ─── MAIN LOG ERROR FUNCTION ───
 export const logError = async (
   errorType: string,
@@ -44,6 +47,20 @@ export const logError = async (
   additionalData?: Record<string, any>
 ): Promise<void> => {
   try {
+    // Dedup check — same error type + message within 10 seconds = skip
+    const dedupKey = `${errorType}::${String(message).substring(0, 100)}`;
+    const lastLogged = recentErrors.get(dedupKey);
+    if (lastLogged && Date.now() - lastLogged < 10000) {
+      return; // Skip duplicate
+    }
+    recentErrors.set(dedupKey, Date.now());
+
+    // Clean old entries every 100 calls
+    if (recentErrors.size > 100) {
+      const cutoff = Date.now() - 30000;
+      recentErrors.forEach((time, key) => { if (time < cutoff) recentErrors.delete(key); });
+    }
+
     const device = getDeviceInfo();
     const pageUrl = window.location.href;
     const module = getModuleFromUrl(pageUrl);
@@ -111,6 +128,20 @@ export const logError = async (
 // ─── GLOBAL ERROR TRACKING SETUP ───
 let isTrackerInitialized = false;
 
+// URLs that should NEVER be logged (prevents infinite loops)
+const NEVER_LOG_URLS = [
+  'log-error',
+  'track-activity',
+  'log-session',
+  'end-session',
+  'supabase.co/functions/v1/log-error',
+];
+
+const shouldLogUrl = (url: string): boolean => {
+  const urlStr = String(url).toLowerCase();
+  return !NEVER_LOG_URLS.some(skip => urlStr.includes(skip));
+};
+
 export const initGlobalErrorTracking = (): void => {
   if (isTrackerInitialized) return;
   isTrackerInitialized = true;
@@ -137,23 +168,37 @@ export const initGlobalErrorTracking = (): void => {
     );
   });
 
-  // 3. Catch network errors (fetch failures)
+  // 3. Catch network errors (fetch failures) — with infinite loop guard
   const originalFetch = window.fetch;
-  window.fetch = async (...args) => {
+
+  window.fetch = async (...args): Promise<Response> => {
+    const url = typeof args[0] === 'string' ? args[0]
+      : args[0] instanceof URL ? args[0].href
+      : (args[0] as Request)?.url || 'unknown';
+
+    // GUARD: Never intercept our own logging calls
+    if (!shouldLogUrl(url)) {
+      return originalFetch(...args);
+    }
+
     try {
       const response = await originalFetch(...args);
       if (!response.ok && response.status >= 500) {
-        const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url || 'unknown';
-        if (!url.includes('log-error')) {
-          logError('api_error', `HTTP ${response.status} from ${url}`, undefined, { status: response.status, url });
-        }
+        logError(
+          'api_error',
+          `HTTP ${response.status} from ${url}`,
+          undefined,
+          { status: response.status, url }
+        );
       }
       return response;
     } catch (fetchError: any) {
-      const url = typeof args[0] === 'string' ? args[0] : 'unknown';
-      if (!url.includes('log-error')) {
-        logError('network_error', fetchError?.message || 'Network request failed', fetchError?.stack, { url });
-      }
+      logError(
+        'network_error',
+        fetchError?.message || 'Network request failed',
+        fetchError?.stack,
+        { url }
+      );
       throw fetchError;
     }
   };
