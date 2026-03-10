@@ -799,7 +799,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
 
   /* ───────── RENDER: VISUALIZER ───────── */
   if (funnelStep === 'visualizer' && funnelData) {
-    const selStep = funnelData.steps.find(st => st.stepId === selectedStep);
+    const selStep = funnelData.steps?.find(st => st.stepId === selectedStep);
     const hasCopyGenerated = Object.keys(stepCopy).length > 0;
     const isComplete = hasCopyGenerated && emailSequence;
 
