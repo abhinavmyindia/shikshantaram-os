@@ -344,8 +344,16 @@ function parseJsonResponse(text: string): any {
     }
     if (clean.trimStart().startsWith('{')) {
       let repaired = clean;
+      // Remove incomplete trailing key-value pairs more aggressively
+      // Handle truncated string value: ,"key": "some truncated text
       repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
-      repaired = repaired.replace(/,\s*"[^"]*":\s*\[?[^\]]*$/, '');
+      // Handle truncated array value: ,"key": ["item1","trunc
+      repaired = repaired.replace(/,\s*"[^"]*":\s*\[[^\]]*$/, '');
+      // Handle truncated object value: ,"key": {stuff
+      repaired = repaired.replace(/,\s*"[^"]*":\s*\{[^}]*$/, '');
+      // Handle key without value: ,"key":
+      repaired = repaired.replace(/,\s*"[^"]*":\s*$/, '');
+      // Handle just a key: ,"key
       repaired = repaired.replace(/,\s*"[^"]*$/, '');
       repaired = repaired.replace(/,\s*$/, '');
       repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
@@ -366,6 +374,7 @@ function parseJsonResponse(text: string): any {
       try {
         return JSON.parse(repaired);
       } catch (e2) {
+        // Aggressive: find the last complete key-value pair by finding last "}
         const lastGoodBrace = repaired.lastIndexOf('}');
         if (lastGoodBrace > 0) {
           let aggressive = repaired.substring(0, lastGoodBrace + 1);
