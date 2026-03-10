@@ -1,5 +1,6 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
 
 /* ───────── Prefill Types ───────── */
@@ -252,7 +253,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     setFunnelStep('generating');
     setError(null);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke('funnel-builder', {
+      const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-funnel', brief: funnelBrief, funnelType: { name: chosenType!.name, stepCount: chosenType!.stepCount } }
       });
       if (fnErr) throw new Error(fnErr.message);
@@ -268,7 +269,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   const generateStepCopy = async (step: FunnelStep) => {
     setGeneratingCopy(step.stepId);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke('funnel-builder', {
+      const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-step-copy', step, brief: funnelBrief }
       });
       if (fnErr) throw new Error(fnErr.message);
@@ -285,7 +286,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     setGeneratingEmails(true);
     setError(null);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke('funnel-builder', {
+      const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-emails', brief: funnelBrief, funnelData }
       });
       if (fnErr) throw new Error(fnErr.message);

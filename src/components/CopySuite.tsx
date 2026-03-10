@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
 
 /* ───────── Types ───────── */
@@ -198,7 +199,7 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
     scrollToTop();
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('generate-copy', {
+      const { data, error: fnError } = await invokeWithRetry('generate-copy', {
         body: {
           copyType: selectedType.name,
           baseBrief: brief,

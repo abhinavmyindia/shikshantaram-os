@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
 
 /* ───────── Types ───────── */
@@ -277,7 +278,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
     setError('');
     setOfferStep('generating');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('offer-creation', {
+      const { data, error: fnError } = await invokeWithRetry('offer-creation', {
         body: { action: 'generate-structures', brief: offerBrief },
       });
       if (fnError) throw fnError;
@@ -296,7 +297,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
     setOfferStep('building');
     const chosen = offerStructures?.find(s => s.structureId === selectedStructure);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('offer-creation', {
+      const { data, error: fnError } = await invokeWithRetry('offer-creation', {
         body: { action: 'build-offer', brief: offerBrief, chosenStructure: chosen },
       });
       if (fnError) throw fnError;

@@ -1,5 +1,6 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
 
 /* ───────── Types ───────── */
@@ -474,7 +475,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setLoadingStartTime(Date.now());
     setAiStep('loading-ideas');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: { action: 'generate-ideas', niche: inputData.niche, country: inputData.country, productType: inputData.productType },
       });
       if (fnError) throw fnError;
@@ -493,7 +494,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setError('');
     setRawIdeaStep('analyzing');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: { action: 'analyze-idea', ideaText: rawIdeaData.ideaText, country: rawIdeaData.country },
       });
       if (fnError) throw fnError;
@@ -515,7 +516,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setAiStep('loading-ideas');
     const chosenAngle = ideaAnalysis.angles?.find(a => a.angleId === selectedAngle);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: {
           action: 'generate-ideas-from-raw',
           ideaText: rawIdeaData.ideaText,
@@ -550,7 +551,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setLoadingStartTime(Date.now());
     setAiStep('loading-report');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: { action: 'deep-research', product, inputData },
       });
       if (fnError) throw fnError;
@@ -580,7 +581,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     try {
       const existingNames = productIdeas.map(p => p.productName);
       const rawIdea = isRawResultsMode ? productIdeas[0]?.originalIdea : undefined;
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: {
           action: 'generate-more',
           niche: inputData.niche,
