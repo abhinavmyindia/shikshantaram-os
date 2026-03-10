@@ -253,7 +253,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     setFunnelStep('generating');
     setError(null);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke('funnel-builder', {
+      const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-funnel', brief: funnelBrief, funnelType: { name: chosenType!.name, stepCount: chosenType!.stepCount } }
       });
       if (fnErr) throw new Error(fnErr.message);
