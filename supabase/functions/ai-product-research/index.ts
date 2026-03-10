@@ -555,7 +555,15 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
 
     console.log(`AI Product Research: action=${action}, model=${model}`);
 
-    const aiResult = await callLovableAI(prompt, model, maxTokens);
+    let aiResult = await callLovableAI(prompt, model, maxTokens);
+
+    // If deep-research was truncated, retry with conciseness instruction
+    if (aiResult.finishReason === 'length' && action === 'deep-research') {
+      console.warn('Deep research truncated, retrying with conciseness prompt...');
+      const concisePrompt = prompt + '\n\nCRITICAL: Keep ALL text values SHORT and concise (1-2 sentences max per field). The previous attempt was truncated. Prioritize completing the ENTIRE JSON structure over verbose descriptions.';
+      aiResult = await callLovableAI(concisePrompt, model, maxTokens);
+      logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_retry', model, aiResult.usage);
+    }
 
     // Log usage (fire-and-forget)
     logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType, model, aiResult.usage);
@@ -567,7 +575,7 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       });
     } catch (parseErr) {
       console.error("JSON parse error:", parseErr, "Raw:", aiResult.content.substring(0, 500));
-      return new Response(JSON.stringify({ error: "Failed to parse AI response", raw: aiResult.content.substring(0, 200) }), {
+      return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
