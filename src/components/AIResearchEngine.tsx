@@ -516,7 +516,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setAiStep('loading-ideas');
     const chosenAngle = ideaAnalysis.angles?.find(a => a.angleId === selectedAngle);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: {
           action: 'generate-ideas-from-raw',
           ideaText: rawIdeaData.ideaText,
