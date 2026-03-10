@@ -397,6 +397,7 @@ function parseJsonResponse(text: string): any {
 interface AIResult {
   content: string;
   usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null;
+  finishReason: string | null;
 }
 
 async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<AIResult> {
@@ -427,6 +428,7 @@ async function callLovableAI(prompt: string, model: string, maxTokens: number): 
     return {
       content: data.choices?.[0]?.message?.content || '',
       usage: data.usage || null,
+      finishReason: data.choices?.[0]?.finish_reason || null,
     };
   }
   throw new Error("AI is busy right now. Please wait a moment and try again.");
