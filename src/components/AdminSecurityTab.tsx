@@ -68,8 +68,306 @@ function EmptyState({ icon = '📭', title = 'No data yet', sub = 'This will pop
   );
 }
 
-// ─── SUB-TAB 1: ERROR LOGS ───
+// ─── SUB-TAB 1: ERROR LOGS (Grouped + Intelligent) ───
 function ErrorLogsSubTab({ adminId, showToast }: { adminId: string; showToast: (msg: string, type?: string) => void }) {
+  const [errors, setErrors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('all');
+  const [showResolved, setShowResolved] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [kpis, setKpis] = useState({ errorsToday: 0, critical: 0, unresolved: 0, affected: 0 });
+
+  const fetchErrors = async () => {
+    try {
+      setLoading(true);
+      setFetchError('');
+      let query = supabase.from('error_logs').select('*').order('last_seen_at', { ascending: false }).limit(200);
+      if (severityFilter !== 'all') query = query.eq('severity', severityFilter);
+      if (!showResolved) query = query.eq('is_resolved', false);
+      const { data, error } = await query;
+      if (error) {
+        if (error.code === '42501') {
+          setFetchError('Permission denied. Make sure your user ID is in the admin_users table.');
+        } else {
+          setFetchError(`Failed to load: ${error.message}`);
+        }
+        return;
+      }
+
+      // Group by fingerprint on client side
+      const grouped = new Map<string, any>();
+      ((data as any[]) || []).forEach(err => {
+        const key = err.fingerprint || err.id;
+        if (!grouped.has(key)) {
+          grouped.set(key, { ...err, totalOccurrences: err.occurrence_count || 1 });
+        } else {
+          const existing = grouped.get(key);
+          existing.totalOccurrences += (err.occurrence_count || 1);
+          if (new Date(err.last_seen_at || err.created_at) > new Date(existing.last_seen_at || existing.created_at)) {
+            grouped.set(key, { ...err, totalOccurrences: existing.totalOccurrences });
+          }
+        }
+      });
+
+      setErrors(Array.from(grouped.values()));
+    } catch (err: any) {
+      console.error('Admin fetch error:', err);
+      setFetchError('Failed to load error logs.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchKPIs = async () => {
+    try {
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const [r1, r2, r3, r4] = await Promise.all([
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString()),
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false),
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('is_resolved', false),
+        supabase.from('error_logs').select('user_id').eq('is_resolved', false).not('user_id', 'is', null),
+      ]);
+      setKpis({
+        errorsToday: r1.count || 0,
+        critical: r2.count || 0,
+        unresolved: r3.count || 0,
+        affected: new Set((r4.data as any[])?.map((e: any) => e.user_id)).size,
+      });
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => { fetchErrors(); fetchKPIs(); }, [severityFilter, showResolved]);
+
+  const markResolved = async (errorId: string) => {
+    await supabase.from('error_logs').update({
+      is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminId,
+    } as any).eq('id', errorId);
+    showToast('✅ Error marked as resolved');
+    fetchErrors();
+    fetchKPIs();
+  };
+
+  const resolveAll = async () => {
+    if (!confirm('Mark all visible errors as resolved?')) return;
+    const ids = errors.filter(e => !e.is_resolved).map(e => e.id);
+    if (ids.length === 0) return;
+    await supabase.from('error_logs')
+      .update({ is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminId } as any)
+      .in('id', ids);
+    showToast(`✅ ${ids.length} errors resolved`);
+    fetchErrors();
+    fetchKPIs();
+  };
+
+  const clearResolved = async () => {
+    if (!confirm('Delete all resolved errors permanently?')) return;
+    await supabase.from('error_logs').delete().eq('is_resolved', true);
+    showToast('🗑 Resolved errors cleared');
+    fetchErrors();
+    fetchKPIs();
+  };
+
+  const testErrorLogging = async () => {
+    try {
+      const { error } = await supabase.functions.invoke('log-error', {
+        body: {
+          errorType: 'test_error',
+          severity: 'warning',
+          message: 'Admin manually triggered test error to verify logging pipeline',
+          module: 'admin',
+          pageUrl: window.location.href,
+          browser: 'Admin Test',
+          os: 'Admin Test',
+          deviceType: 'desktop',
+          additionalData: { test: true, triggeredBy: 'admin_test_button', timestamp: new Date().toISOString() },
+        }
+      });
+      if (error) {
+        showToast(`❌ Edge Function failed: ${error.message}`, 'error');
+        return;
+      }
+      await fetchErrors();
+      await fetchKPIs();
+      showToast('✅ Test error logged successfully! Check the list.');
+    } catch (err: any) {
+      showToast(`❌ Test failed: ${err.message}`, 'error');
+    }
+  };
+
+  const copyDebugReport = (err: any) => {
+    const report = `## Bug Report — Shikshantaram OS
+**Error Type:** ${err.error_type}
+**Severity:** ${err.severity}
+**Module:** ${err.module}
+**Message:** ${err.message}
+**Occurrences:** ${err.totalOccurrences}x (first: ${new Date(err.first_seen_at || err.created_at).toLocaleString('en-IN')}, last: ${new Date(err.last_seen_at || err.created_at).toLocaleString('en-IN')})
+**Affected User:** ${err.user_email || 'Unknown'}
+**Page:** ${err.page_url || 'Unknown'}
+**Browser/OS:** ${err.browser || '?'} on ${err.os || '?'} (${err.device_type || '?'})
+
+**Auto Diagnosis:** ${err.auto_diagnosis || 'Not available'}
+**Suggested Fix:** ${err.suggested_fix || 'Not available'}
+
+**Stack Trace:**
+\`\`\`
+${err.stack_trace || 'No stack trace available'}
+\`\`\`
+
+**Additional Data:**
+\`\`\`json
+${JSON.stringify(err.additional_data || {}, null, 2)}
+\`\`\``;
+
+    navigator.clipboard.writeText(report);
+    showToast('📋 Debug report copied to clipboard');
+  };
+
+  if (loading) return <LoadingSpinner color="#ef4444" />;
+  if (fetchError) return <div style={{ color: '#991b1b', textAlign: 'center', padding: 20 }}>❌ {fetchError}</div>;
+
+  const sevCardColors: Record<string, { bg: string; border: string; badge: string }> = {
+    warning:  { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.18)', badge: '#f59e0b' },
+    error:    { bg: 'rgba(239,68,68,0.05)', border: 'rgba(239,68,68,0.15)', badge: '#ef4444' },
+    critical: { bg: 'rgba(124,58,237,0.05)', border: 'rgba(124,58,237,0.18)', badge: '#7c3aed' },
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
+        <KPICard label="Errors Today" value={kpis.errorsToday} sub="in last 24h" icon="🔴" bg="rgba(239,68,68,0.1)" />
+        <KPICard label="Critical Errors" value={kpis.critical} sub="need attention" icon="🟠" bg="rgba(249,115,22,0.1)" />
+        <KPICard label="Unresolved" value={kpis.unresolved} sub="pending review" icon="🟡" bg="rgba(245,158,11,0.1)" />
+        <KPICard label="Affected Users" value={kpis.affected} sub="unique users" icon="🟣" bg="rgba(124,58,237,0.1)" />
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        {['all', 'warning', 'error', 'critical'].map(s => (
+          <button key={s} onClick={() => setSeverityFilter(s)} style={{
+            padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+            background: severityFilter === s ? '#7c3aed' : '#f1f5f9', color: severityFilter === s ? 'white' : '#64748b',
+            textTransform: 'capitalize' as const,
+          }}>{s}</button>
+        ))}
+        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
+        <button onClick={resolveAll} style={{
+          padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(5,150,105,0.2)',
+          background: 'rgba(5,150,105,0.06)', color: '#059669', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+        }}>✓ Resolve All</button>
+        <button onClick={clearResolved} style={{
+          padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(239,68,68,0.15)',
+          background: 'rgba(239,68,68,0.05)', color: '#dc2626', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+        }}>🗑 Clear Resolved</button>
+        <button onClick={testErrorLogging} style={{
+          padding: '5px 14px', borderRadius: 20, border: '1px solid #e2e8f0', background: '#f8fafc',
+          color: '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+        }}>🧪 Test</button>
+        <div style={{ flex: 1 }} />
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b', cursor: 'pointer' }}>
+          <input type="checkbox" checked={showResolved} onChange={e => setShowResolved(e.target.checked)} />
+          Show resolved
+        </label>
+      </div>
+
+      {errors.length === 0 ? (
+        <div style={{ ...glassCard }}>
+          <EmptyState icon="✅" title="No errors logged yet" sub="Errors will appear here automatically. Use the 🧪 Test button to verify the pipeline." />
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {errors.map(err => {
+            const colors = sevCardColors[err.severity as string] || sevCardColors.error;
+            const isExpanded = expandedId === err.id;
+
+            return (
+              <div key={err.id} style={{
+                background: colors.bg, border: `1px solid ${colors.border}`,
+                borderRadius: 14, overflow: 'hidden',
+              }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', cursor: 'pointer' }}
+                  onClick={() => setExpandedId(isExpanded ? null : err.id)}>
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, background: colors.badge, color: 'white',
+                    padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' as const, flexShrink: 0,
+                  }}>{err.severity}</span>
+                  <span style={{ fontSize: 11, color: '#64748b', flexShrink: 0, fontWeight: 600 }}>{err.module}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{err.message}</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+                      {err.user_email || '—'} · {formatDate(err.last_seen_at || err.created_at)}
+                    </div>
+                  </div>
+                  {err.totalOccurrences > 1 && (
+                    <span style={{
+                      fontSize: 11, fontWeight: 900, background: colors.badge, color: 'white',
+                      padding: '2px 10px', borderRadius: 20, flexShrink: 0,
+                    }}>×{err.totalOccurrences}</span>
+                  )}
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button onClick={e => { e.stopPropagation(); setExpandedId(isExpanded ? null : err.id); }} style={{
+                      background: '#f1f5f9', border: 'none', padding: '4px 10px', borderRadius: 8, cursor: 'pointer',
+                      fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 10, color: '#374151',
+                    }}>{isExpanded ? '▲ Less' : '▼ Details'}</button>
+                    <button onClick={e => { e.stopPropagation(); copyDebugReport(err); }} style={{
+                      background: '#f1f5f9', border: 'none', padding: '4px 10px', borderRadius: 8, cursor: 'pointer',
+                      fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 10, color: '#374151',
+                    }}>📋 Copy</button>
+                    {!err.is_resolved && (
+                      <button onClick={e => { e.stopPropagation(); markResolved(err.id); }} style={{
+                        background: 'rgba(5,150,105,0.1)', border: 'none', padding: '4px 10px', borderRadius: 8, cursor: 'pointer',
+                        fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 10, color: '#059669',
+                      }}>✓ Resolve</button>
+                    )}
+                    {err.is_resolved && <span style={{ fontSize: 10, color: '#15803d', fontWeight: 700 }}>✓</span>}
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {isExpanded && (
+                  <div style={{ padding: '0 16px 16px', display: 'grid', gap: 10 }}>
+                    {err.auto_diagnosis && (
+                      <div style={{ background: 'rgba(124,58,237,0.06)', borderRadius: 10, padding: '12px 14px' }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', marginBottom: 4 }}>🔍 Auto Diagnosis</div>
+                        <div style={{ fontSize: 12.5, color: '#1e1b4b', lineHeight: 1.5 }}>{err.auto_diagnosis}</div>
+                      </div>
+                    )}
+                    {err.suggested_fix && (
+                      <div style={{ background: 'rgba(5,150,105,0.06)', borderRadius: 10, padding: '12px 14px' }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#059669', marginBottom: 4 }}>✅ Suggested Fix</div>
+                        <div style={{ fontSize: 12.5, color: '#064e3b', lineHeight: 1.5 }}>{err.suggested_fix}</div>
+                      </div>
+                    )}
+                    {err.totalOccurrences > 1 && (
+                      <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: 10, padding: '12px 14px' }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#2563eb', marginBottom: 4 }}>📊 Occurrence Timeline</div>
+                        <div style={{ fontSize: 12, color: '#1e3a5f' }}>
+                          First seen: {new Date(err.first_seen_at || err.created_at).toLocaleString('en-IN')} · Last seen: {new Date(err.last_seen_at || err.created_at).toLocaleString('en-IN')} · Total: {err.totalOccurrences}×
+                        </div>
+                      </div>
+                    )}
+                    {err.stack_trace && (
+                      <div style={{ background: '#1e293b', borderRadius: 10, padding: '12px 14px', maxHeight: 200, overflowY: 'auto' as const }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 6 }}>Stack Trace</div>
+                        <pre style={{ fontSize: 11, color: '#cbd5e1', fontFamily: 'monospace', whiteSpace: 'pre-wrap' as const, margin: 0 }}>{err.stack_trace}</pre>
+                      </div>
+                    )}
+                    {err.additional_data && Object.keys(err.additional_data).length > 0 && (
+                      <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>Additional Data</div>
+                        <pre style={{ fontSize: 11, color: '#334155', fontFamily: 'monospace', whiteSpace: 'pre-wrap' as const, margin: 0 }}>{JSON.stringify(err.additional_data, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
   const [errors, setErrors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
