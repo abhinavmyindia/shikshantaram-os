@@ -551,7 +551,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setLoadingStartTime(Date.now());
     setAiStep('loading-report');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: { action: 'deep-research', product, inputData },
       });
       if (fnError) throw fnError;
