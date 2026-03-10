@@ -368,14 +368,8 @@ ${JSON.stringify(err.additional_data || {}, null, 2)}
     </div>
   );
 }
-  const [errors, setErrors] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState('');
-  const [severityFilter, setSeverityFilter] = useState('all');
-  const [moduleFilter] = useState('all');
-  const [showResolved, setShowResolved] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [kpis, setKpis] = useState({ errorsToday: 0, critical: 0, unresolved: 0, affected: 0 });
+
+
 
   const fetchErrors = async () => {
     try {
