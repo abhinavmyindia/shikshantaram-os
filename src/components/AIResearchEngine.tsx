@@ -475,7 +475,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setLoadingStartTime(Date.now());
     setAiStep('loading-ideas');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: { action: 'generate-ideas', niche: inputData.niche, country: inputData.country, productType: inputData.productType },
       });
       if (fnError) throw fnError;
