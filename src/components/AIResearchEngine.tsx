@@ -1178,7 +1178,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
             </h2>
             <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 3 })}>
               {isRawResultsMode
-                ? `Based on: '${(productIdeas[0]?.originalIdea || '').substring(0, 60)}${(productIdeas[0]?.originalIdea || '').length > 60 ? '...' : ''}' · ? `Based on: '${(productIdeas[0]?.originalIdea || '').substring(0, 60)}${(productIdeas[0]?.originalIdea || '').length > 60 ? '...' : ''}' · ${ideaAnalysis?.angles?.find(a => a.angleId === selectedAngle)?.angleName || ''} · ${inputData.country}` · ${inputData.country}`
+                ? `Based on: '${(productIdeas[0]?.originalIdea || '').substring(0, 60)}${(productIdeas[0]?.originalIdea || '').length > 60 ? '...' : ''}' · ${ideaAnalysis?.angles?.find(a => a.angleId === selectedAngle)?.angleName || ''} · ${inputData.country}` '${(productIdeas[0]?.originalIdea || '').substring(0, 60)}${(productIdeas[0]?.originalIdea || '').length > 60 ? '...' : ''}' · ${ideaAnalysis?.angles?.find(a => a.angleId === selectedAngle)?.angleName || ''} · ${inputData.country}` · ${inputData.country}`
                 : `${inputData.productType} products for ${inputData.country} market · Click any idea for deep research →`}
             </p>
           </div>
