@@ -1482,7 +1482,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   if (aiStep === 'report' && researchReport && selectedProduct) {
     const r = researchReport;
     const isRawReport = selectedProduct.sourceMode === 'raw';
-    const chosenAngle = ideaAnalysis?.angles.find(a => a.angleId === selectedAngle);
+    const chosenAngle = ideaAnalysis?.angles?.find(a => a.angleId === selectedAngle);
 
     return (
       <div style={s({ animation: 'fadeUp 0.4s ease', paddingBottom: 80 })}>
