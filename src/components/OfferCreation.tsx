@@ -460,7 +460,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
             <div style={s({ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 })}>
               <div style={s({ flex: 1 })}>
                 <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#ef4444', display: 'block', marginBottom: 4 })}>Before 😔</span>
-                <textarea value={offerBrief.beforeState} onChange={e => { setOfferBrief(p => ({ ...p, beforeState: e.target.value.slice(0, 400) })); clearPrefillField('beforeState'); }}
+                <textarea value={offerBrief.beforeState} onChange={e => { setOfferBrief(p => ({ ...p, beforeState: e.target.value.slice(0, 1000) })); clearPrefillField('beforeState'); }}
                   placeholder="e.g. 'Stuck in a 9-5, no freelance clients'"
                   style={s({ width: '100%', minHeight: 80, padding: '11px 14px', borderRadius: 10, border: prefilledFields.has('beforeState') ? '1.5px solid rgba(234,88,12,0.35)' : '1.5px solid #fecaca', background: '#fee2e2', fontSize: 13.5, fontFamily: 'DM Sans', color: '#0f172a', outline: 'none', boxSizing: 'border-box', resize: 'vertical' })} />
               </div>
