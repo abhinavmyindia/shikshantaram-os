@@ -344,8 +344,16 @@ function parseJsonResponse(text: string): any {
     }
     if (clean.trimStart().startsWith('{')) {
       let repaired = clean;
+      // Remove incomplete trailing key-value pairs more aggressively
+      // Handle truncated string value: ,"key": "some truncated text
       repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
-      repaired = repaired.replace(/,\s*"[^"]*":\s*\[?[^\]]*$/, '');
+      // Handle truncated array value: ,"key": ["item1","trunc
+      repaired = repaired.replace(/,\s*"[^"]*":\s*\[[^\]]*$/, '');
+      // Handle truncated object value: ,"key": {stuff
+      repaired = repaired.replace(/,\s*"[^"]*":\s*\{[^}]*$/, '');
+      // Handle key without value: ,"key":
+      repaired = repaired.replace(/,\s*"[^"]*":\s*$/, '');
+      // Handle just a key: ,"key
       repaired = repaired.replace(/,\s*"[^"]*$/, '');
       repaired = repaired.replace(/,\s*$/, '');
       repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
@@ -366,6 +374,7 @@ function parseJsonResponse(text: string): any {
       try {
         return JSON.parse(repaired);
       } catch (e2) {
+        // Aggressive: find the last complete key-value pair by finding last "}
         const lastGoodBrace = repaired.lastIndexOf('}');
         if (lastGoodBrace > 0) {
           let aggressive = repaired.substring(0, lastGoodBrace + 1);
@@ -397,6 +406,7 @@ function parseJsonResponse(text: string): any {
 interface AIResult {
   content: string;
   usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null;
+  finishReason: string | null;
 }
 
 async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<AIResult> {
@@ -427,6 +437,7 @@ async function callLovableAI(prompt: string, model: string, maxTokens: number): 
     return {
       content: data.choices?.[0]?.message?.content || '',
       usage: data.usage || null,
+      finishReason: data.choices?.[0]?.finish_reason || null,
     };
   }
   throw new Error("AI is busy right now. Please wait a moment and try again.");
@@ -544,7 +555,15 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
 
     console.log(`AI Product Research: action=${action}, model=${model}`);
 
-    const aiResult = await callLovableAI(prompt, model, maxTokens);
+    let aiResult = await callLovableAI(prompt, model, maxTokens);
+
+    // If deep-research was truncated, retry with conciseness instruction
+    if (aiResult.finishReason === 'length' && action === 'deep-research') {
+      console.warn('Deep research truncated, retrying with conciseness prompt...');
+      const concisePrompt = prompt + '\n\nCRITICAL: Keep ALL text values SHORT and concise (1-2 sentences max per field). The previous attempt was truncated. Prioritize completing the ENTIRE JSON structure over verbose descriptions.';
+      aiResult = await callLovableAI(concisePrompt, model, maxTokens);
+      logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_retry', model, aiResult.usage);
+    }
 
     // Log usage (fire-and-forget)
     logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType, model, aiResult.usage);
@@ -556,7 +575,7 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       });
     } catch (parseErr) {
       console.error("JSON parse error:", parseErr, "Raw:", aiResult.content.substring(0, 500));
-      return new Response(JSON.stringify({ error: "Failed to parse AI response", raw: aiResult.content.substring(0, 200) }), {
+      return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
