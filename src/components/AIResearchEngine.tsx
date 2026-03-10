@@ -513,7 +513,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setRawIdeaStep('loading-ideas');
     setLoadingStartTime(Date.now());
     setAiStep('loading-ideas');
-    const chosenAngle = ideaAnalysis.angles.find(a => a.angleId === selectedAngle);
+    const chosenAngle = ideaAnalysis.angles?.find(a => a.angleId === selectedAngle);
     try {
       const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
         body: {
