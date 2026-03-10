@@ -278,7 +278,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
     setError('');
     setOfferStep('generating');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('offer-creation', {
+      const { data, error: fnError } = await invokeWithRetry('offer-creation', {
         body: { action: 'generate-structures', brief: offerBrief },
       });
       if (fnError) throw fnError;
