@@ -513,7 +513,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setRawIdeaStep('loading-ideas');
     setLoadingStartTime(Date.now());
     setAiStep('loading-ideas');
-    const chosenAngle = ideaAnalysis.angles.find(a => a.angleId === selectedAngle);
+    const chosenAngle = ideaAnalysis.angles?.find(a => a.angleId === selectedAngle);
     try {
       const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
         body: {
@@ -733,7 +733,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   /* ═══════════════════ RAW IDEA: ANALYSIS RESULT ═══════════════════ */
   if (aiStep === 'input' && ideaMode === 'raw' && rawIdeaStep === 'analysis-result' && ideaAnalysis) {
     const a = ideaAnalysis;
-    const chosenAngle = a.angles.find(ang => ang.angleId === selectedAngle);
+    const chosenAngle = a.angles?.find(ang => ang.angleId === selectedAngle);
     const readinessBadge = a.marketReadiness === 'High'
       ? { bg: 'linear-gradient(135deg,#059669,#10b981)', label: '🔥 High Demand' }
       : a.marketReadiness === 'Medium'
@@ -1178,7 +1178,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
             </h2>
             <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 3 })}>
               {isRawResultsMode
-                ? `Based on: '${(productIdeas[0]?.originalIdea || '').substring(0, 60)}${(productIdeas[0]?.originalIdea || '').length > 60 ? '...' : ''}' · ${ideaAnalysis?.angles.find(a => a.angleId === selectedAngle)?.angleName || ''} · ${inputData.country}`
+                ? `Based on: '${(productIdeas[0]?.originalIdea || '').substring(0, 60)}${(productIdeas[0]?.originalIdea || '').length > 60 ? '...' : ''}' · ${ideaAnalysis?.angles?.find(a => a.angleId === selectedAngle)?.angleName || ''} · ${inputData.country}`
                 : `${inputData.productType} products for ${inputData.country} market · Click any idea for deep research →`}
             </p>
           </div>
@@ -1482,7 +1482,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   if (aiStep === 'report' && researchReport && selectedProduct) {
     const r = researchReport;
     const isRawReport = selectedProduct.sourceMode === 'raw';
-    const chosenAngle = ideaAnalysis?.angles.find(a => a.angleId === selectedAngle);
+    const chosenAngle = ideaAnalysis?.angles?.find(a => a.angleId === selectedAngle);
 
     return (
       <div style={s({ animation: 'fadeUp 0.4s ease', paddingBottom: 80 })}>

@@ -294,7 +294,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
   const buildFullOffer = async () => {
     setError('');
     setOfferStep('building');
-    const chosen = offerStructures.find(s => s.structureId === selectedStructure);
+    const chosen = offerStructures?.find(s => s.structureId === selectedStructure);
     try {
       const { data, error: fnError } = await supabase.functions.invoke('offer-creation', {
         body: { action: 'build-offer', brief: offerBrief, chosenStructure: chosen },
