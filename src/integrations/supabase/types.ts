@@ -197,58 +197,76 @@ export type Database = {
       error_logs: {
         Row: {
           additional_data: Json | null
+          auto_diagnosis: string | null
           browser: string | null
           created_at: string | null
           device_type: string | null
           error_type: string
+          fingerprint: string | null
+          first_seen_at: string | null
           id: string
           is_resolved: boolean | null
+          last_seen_at: string | null
           message: string
           module: string | null
+          occurrence_count: number | null
           os: string | null
           page_url: string | null
           resolved_at: string | null
           resolved_by: string | null
           severity: string | null
           stack_trace: string | null
+          suggested_fix: string | null
           user_email: string | null
           user_id: string | null
         }
         Insert: {
           additional_data?: Json | null
+          auto_diagnosis?: string | null
           browser?: string | null
           created_at?: string | null
           device_type?: string | null
           error_type: string
+          fingerprint?: string | null
+          first_seen_at?: string | null
           id?: string
           is_resolved?: boolean | null
+          last_seen_at?: string | null
           message: string
           module?: string | null
+          occurrence_count?: number | null
           os?: string | null
           page_url?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           severity?: string | null
           stack_trace?: string | null
+          suggested_fix?: string | null
           user_email?: string | null
           user_id?: string | null
         }
         Update: {
           additional_data?: Json | null
+          auto_diagnosis?: string | null
           browser?: string | null
           created_at?: string | null
           device_type?: string | null
           error_type?: string
+          fingerprint?: string | null
+          first_seen_at?: string | null
           id?: string
           is_resolved?: boolean | null
+          last_seen_at?: string | null
           message?: string
           module?: string | null
+          occurrence_count?: number | null
           os?: string | null
           page_url?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           severity?: string | null
           stack_trace?: string | null
+          suggested_fix?: string | null
           user_email?: string | null
           user_id?: string | null
         }
