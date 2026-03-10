@@ -733,7 +733,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   /* ═══════════════════ RAW IDEA: ANALYSIS RESULT ═══════════════════ */
   if (aiStep === 'input' && ideaMode === 'raw' && rawIdeaStep === 'analysis-result' && ideaAnalysis) {
     const a = ideaAnalysis;
-    const chosenAngle = a.angles.find(ang => ang.angleId === selectedAngle);
+    const chosenAngle = a.angles?.find(ang => ang.angleId === selectedAngle);
     const readinessBadge = a.marketReadiness === 'High'
       ? { bg: 'linear-gradient(135deg,#059669,#10b981)', label: '🔥 High Demand' }
       : a.marketReadiness === 'Medium'
