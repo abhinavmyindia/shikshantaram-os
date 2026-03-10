@@ -494,7 +494,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setError('');
     setRawIdeaStep('analyzing');
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: { action: 'analyze-idea', ideaText: rawIdeaData.ideaText, country: rawIdeaData.country },
       });
       if (fnError) throw fnError;
