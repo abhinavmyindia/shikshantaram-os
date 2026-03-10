@@ -199,7 +199,7 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
     scrollToTop();
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('generate-copy', {
+      const { data, error: fnError } = await invokeWithRetry('generate-copy', {
         body: {
           copyType: selectedType.name,
           baseBrief: brief,

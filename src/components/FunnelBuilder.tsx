@@ -286,7 +286,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     setGeneratingEmails(true);
     setError(null);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke('funnel-builder', {
+      const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-emails', brief: funnelBrief, funnelData }
       });
       if (fnErr) throw new Error(fnErr.message);

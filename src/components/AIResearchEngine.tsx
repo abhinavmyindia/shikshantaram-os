@@ -581,7 +581,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     try {
       const existingNames = productIdeas.map(p => p.productName);
       const rawIdea = isRawResultsMode ? productIdeas[0]?.originalIdea : undefined;
-      const { data, error: fnError } = await supabase.functions.invoke('ai-product-research', {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: {
           action: 'generate-more',
           niche: inputData.niche,
