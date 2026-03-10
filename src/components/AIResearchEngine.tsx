@@ -1790,11 +1790,9 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
                 productName: `${selectedProduct.productName} — ${selectedProduct.tagline}`,
                 audience: r.marketOverview?.primaryAudience || selectedProduct.targetAudience || '',
                 beforeState: r.transformation?.beforeParagraph
-                  ? r.transformation.beforeParagraph.slice(0, 120)
-                  : `Someone struggling with: ${selectedProduct.primaryPain}`,
+                  || `Someone struggling with: ${selectedProduct.primaryPain}`,
                 afterState: r.transformation?.afterParagraph
-                  ? r.transformation.afterParagraph.slice(0, 120)
-                  : `Someone who has solved this with ${selectedProduct.productName}`,
+                  || `Someone who has solved this with ${selectedProduct.productName}`,
                 transformationBridge: r.transformation?.transformationBridge || '',
                 sourceProduct: selectedProduct.productName,
                 sourceNiche: inputData.niche || rawIdeaData.ideaText?.slice(0, 40) || '',
