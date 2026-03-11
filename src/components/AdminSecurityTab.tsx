@@ -544,42 +544,90 @@ function LoginHistorySubTab() {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-        <input value={userFilter} onChange={e => setUserFilter(e.target.value)} placeholder="Search by email..." style={{ padding: '7px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 12, fontFamily: 'DM Sans', outline: 'none', width: 200 }} />
+      {/* Filter bar */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', width: 220 }}>
+          <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, pointerEvents: 'none' }}>🔍</span>
+          <input value={userFilter} onChange={e => setUserFilter(e.target.value)} placeholder="Search by email..."
+            style={{ width: '100%', padding: '8px 12px 8px 32px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 12, fontFamily: 'DM Sans, sans-serif', outline: 'none', background: 'white', boxSizing: 'border-box' as const }} />
+        </div>
         <div style={{ flex: 1 }} />
-        {['7d', '30d', 'all'].map(r => (
-          <button key={r} onClick={() => setDateFilter(r)} style={{
-            padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-            background: dateFilter === r ? '#0f172a' : '#f1f5f9', color: dateFilter === r ? 'white' : '#64748b',
-          }}>{r === '7d' ? '7 Days' : r === '30d' ? '30 Days' : 'All Time'}</button>
+        {[
+          { label: '7 Days', value: '7d' },
+          { label: '30 Days', value: '30d' },
+          { label: 'All Time', value: 'all' },
+        ].map(opt => (
+          <button key={opt.value} onClick={() => setDateFilter(opt.value)} style={{
+            padding: '7px 16px', borderRadius: 50, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+            fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' as const, transition: 'all 0.15s',
+            border: dateFilter === opt.value ? 'none' : '1.5px solid #e2e8f0',
+            background: dateFilter === opt.value ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'white',
+            color: dateFilter === opt.value ? 'white' : '#64748b',
+          }}>{opt.label}</button>
         ))}
+        <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>
+          {history.length} records
+        </span>
       </div>
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
-        {history.length === 0 ? (
-          <EmptyState icon="📋" title="No login history found" sub="Adjust filters to see more results." />
+        {loading ? (
+          <div style={{ padding: 20 }}>
+            {[1,2,3,4,5].map(i => (
+              <div key={i} style={{ height: 40, background: '#f8fafc', borderRadius: 8, marginBottom: 8, animation: 'pulse 1.5s ease-in-out infinite' }} />
+            ))}
+          </div>
+        ) : history.length === 0 ? (
+          <EmptyState icon="📭" title="No login history found" sub={userFilter ? `No results for "${userFilter}"` : 'Login records will appear here as users sign in.'} />
         ) : (
           <div style={{ maxHeight: 600, overflowY: 'auto', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 960, tableLayout: 'fixed' as const }}>
+              <colgroup>
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '11%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '4%' }} />
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '8%' }} />
+                <col style={{ width: '130px' }} />
+              </colgroup>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                 {['Time', 'User', 'IP', 'Location', 'ISP', 'Device', 'Browser', 'OS', 'Status'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', ...(h === 'Status' ? { minWidth: 130, whiteSpace: 'nowrap' as const } : {}) }}>{h}</th>
+                  {['Time', 'User', 'IP', 'Location', 'ISP', '', 'Browser', 'OS', 'Status'].map((h, i) => (
+                    <th key={i} style={{
+                      padding: '10px 12px', fontSize: 10, fontWeight: 700, color: '#94a3b8',
+                      textTransform: 'uppercase' as const, textAlign: 'left' as const,
+                      letterSpacing: '0.06em', fontFamily: 'DM Sans, sans-serif',
+                      whiteSpace: 'nowrap' as const,
+                    }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {history.map(s => (
-                  <tr key={s.id} onClick={() => setExpandedId(expandedId === s.id ? null : s.id)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8' }}>{formatDate(s.created_at)}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 12, fontWeight: 600, color: '#0f172a' }}>{s.user_email?.split('@')[0] || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{s.ip_address}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{[s.ip_city, s.ip_state].filter(Boolean).join(', ') || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.ip_isp || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 14 }}>{deviceIcon(s.device_type)}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.browser}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.os}</td>
-                    <td style={{ padding: '10px 12px', minWidth: 130, verticalAlign: 'middle' }}>{statusBadge(s)}</td>
+                {history.map((s, i) => (
+                  <tr key={s.id}
+                    onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
+                    style={{
+                      borderBottom: '1px solid #f1f5f9', cursor: 'pointer',
+                      background: i % 2 === 0 ? 'white' : '#fafbfc',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.03)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafbfc')}
+                  >
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{formatDate(s.created_at)}</td>
+                    <td style={{ padding: '10px 12px', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.user_email?.split('@')[0] || '—'}</div>
+                    </td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_address}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{[s.ip_city, s.ip_state].filter(Boolean).join(', ') || '—'}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_isp || '—'}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 14, textAlign: 'center' as const }}>{deviceIcon(s.device_type)}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.browser || '—'}</td>
+                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.os || '—'}</td>
+                    <td style={{ padding: '10px 12px', verticalAlign: 'middle' as const }}>{statusBadge(s)}</td>
                   </tr>
                 ))}
               </tbody>
