@@ -5,6 +5,7 @@ import { useIdleLogout } from "@/hooks/useIdleLogout";
 import SplashScreen from "@/pages/SplashScreen";
 import LoginScreen from "@/pages/LoginScreen";
 import RevokedScreen from "@/pages/RevokedScreen";
+import ResetPassword from "@/pages/ResetPassword";
 import AdminPanel from "@/pages/AdminPanel";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
@@ -28,7 +29,17 @@ export default function AppRoutes() {
   );
 
   if (loading) return <SplashScreen />;
-  if (!user) return <LoginScreen />;
+
+  // /reset-password must be accessible without login
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="*" element={<LoginScreen />} />
+      </Routes>
+    );
+  }
+
   if (profile?.access_tier === 'revoked') return <RevokedScreen />;
 
   return (

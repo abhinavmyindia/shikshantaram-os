@@ -113,14 +113,19 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
     }
     setResetLoading(true);
     setResetError('');
-    const { error: err } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/reset-password`
-    });
-    setResetLoading(false);
-    if (err) {
-      setResetError(err.message);
-    } else {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: { email: resetEmail.trim().toLowerCase() },
+      });
+      if (error || data?.sent === false) {
+        setResetError('Failed to send reset email. Please try again or contact support.');
+        return;
+      }
       setResetSent(true);
+    } catch (err) {
+      setResetError('Something went wrong. Please try again.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -170,10 +175,11 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
       {showForgotPassword && (
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 16, padding: 20, marginTop: 16, animation: 'fadeIn 0.2s ease' }}>
           {resetSent ? (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>✅</div>
-              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 6 }}>Check your inbox!</div>
-              <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>We sent a reset link to <strong>{resetEmail}</strong></div>
+          <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>📧</div>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 6 }}>Check Your Email</div>
+              <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>If <strong>{resetEmail}</strong> has an approved account, a reset link has been sent from <strong>reset@shikshantaram.in</strong>.</div>
+              <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 8 }}>Check your inbox (and spam folder). Link expires in 1 hour.</div>
               <span onClick={() => setShowForgotPassword(false)} style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#7c3aed', cursor: 'pointer', fontWeight: 600, display: 'inline-block', marginTop: 12 }}>← Back to Login</span>
             </div>
           ) : (
