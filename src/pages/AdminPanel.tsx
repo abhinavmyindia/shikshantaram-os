@@ -196,7 +196,10 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
     }
   };
 
+  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
+
   const sendEmail = async (type: string) => {
+    setSendingEmail(p => ({ ...p, [type]: true }));
     try {
       if (type === 'access') {
         await supabase.functions.invoke('send-upgrade-email', {
@@ -209,10 +212,12 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
           body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier, temp_password: tempPwd, login_url: 'https://app.shikshantaram.in' },
         });
       }
+      setSendingEmail(p => ({ ...p, [type]: false }));
       setEmailSent(p => ({ ...p, [type]: true }));
-      setTimeout(() => setEmailSent(p => ({ ...p, [type]: false })), 3000);
-      showToast(`📧 Email sent to ${form.email}`);
+      setTimeout(() => setEmailSent(p => ({ ...p, [type]: false })), 4000);
+      showToast(`✅ Email sent to ${form.email}`);
     } catch (err: any) {
+      setSendingEmail(p => ({ ...p, [type]: false }));
       showToast(`❌ Email failed: ${err.message}`, 'error');
     }
   };
