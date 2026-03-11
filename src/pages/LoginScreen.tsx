@@ -113,14 +113,19 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
     }
     setResetLoading(true);
     setResetError('');
-    const { error: err } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: `${window.location.origin}/reset-password`
-    });
-    setResetLoading(false);
-    if (err) {
-      setResetError(err.message);
-    } else {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: { email: resetEmail.trim().toLowerCase() },
+      });
+      if (error || data?.sent === false) {
+        setResetError('Failed to send reset email. Please try again or contact support.');
+        return;
+      }
       setResetSent(true);
+    } catch (err) {
+      setResetError('Something went wrong. Please try again.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
