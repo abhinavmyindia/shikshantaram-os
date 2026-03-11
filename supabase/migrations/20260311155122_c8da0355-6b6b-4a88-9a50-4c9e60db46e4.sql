@@ -1,0 +1,1 @@
+UPDATE error_logs SET is_resolved = true, resolved_at = now() WHERE is_resolved = false

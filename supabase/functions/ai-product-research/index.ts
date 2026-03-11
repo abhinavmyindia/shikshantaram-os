@@ -685,9 +685,22 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
         }
       }
 
-      return new Response(JSON.stringify({ error: "AI returned an incomplete response. Please try again." }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // For non-deep-research actions (generate-ideas, etc.), retry once with conciseness
+      try {
+        console.warn(`${action} parse failed, retrying with strict JSON prompt...`);
+        const recoveryPrompt = prompt + '\n\nCRITICAL: Return ONLY valid JSON. No markdown, no commentary. Keep values concise. Escape all quotes inside strings.';
+        const recovered = await callLovableAI(recoveryPrompt, model, Math.min(maxTokens, 20000));
+        logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_parse_recovery', model, recovered.usage);
+        const repairedParsed = parseJsonResponse(recovered.content);
+        return new Response(JSON.stringify({ result: repairedParsed }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (retryErr: any) {
+        console.error(`${action} recovery also failed:`, retryErr);
+        return new Response(JSON.stringify({ error: "AI returned an incomplete response after retry. Please try again." }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
   } catch (err) {
     console.error("Edge function error:", err);
