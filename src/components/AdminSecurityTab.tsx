@@ -579,7 +579,7 @@ function LoginHistorySubTab() {
                     <td style={{ padding: '10px 12px', fontSize: 14 }}>{deviceIcon(s.device_type)}</td>
                     <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.browser}</td>
                     <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.os}</td>
-                    <td style={{ padding: '10px 12px' }}>{statusBadge(s)}</td>
+                    <td style={{ padding: '10px 12px', minWidth: 130, verticalAlign: 'middle' }}>{statusBadge(s)}</td>
                   </tr>
                 ))}
               </tbody>
