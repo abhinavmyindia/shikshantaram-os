@@ -140,11 +140,17 @@ function ErrorLogsSubTab({ adminId, showToast }: { adminId: string; showToast: (
   useEffect(() => { fetchErrors(); fetchKPIs(); }, [severityFilter, showResolved]);
 
   const markResolved = async (errorId: string) => {
-    await supabase.from('error_logs').update({
-      is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminId,
-    } as any).eq('id', errorId);
+    // Optimistic — hide immediately
+    setErrors(prev => prev.filter(e => e.id !== errorId));
     showToast('✅ Error marked as resolved');
-    fetchErrors();
+
+    const { data } = await supabase.functions.invoke('resolve-error', {
+      body: { action: 'resolve_one', errorId, resolvedBy: adminId },
+    });
+    if (!data?.success) {
+      fetchErrors(); // Restore if failed
+      showToast('❌ Failed to resolve error', 'error');
+    }
     fetchKPIs();
   };
 
@@ -152,17 +158,20 @@ function ErrorLogsSubTab({ adminId, showToast }: { adminId: string; showToast: (
     if (!confirm('Mark all visible errors as resolved?')) return;
     const ids = errors.filter(e => !e.is_resolved).map(e => e.id);
     if (ids.length === 0) return;
-    await supabase.from('error_logs')
-      .update({ is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminId } as any)
-      .in('id', ids);
+    setErrors([]);
     showToast(`✅ ${ids.length} errors resolved`);
-    fetchErrors();
+
+    await supabase.functions.invoke('resolve-error', {
+      body: { action: 'resolve_all', errorIds: ids, resolvedBy: adminId },
+    });
     fetchKPIs();
   };
 
   const clearResolved = async () => {
     if (!confirm('Delete all resolved errors permanently?')) return;
-    await supabase.from('error_logs').delete().eq('is_resolved', true);
+    await supabase.functions.invoke('resolve-error', {
+      body: { action: 'delete_resolved' },
+    });
     showToast('🗑 Resolved errors cleared');
     fetchErrors();
     fetchKPIs();
