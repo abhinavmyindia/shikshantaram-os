@@ -395,6 +395,97 @@ function parseJsonResponse(text: string): any {
   }
 }
 
+function buildFallbackDeepResearchReport(product: any, inputData: any, warning: string) {
+  return {
+    marketOverview: {
+      totalAddressableMarket: 'Temporarily unavailable',
+      growthRate: 'Temporarily unavailable',
+      primaryAudience: product?.targetAudience || 'Audience data unavailable',
+      audienceSize: 'Temporarily unavailable',
+      buyingPower: 'Temporarily unavailable',
+      platformsTheyUseToFind: ['Google', 'YouTube', 'Instagram'],
+    },
+    searchDemand: {
+      primaryKeyword: product?.searchKeyword || product?.productName || 'keyword unavailable',
+      estimatedMonthlySearches: 'Temporarily unavailable',
+      relatedKeywords: [inputData?.niche || 'niche keyword'],
+      trendDirection: 'Stable',
+      trendNote: 'We could not fully parse the AI response this time. Please regenerate once for a complete report.',
+      bestTimeToLaunch: 'Any time',
+    },
+    painPoints: [
+      {
+        rank: 1,
+        title: product?.primaryPain || 'Core pain point',
+        description: 'Detailed pain analysis is temporarily unavailable due to a response formatting issue.',
+        emotionalWeight: 'High',
+        trigger: 'Needs fresh regeneration',
+      },
+    ],
+    transformation: {
+      beforeHeadline: 'Current struggle',
+      beforeParagraph: 'The full before-state narrative is temporarily unavailable.',
+      beforeMoments: ['Data unavailable'],
+      afterHeadline: 'Desired outcome',
+      afterParagraph: 'The full after-state narrative is temporarily unavailable.',
+      afterMoments: ['Data unavailable'],
+      transformationBridge: 'From current pain to desired outcome with a clear system.',
+      timeToTransformation: 'To be validated',
+      identityShift: 'Emerging performer',
+    },
+    deepestDesires: [
+      {
+        desire: 'Solve the core problem effectively',
+        underlyingBelief: 'A clear plan can create results',
+        emotionalDriver: 'Relief',
+      },
+    ],
+    empathyMap: {
+      thinks: ['Needs clarity'],
+      feels: ['Overwhelmed'],
+      sees: ['Competing advice'],
+      hears: ['Mixed guidance'],
+      says: ['I need a simple path'],
+      does: ['Searches for solutions'],
+    },
+    primarySolution: {
+      howProductSolvesIt: 'Regenerate this report to get the complete solution breakdown.',
+      uniqueMechanism: product?.productName || 'Core mechanism pending',
+      quickWin: 'Initial clarity on the next action',
+      transformationStatement: 'From confusion to clarity',
+      priceJustification: 'Based on outcome speed and certainty',
+    },
+    impulsePurchaseAnalysis: {
+      score: product?.impulseScore || 'Medium',
+      rating: 5,
+      whyTheyBuyNow: 'Urgency exists but detailed trigger mapping is unavailable in this fallback.',
+      purchaseTriggers: ['Urgent pain'],
+      objections: ['Need more confidence'],
+      objectionHandlers: ['Provide proof and step-by-step guidance'],
+    },
+    competitorLandscape: {
+      directCompetitors: [],
+      marketGap: 'Competitor extraction failed in this run. Regenerate to populate.',
+      differentiationOpportunity: product?.tagline || 'Position around a specific transformation promise.',
+    },
+    nextSteps: [
+      {
+        step: 1,
+        action: 'Regenerate deep research report',
+        timeframe: 'Now',
+        tool: 'Product Navigator',
+        details: warning,
+      },
+    ],
+    launchStrategy: {
+      recommendedPlatform: 'To be validated',
+      pricingStrategy: 'To be validated',
+      launchContent: ['Regenerate for full content plan'],
+      firstSaleIn: 'To be validated',
+    },
+  };
+}
+
 // ─── AI CALL ─────────────────────────────────────────────────
 
 interface AIResult {
