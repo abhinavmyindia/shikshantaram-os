@@ -514,10 +514,27 @@ function LoginHistorySubTab() {
   useEffect(() => { fetchHistory(); }, [dateFilter, userFilter]);
 
   const statusBadge = (s: any) => {
-    if (s.is_active) return <span style={{ fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 20 }}>🟢 Active</span>;
-    if (s.logout_reason === 'forced_logout') return <span style={{ fontSize: 10, fontWeight: 700, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 20 }}>⚡ Force Ended</span>;
-    if (s.logout_reason === 'security_block') return <span style={{ fontSize: 10, fontWeight: 700, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 20 }}>🚫 Blocked</span>;
-    return <span style={{ fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: 20 }}>Logged Out</span>;
+    const isActive = s.is_active;
+    const reason = s.logout_reason;
+    const config = isActive
+      ? { label: '🟢 Active',       bg: 'rgba(5,150,105,0.1)',   color: '#059669',  border: 'rgba(5,150,105,0.2)'  }
+      : reason === 'forced_logout' || reason === 'force_logout'
+      ? { label: '⚡ Force Ended',  bg: 'rgba(239,68,68,0.08)',  color: '#dc2626',  border: 'rgba(239,68,68,0.2)'  }
+      : reason === 'idle_timeout'
+      ? { label: '⏰ Idle Timeout', bg: 'rgba(245,158,11,0.08)', color: '#b45309',  border: 'rgba(245,158,11,0.2)' }
+      : reason === 'security_block'
+      ? { label: '🚫 Blocked',      bg: 'rgba(124,58,237,0.08)', color: '#7c3aed',  border: 'rgba(124,58,237,0.2)' }
+      : { label: '⚪ Logged Out',   bg: '#f8fafc',               color: '#64748b',  border: '#e2e8f0'              };
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' as const,
+        padding: '4px 10px', borderRadius: 50, border: `1px solid ${config.border}`,
+        background: config.bg, color: config.color, fontFamily: 'DM Sans, sans-serif',
+        fontWeight: 700, fontSize: 11,
+      }}>
+        {config.label}
+      </span>
+    );
   };
 
   const deviceIcon = (d: string) => d === 'mobile' ? '📱' : d === 'tablet' ? '📋' : '💻';
