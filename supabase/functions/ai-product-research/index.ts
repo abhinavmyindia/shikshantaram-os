@@ -353,58 +353,42 @@ function parseJsonResponse(text: string): any {
       }
     }
     if (clean.trimStart().startsWith('{')) {
-      let repaired = clean;
-      // Remove incomplete trailing key-value pairs more aggressively
-      // Handle truncated string value: ,"key": "some truncated text
-      repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
-      // Handle truncated array value: ,"key": ["item1","trunc
-      repaired = repaired.replace(/,\s*"[^"]*":\s*\[[^\]]*$/, '');
-      // Handle truncated object value: ,"key": {stuff
-      repaired = repaired.replace(/,\s*"[^"]*":\s*\{[^}]*$/, '');
-      // Handle key without value: ,"key":
-      repaired = repaired.replace(/,\s*"[^"]*":\s*$/, '');
-      // Handle just a key: ,"key
-      repaired = repaired.replace(/,\s*"[^"]*$/, '');
-      repaired = repaired.replace(/,\s*$/, '');
-      repaired = repaired.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-      let braces = 0, brackets = 0, inString = false, escape = false;
-      for (const c of repaired) {
-        if (escape) { escape = false; continue; }
-        if (c === '\\') { escape = true; continue; }
-        if (c === '"') { inString = !inString; continue; }
-        if (inString) continue;
-        if (c === '{') braces++;
-        if (c === '}') braces--;
-        if (c === '[') brackets++;
-        if (c === ']') brackets--;
+      // Strategy: find the last complete key-value pair, then close all open braces/brackets
+      // Step 1: Try progressively shorter substrings ending at each '}' or ']'
+      const closingPositions: number[] = [];
+      let inStr2 = false, esc2 = false;
+      for (let i = 0; i < clean.length; i++) {
+        const c = clean[i];
+        if (esc2) { esc2 = false; continue; }
+        if (c === '\\') { esc2 = true; continue; }
+        if (c === '"') { inStr2 = !inStr2; continue; }
+        if (inStr2) continue;
+        if (c === '}' || c === ']') closingPositions.push(i);
       }
-      if (inString) repaired += '"';
-      while (brackets > 0) { repaired += ']'; brackets--; }
-      while (braces > 0) { repaired += '}'; braces--; }
-      try {
-        return JSON.parse(repaired);
-      } catch (e2) {
-        // Aggressive: find the last complete key-value pair by finding last "}
-        const lastGoodBrace = repaired.lastIndexOf('}');
-        if (lastGoodBrace > 0) {
-          let aggressive = repaired.substring(0, lastGoodBrace + 1);
-          aggressive = aggressive.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-          let b2 = 0, k2 = 0, s2 = false, e3 = false;
-          for (const c of aggressive) {
-            if (e3) { e3 = false; continue; }
-            if (c === '\\') { e3 = true; continue; }
-            if (c === '"') { s2 = !s2; continue; }
-            if (s2) continue;
-            if (c === '{') b2++;
-            if (c === '}') b2--;
-            if (c === '[') k2++;
-            if (c === ']') k2--;
-          }
-          while (k2 > 0) { aggressive += ']'; k2--; }
-          while (b2 > 0) { aggressive += '}'; b2--; }
-          return JSON.parse(aggressive);
+
+      // Try from the end, finding the longest valid-parseable prefix
+      for (let idx = closingPositions.length - 1; idx >= 0; idx--) {
+        let candidate = clean.substring(0, closingPositions[idx] + 1);
+        // Remove trailing commas before closing braces/brackets
+        candidate = candidate.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+        // Count unclosed braces/brackets
+        let b = 0, k = 0, s = false, es = false;
+        for (const c of candidate) {
+          if (es) { es = false; continue; }
+          if (c === '\\') { es = true; continue; }
+          if (c === '"') { s = !s; continue; }
+          if (s) continue;
+          if (c === '{') b++; if (c === '}') b--;
+          if (c === '[') k++; if (c === ']') k--;
         }
-        throw e2;
+        if (s) candidate += '"';
+        while (k > 0) { candidate += ']'; k--; }
+        while (b > 0) { candidate += '}'; b--; }
+        try {
+          const result = JSON.parse(candidate);
+          console.warn(`Recovered truncated object (used ${closingPositions[idx] + 1}/${clean.length} chars)`);
+          return result;
+        } catch { continue; }
       }
     }
     throw e;
