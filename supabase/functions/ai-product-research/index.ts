@@ -557,11 +557,11 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
 
     let aiResult = await callLovableAI(prompt, model, maxTokens);
 
-    // If deep-research was truncated, retry with conciseness instruction
-    if (aiResult.finishReason === 'length' && action === 'deep-research') {
-      console.warn('Deep research truncated, retrying with conciseness prompt...');
-      const concisePrompt = prompt + '\n\nCRITICAL: Keep ALL text values SHORT and concise (1-2 sentences max per field). The previous attempt was truncated. Prioritize completing the ENTIRE JSON structure over verbose descriptions.';
-      aiResult = await callLovableAI(concisePrompt, model, maxTokens);
+    // If ANY action was truncated, retry with conciseness instruction
+    if (aiResult.finishReason === 'length') {
+      console.warn(`${action} truncated (finish_reason=length), retrying with conciseness prompt...`);
+      const concisePrompt = prompt + '\n\nCRITICAL: Your previous response was TRUNCATED because it was too long. Keep ALL text values SHORT and concise (1 sentence max per field). Use abbreviated descriptions. Prioritize completing the ENTIRE JSON structure over verbose descriptions. Return COMPLETE, VALID JSON.';
+      aiResult = await callLovableAI(concisePrompt, model, Math.min(maxTokens + 4000, 32000));
       logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_retry', model, aiResult.usage);
     }
 
