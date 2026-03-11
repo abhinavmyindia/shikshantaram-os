@@ -583,9 +583,9 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       return new Response(JSON.stringify({ result: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    } catch (parseErr) {
+    } catch (parseErr: any) {
       console.error("JSON parse error:", parseErr, "Raw:", aiResult.content.substring(0, 500));
-      return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), {
+      return new Response(JSON.stringify({ error: "AI returned an incomplete response. Please try again." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
