@@ -332,14 +332,24 @@ function parseJsonResponse(text: string): any {
   } catch (e) {
     console.log("Initial parse failed, attempting repair...");
     if (clean.trimStart().startsWith('[')) {
-      const lastCloseBrace = clean.lastIndexOf('}');
-      if (lastCloseBrace > 0) {
-        let candidate = clean.substring(0, lastCloseBrace + 1).replace(/,\s*$/, '') + ']';
-        try {
-          const items = JSON.parse(candidate);
-          console.warn(`Recovered ${items.length} items from truncated array`);
-          return items;
-        } catch { /* fall through */ }
+      // Find all complete objects in the array by matching balanced braces
+      const items: any[] = [];
+      let depth = 0, start = -1, inStr = false, esc = false;
+      for (let i = 0; i < clean.length; i++) {
+        const c = clean[i];
+        if (esc) { esc = false; continue; }
+        if (c === '\\') { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === '{') { if (depth === 0) start = i; depth++; }
+        if (c === '}') { depth--; if (depth === 0 && start >= 0) {
+          try { items.push(JSON.parse(clean.substring(start, i + 1))); } catch {}
+          start = -1;
+        }}
+      }
+      if (items.length > 0) {
+        console.warn(`Recovered ${items.length} complete items from truncated array`);
+        return items;
       }
     }
     if (clean.trimStart().startsWith('{')) {
