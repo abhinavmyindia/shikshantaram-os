@@ -140,11 +140,17 @@ function ErrorLogsSubTab({ adminId, showToast }: { adminId: string; showToast: (
   useEffect(() => { fetchErrors(); fetchKPIs(); }, [severityFilter, showResolved]);
 
   const markResolved = async (errorId: string) => {
-    await supabase.from('error_logs').update({
-      is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminId,
-    } as any).eq('id', errorId);
+    // Optimistic — hide immediately
+    setErrors(prev => prev.filter(e => e.id !== errorId));
     showToast('✅ Error marked as resolved');
-    fetchErrors();
+
+    const { data } = await supabase.functions.invoke('resolve-error', {
+      body: { action: 'resolve_one', errorId, resolvedBy: adminId },
+    });
+    if (!data?.success) {
+      fetchErrors(); // Restore if failed
+      showToast('❌ Failed to resolve error', 'error');
+    }
     fetchKPIs();
   };
 
@@ -152,17 +158,20 @@ function ErrorLogsSubTab({ adminId, showToast }: { adminId: string; showToast: (
     if (!confirm('Mark all visible errors as resolved?')) return;
     const ids = errors.filter(e => !e.is_resolved).map(e => e.id);
     if (ids.length === 0) return;
-    await supabase.from('error_logs')
-      .update({ is_resolved: true, resolved_at: new Date().toISOString(), resolved_by: adminId } as any)
-      .in('id', ids);
+    setErrors([]);
     showToast(`✅ ${ids.length} errors resolved`);
-    fetchErrors();
+
+    await supabase.functions.invoke('resolve-error', {
+      body: { action: 'resolve_all', errorIds: ids, resolvedBy: adminId },
+    });
     fetchKPIs();
   };
 
   const clearResolved = async () => {
     if (!confirm('Delete all resolved errors permanently?')) return;
-    await supabase.from('error_logs').delete().eq('is_resolved', true);
+    await supabase.functions.invoke('resolve-error', {
+      body: { action: 'delete_resolved' },
+    });
     showToast('🗑 Resolved errors cleared');
     fetchErrors();
     fetchKPIs();
@@ -505,10 +514,27 @@ function LoginHistorySubTab() {
   useEffect(() => { fetchHistory(); }, [dateFilter, userFilter]);
 
   const statusBadge = (s: any) => {
-    if (s.is_active) return <span style={{ fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 20 }}>🟢 Active</span>;
-    if (s.logout_reason === 'forced_logout') return <span style={{ fontSize: 10, fontWeight: 700, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 20 }}>⚡ Force Ended</span>;
-    if (s.logout_reason === 'security_block') return <span style={{ fontSize: 10, fontWeight: 700, background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: 20 }}>🚫 Blocked</span>;
-    return <span style={{ fontSize: 10, fontWeight: 700, background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: 20 }}>Logged Out</span>;
+    const isActive = s.is_active;
+    const reason = s.logout_reason;
+    const config = isActive
+      ? { label: '🟢 Active',       bg: 'rgba(5,150,105,0.1)',   color: '#059669',  border: 'rgba(5,150,105,0.2)'  }
+      : reason === 'forced_logout' || reason === 'force_logout'
+      ? { label: '⚡ Force Ended',  bg: 'rgba(239,68,68,0.08)',  color: '#dc2626',  border: 'rgba(239,68,68,0.2)'  }
+      : reason === 'idle_timeout'
+      ? { label: '⏰ Idle Timeout', bg: 'rgba(245,158,11,0.08)', color: '#b45309',  border: 'rgba(245,158,11,0.2)' }
+      : reason === 'security_block'
+      ? { label: '🚫 Blocked',      bg: 'rgba(124,58,237,0.08)', color: '#7c3aed',  border: 'rgba(124,58,237,0.2)' }
+      : { label: '⚪ Logged Out',   bg: '#f8fafc',               color: '#64748b',  border: '#e2e8f0'              };
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' as const,
+        padding: '4px 10px', borderRadius: 50, border: `1px solid ${config.border}`,
+        background: config.bg, color: config.color, fontFamily: 'DM Sans, sans-serif',
+        fontWeight: 700, fontSize: 11,
+      }}>
+        {config.label}
+      </span>
+    );
   };
 
   const deviceIcon = (d: string) => d === 'mobile' ? '📱' : d === 'tablet' ? '📋' : '💻';
@@ -537,8 +563,8 @@ function LoginHistorySubTab() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['Time', 'User', 'IP', 'Location', 'ISP', 'Device', 'Browser', 'OS', 'Status'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>
+                 {['Time', 'User', 'IP', 'Location', 'ISP', 'Device', 'Browser', 'OS', 'Status'].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', ...(h === 'Status' ? { minWidth: 130, whiteSpace: 'nowrap' as const } : {}) }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -553,7 +579,7 @@ function LoginHistorySubTab() {
                     <td style={{ padding: '10px 12px', fontSize: 14 }}>{deviceIcon(s.device_type)}</td>
                     <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.browser}</td>
                     <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b' }}>{s.os}</td>
-                    <td style={{ padding: '10px 12px' }}>{statusBadge(s)}</td>
+                    <td style={{ padding: '10px 12px', minWidth: 130, verticalAlign: 'middle' }}>{statusBadge(s)}</td>
                   </tr>
                 ))}
               </tbody>

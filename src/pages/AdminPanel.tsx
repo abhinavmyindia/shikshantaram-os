@@ -196,7 +196,10 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
     }
   };
 
+  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
+
   const sendEmail = async (type: string) => {
+    setSendingEmail(p => ({ ...p, [type]: true }));
     try {
       if (type === 'access') {
         await supabase.functions.invoke('send-upgrade-email', {
@@ -209,10 +212,12 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
           body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier, temp_password: tempPwd, login_url: 'https://app.shikshantaram.in' },
         });
       }
+      setSendingEmail(p => ({ ...p, [type]: false }));
       setEmailSent(p => ({ ...p, [type]: true }));
-      setTimeout(() => setEmailSent(p => ({ ...p, [type]: false })), 3000);
-      showToast(`📧 Email sent to ${form.email}`);
+      setTimeout(() => setEmailSent(p => ({ ...p, [type]: false })), 4000);
+      showToast(`✅ Email sent to ${form.email}`);
     } catch (err: any) {
+      setSendingEmail(p => ({ ...p, [type]: false }));
       showToast(`❌ Email failed: ${err.message}`, 'error');
     }
   };
@@ -349,11 +354,29 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
               pill={<span style={{ background: '#f1f5f9', color: '#94a3b8', fontSize: 10, padding: '2px 8px', borderRadius: 20, marginLeft: 6 }}>Optional</span>} />
             {sections[2] && (
               <div style={{ padding: '12px 0' }}>
-                <button onClick={() => sendEmail('access')} style={{ width: '100%', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: 10, padding: '10px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left', marginBottom: 10 }}>
-                  📧 Send Access Updated Email {emailSent.access && <span style={{ marginLeft: 8, color: '#059669' }}>✅ Sent!</span>}
+                <button onClick={() => sendEmail('access')} disabled={!!sendingEmail.access || !!emailSent.access} style={{
+                  width: '100%', background: emailSent.access ? 'rgba(5,150,105,0.1)' : sendingEmail.access ? 'rgba(124,58,237,0.1)' : '#f0fdf4',
+                  border: `1px solid ${emailSent.access ? 'rgba(5,150,105,0.2)' : sendingEmail.access ? 'rgba(124,58,237,0.2)' : '#bbf7d0'}`,
+                  color: emailSent.access ? '#059669' : sendingEmail.access ? '#7c3aed' : '#15803d',
+                  borderRadius: 10, padding: '10px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
+                  cursor: sendingEmail.access || emailSent.access ? 'not-allowed' : 'pointer', textAlign: 'left', marginBottom: 10,
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  {sendingEmail.access ? (
+                    <><span style={{ width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spinSlow 0.6s linear infinite', display: 'inline-block' }} /> Sending...</>
+                  ) : emailSent.access ? '✅ Email Sent!' : '📧 Send Access Updated Email'}
                 </button>
-                <button onClick={() => sendEmail('password')} style={{ width: '100%', background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0891b2', borderRadius: 10, padding: '10px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
-                  🔑 Send New Password Email {emailSent.password && <span style={{ marginLeft: 8, color: '#059669' }}>✅ Sent!</span>}
+                <button onClick={() => sendEmail('password')} disabled={!!sendingEmail.password || !!emailSent.password} style={{
+                  width: '100%', background: emailSent.password ? 'rgba(5,150,105,0.1)' : sendingEmail.password ? 'rgba(124,58,237,0.1)' : '#f0f9ff',
+                  border: `1px solid ${emailSent.password ? 'rgba(5,150,105,0.2)' : sendingEmail.password ? 'rgba(124,58,237,0.2)' : '#bae6fd'}`,
+                  color: emailSent.password ? '#059669' : sendingEmail.password ? '#7c3aed' : '#0891b2',
+                  borderRadius: 10, padding: '10px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
+                  cursor: sendingEmail.password || emailSent.password ? 'not-allowed' : 'pointer', textAlign: 'left',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                  {sendingEmail.password ? (
+                    <><span style={{ width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spinSlow 0.6s linear infinite', display: 'inline-block' }} /> Sending...</>
+                  ) : emailSent.password ? '✅ Email Sent!' : '🔑 Send New Password Email'}
                 </button>
               </div>
             )}

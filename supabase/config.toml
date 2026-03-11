@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.manage-team]
 verify_jwt = false
+
+[functions.resolve-error]
+verify_jwt = false
