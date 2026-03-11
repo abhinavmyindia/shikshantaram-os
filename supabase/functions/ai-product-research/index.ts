@@ -629,6 +629,7 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       callType = "generate_more_ideas";
     } else if (action === "deep-research") {
       const { product, inputData } = body;
+      deepResearchContext = { product, inputData };
       prompt = buildDeepResearchPrompt(product, inputData);
       model = "google/gemini-2.5-flash";
       maxTokens = 30000;
