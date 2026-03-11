@@ -568,6 +568,7 @@ serve(async (req) => {
     let model: string;
     let maxTokens: number;
     let callType: string;
+    let deepResearchContext: { product: any; inputData: any } | null = null;
 
     if (action === "generate-ideas") {
       const { niche, country, productType } = body;
