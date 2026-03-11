@@ -563,8 +563,8 @@ function LoginHistorySubTab() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['Time', 'User', 'IP', 'Location', 'ISP', 'Device', 'Browser', 'OS', 'Status'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>
+                 {['Time', 'User', 'IP', 'Location', 'ISP', 'Device', 'Browser', 'OS', 'Status'].map(h => (
+                    <th key={h} style={{ padding: '10px 12px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', textAlign: 'left', ...(h === 'Status' ? { minWidth: 130, whiteSpace: 'nowrap' as const } : {}) }}>{h}</th>
                   ))}
                 </tr>
               </thead>
