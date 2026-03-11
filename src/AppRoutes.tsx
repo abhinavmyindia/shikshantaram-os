@@ -5,6 +5,7 @@ import { useIdleLogout } from "@/hooks/useIdleLogout";
 import SplashScreen from "@/pages/SplashScreen";
 import LoginScreen from "@/pages/LoginScreen";
 import RevokedScreen from "@/pages/RevokedScreen";
+import ResetPassword from "@/pages/ResetPassword";
 import AdminPanel from "@/pages/AdminPanel";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
