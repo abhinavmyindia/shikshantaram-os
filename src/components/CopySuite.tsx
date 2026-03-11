@@ -510,15 +510,7 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
                   <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap' })}>
                     {typeof section.content === 'string'
                       ? section.content
-                      : Array.isArray(section.content)
-                        ? section.content.map((item: any, idx: number) =>
-                            typeof item === 'string' ? item : typeof item === 'object' && item !== null
-                              ? Object.entries(item).map(([k, v]) => `${k.toUpperCase()}: ${v}`).join('\n')
-                              : String(item)
-                          ).join('\n\n')
-                        : typeof section.content === 'object' && section.content !== null
-                          ? JSON.stringify(section.content, null, 2)
-                          : String(section.content ?? '')}
+                      : String(JSON.stringify(section.content, null, 2))}
                   </div>
                 </div>
               ))}
