@@ -332,14 +332,24 @@ function parseJsonResponse(text: string): any {
   } catch (e) {
     console.log("Initial parse failed, attempting repair...");
     if (clean.trimStart().startsWith('[')) {
-      const lastCloseBrace = clean.lastIndexOf('}');
-      if (lastCloseBrace > 0) {
-        let candidate = clean.substring(0, lastCloseBrace + 1).replace(/,\s*$/, '') + ']';
-        try {
-          const items = JSON.parse(candidate);
-          console.warn(`Recovered ${items.length} items from truncated array`);
-          return items;
-        } catch { /* fall through */ }
+      // Find all complete objects in the array by matching balanced braces
+      const items: any[] = [];
+      let depth = 0, start = -1, inStr = false, esc = false;
+      for (let i = 0; i < clean.length; i++) {
+        const c = clean[i];
+        if (esc) { esc = false; continue; }
+        if (c === '\\') { esc = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === '{') { if (depth === 0) start = i; depth++; }
+        if (c === '}') { depth--; if (depth === 0 && start >= 0) {
+          try { items.push(JSON.parse(clean.substring(start, i + 1))); } catch {}
+          start = -1;
+        }}
+      }
+      if (items.length > 0) {
+        console.warn(`Recovered ${items.length} complete items from truncated array`);
+        return items;
       }
     }
     if (clean.trimStart().startsWith('{')) {
@@ -557,11 +567,11 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
 
     let aiResult = await callLovableAI(prompt, model, maxTokens);
 
-    // If deep-research was truncated, retry with conciseness instruction
-    if (aiResult.finishReason === 'length' && action === 'deep-research') {
-      console.warn('Deep research truncated, retrying with conciseness prompt...');
-      const concisePrompt = prompt + '\n\nCRITICAL: Keep ALL text values SHORT and concise (1-2 sentences max per field). The previous attempt was truncated. Prioritize completing the ENTIRE JSON structure over verbose descriptions.';
-      aiResult = await callLovableAI(concisePrompt, model, maxTokens);
+    // If ANY action was truncated, retry with conciseness instruction
+    if (aiResult.finishReason === 'length') {
+      console.warn(`${action} truncated (finish_reason=length), retrying with conciseness prompt...`);
+      const concisePrompt = prompt + '\n\nCRITICAL: Your previous response was TRUNCATED because it was too long. Keep ALL text values SHORT and concise (1 sentence max per field). Use abbreviated descriptions. Prioritize completing the ENTIRE JSON structure over verbose descriptions. Return COMPLETE, VALID JSON.';
+      aiResult = await callLovableAI(concisePrompt, model, Math.min(maxTokens + 4000, 32000));
       logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_retry', model, aiResult.usage);
     }
 
@@ -573,9 +583,9 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       return new Response(JSON.stringify({ result: parsed }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    } catch (parseErr) {
+    } catch (parseErr: any) {
       console.error("JSON parse error:", parseErr, "Raw:", aiResult.content.substring(0, 500));
-      return new Response(JSON.stringify({ error: "Failed to parse AI response. Please try again." }), {
+      return new Response(JSON.stringify({ error: "AI returned an incomplete response. Please try again." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
