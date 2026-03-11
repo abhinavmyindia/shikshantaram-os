@@ -1,0 +1,16 @@
+{
+  "name": "Shikshantaram OS",
+  "short_name": "Shikshantaram",
+  "description": "India's AI-Powered Digital Product Suite",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f3ff",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
