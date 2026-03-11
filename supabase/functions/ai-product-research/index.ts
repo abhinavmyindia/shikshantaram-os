@@ -662,6 +662,29 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       });
     } catch (parseErr: any) {
       console.error("JSON parse error:", parseErr, "Raw:", aiResult.content.substring(0, 500));
+
+      if (action === 'deep-research' && deepResearchContext) {
+        try {
+          const recoveryPrompt = prompt + '\n\nCRITICAL JSON VALIDITY RULES: Return STRICT VALID JSON only. Keep each value short. Escape internal quotes. Do not include markdown or commentary.';
+          const recovered = await callLovableAI(recoveryPrompt, model, Math.min(maxTokens, 22000));
+          logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_parse_recovery', model, recovered.usage);
+          const repairedParsed = parseJsonResponse(recovered.content);
+          return new Response(JSON.stringify({ result: repairedParsed }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } catch (recoveryErr: any) {
+          console.error('Deep research recovery failed:', recoveryErr);
+          const fallback = buildFallbackDeepResearchReport(
+            deepResearchContext.product,
+            deepResearchContext.inputData,
+            'AI response was malformed twice; fallback report returned to avoid blocking your workflow.'
+          );
+          return new Response(JSON.stringify({ result: fallback, warning: 'partial_fallback' }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
       return new Response(JSON.stringify({ error: "AI returned an incomplete response. Please try again." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
