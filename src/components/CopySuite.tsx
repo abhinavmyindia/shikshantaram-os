@@ -211,7 +211,12 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
       if (fnError) throw new Error(fnError.message || 'Generation failed');
       if (data?.error) throw new Error(data.error);
 
-      setSections(data.sections || []);
+      // Normalize: ensure every section.content is a string (AI sometimes returns objects/arrays)
+      const safeSections = (data.sections || []).map((s: any) => ({
+        ...s,
+        content: typeof s.content === 'string' ? s.content : JSON.stringify(s.content, null, 2),
+      }));
+      setSections(safeSections);
       setScore(data.score || null);
       setStep('output');
     } catch (err: any) {
@@ -508,7 +513,9 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
                     </button>
                   </div>
                   <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap' })}>
-                    {section.content}
+                    {typeof section.content === 'string'
+                      ? section.content
+                      : String(JSON.stringify(section.content, null, 2))}
                   </div>
                 </div>
               ))}
