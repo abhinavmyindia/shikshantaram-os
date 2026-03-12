@@ -160,15 +160,28 @@ Deno.serve(async (req) => {
 
     if (concurrentCount >= maxConcurrent) {
       const sameIpSession = activeSessions?.find((s: any) => s.ip_address === ipAddress);
-      if (!sameIpSession) {
-        const newViolations = (secSettings?.violation_count ?? 0) + 1;
-        const shouldAutoBlock = newViolations >= 3;
+      if (sameIpSession) {
+        // Same IP — auto-end old session and allow new login
+        await supabase
+          .from('login_sessions')
+          .update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'replaced_same_ip' })
+          .eq('id', sameIpSession.id);
+      } else {
+        // Different IP — auto-end oldest session and allow login (no more blocking)
+        const oldestSession = activeSessions?.[0];
+        if (oldestSession) {
+          await supabase
+            .from('login_sessions')
+            .update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'replaced_new_device' })
+            .eq('id', oldestSession.id);
+        }
 
+        const newViolations = (secSettings?.violation_count ?? 0) + 1;
         await Promise.all([
           supabase.from('security_events').insert({
             user_id: userId, user_email: userEmail,
-            event_type: 'concurrent_session_violation', severity: 'high',
-            description: `Concurrent session violation — ${concurrentCount} active sessions`,
+            event_type: 'concurrent_session_replaced', severity: 'medium',
+            description: `New login replaced old session — ${concurrentCount} were active`,
             ip_address: ipAddress, ip_location: locationStr,
             device_info: `${browser} on ${os} (${deviceType})`,
             metadata: { active_sessions: concurrentCount, max_allowed: maxConcurrent },
@@ -177,17 +190,8 @@ Deno.serve(async (req) => {
             user_id: userId, user_email: userEmail,
             violation_count: newViolations,
             last_violation_at: new Date().toISOString(),
-            is_blocked: shouldAutoBlock,
-            block_reason: shouldAutoBlock ? 'Auto-blocked: Too many concurrent session violations' : undefined,
-            blocked_at: shouldAutoBlock ? new Date().toISOString() : undefined,
           }, { onConflict: 'user_id' }),
         ]);
-
-        return new Response(JSON.stringify({
-          allowed: false, reason: 'concurrent_session',
-          message: 'You are already logged in on another device. Please log out first, or contact support.',
-          violation_count: newViolations,
-        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
