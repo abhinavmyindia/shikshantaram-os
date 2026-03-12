@@ -191,12 +191,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check unique IP limit
+    // Check unique IP limit (only last 30 days to prevent permanent lockout)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const { data: ipHistory } = await supabase
       .from('login_sessions')
       .select('ip_address')
       .eq('user_id', userId)
-      .neq('ip_address', ipAddress);
+      .neq('ip_address', ipAddress)
+      .gte('created_at', thirtyDaysAgo);
 
     const uniqueIPs = [...new Set(ipHistory?.map((s: any) => s.ip_address) || [])];
     const maxIPs = secSettings?.max_unique_ips ?? 2;
