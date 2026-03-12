@@ -210,24 +210,17 @@ Deno.serve(async (req) => {
       && !uniqueIPs.includes(ipAddress);
 
     if (isNewIP && uniqueIPs.length >= maxIPs) {
-      const newViolations = (secSettings?.violation_count ?? 0) + 1;
+      // Log the event but ALLOW login — don't hard block users for IP changes
       await supabase.from('security_events').insert({
         user_id: userId, user_email: userEmail,
-        event_type: 'ip_limit_exceeded', severity: 'high',
-        description: `IP limit exceeded — tried to login from a new device`,
+        event_type: 'ip_limit_exceeded', severity: 'medium',
+        description: `New IP detected beyond limit — allowed but flagged`,
         ip_address: ipAddress, ip_location: locationStr,
         device_info: `${browser} on ${os}`,
         metadata: { known_ips: uniqueIPs, new_ip: ipAddress, max_allowed: maxIPs },
       });
-      await supabase.from('user_security_settings').upsert({
-        user_id: userId, user_email: userEmail,
-        violation_count: newViolations,
-        last_violation_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
-
-      return new Response(JSON.stringify({
-        allowed: false, reason: 'ip_limit',
-        message: 'Login from an unrecognized device. Maximum device limit reached. Contact support to add a new device.',
+      // Don't return — fall through and allow login
+    }
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
