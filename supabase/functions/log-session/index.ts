@@ -221,8 +221,6 @@ Deno.serve(async (req) => {
       });
       // Don't return — fall through and allow login
     }
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
 
     // ─── ALL CHECKS PASSED — Create session ──────────────────────────────────
     await supabase.from('login_sessions').insert({
