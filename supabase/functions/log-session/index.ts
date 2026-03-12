@@ -160,15 +160,28 @@ Deno.serve(async (req) => {
 
     if (concurrentCount >= maxConcurrent) {
       const sameIpSession = activeSessions?.find((s: any) => s.ip_address === ipAddress);
-      if (!sameIpSession) {
-        const newViolations = (secSettings?.violation_count ?? 0) + 1;
-        const shouldAutoBlock = newViolations >= 3;
+      if (sameIpSession) {
+        // Same IP — auto-end old session and allow new login
+        await supabase
+          .from('login_sessions')
+          .update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'replaced_same_ip' })
+          .eq('id', sameIpSession.id);
+      } else {
+        // Different IP — auto-end oldest session and allow login (no more blocking)
+        const oldestSession = activeSessions?.[0];
+        if (oldestSession) {
+          await supabase
+            .from('login_sessions')
+            .update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'replaced_new_device' })
+            .eq('id', oldestSession.id);
+        }
 
+        const newViolations = (secSettings?.violation_count ?? 0) + 1;
         await Promise.all([
           supabase.from('security_events').insert({
             user_id: userId, user_email: userEmail,
-            event_type: 'concurrent_session_violation', severity: 'high',
-            description: `Concurrent session violation — ${concurrentCount} active sessions`,
+            event_type: 'concurrent_session_replaced', severity: 'medium',
+            description: `New login replaced old session — ${concurrentCount} were active`,
             ip_address: ipAddress, ip_location: locationStr,
             device_info: `${browser} on ${os} (${deviceType})`,
             metadata: { active_sessions: concurrentCount, max_allowed: maxConcurrent },
@@ -177,26 +190,19 @@ Deno.serve(async (req) => {
             user_id: userId, user_email: userEmail,
             violation_count: newViolations,
             last_violation_at: new Date().toISOString(),
-            is_blocked: shouldAutoBlock,
-            block_reason: shouldAutoBlock ? 'Auto-blocked: Too many concurrent session violations' : undefined,
-            blocked_at: shouldAutoBlock ? new Date().toISOString() : undefined,
           }, { onConflict: 'user_id' }),
         ]);
-
-        return new Response(JSON.stringify({
-          allowed: false, reason: 'concurrent_session',
-          message: 'You are already logged in on another device. Please log out first, or contact support.',
-          violation_count: newViolations,
-        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
     }
 
-    // Check unique IP limit
+    // Check unique IP limit (only last 30 days to prevent permanent lockout)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const { data: ipHistory } = await supabase
       .from('login_sessions')
       .select('ip_address')
       .eq('user_id', userId)
-      .neq('ip_address', ipAddress);
+      .neq('ip_address', ipAddress)
+      .gte('created_at', thirtyDaysAgo);
 
     const uniqueIPs = [...new Set(ipHistory?.map((s: any) => s.ip_address) || [])];
     const maxIPs = secSettings?.max_unique_ips ?? 2;
@@ -204,25 +210,16 @@ Deno.serve(async (req) => {
       && !uniqueIPs.includes(ipAddress);
 
     if (isNewIP && uniqueIPs.length >= maxIPs) {
-      const newViolations = (secSettings?.violation_count ?? 0) + 1;
+      // Log the event but ALLOW login — don't hard block users for IP changes
       await supabase.from('security_events').insert({
         user_id: userId, user_email: userEmail,
-        event_type: 'ip_limit_exceeded', severity: 'high',
-        description: `IP limit exceeded — tried to login from a new device`,
+        event_type: 'ip_limit_exceeded', severity: 'medium',
+        description: `New IP detected beyond limit — allowed but flagged`,
         ip_address: ipAddress, ip_location: locationStr,
         device_info: `${browser} on ${os}`,
         metadata: { known_ips: uniqueIPs, new_ip: ipAddress, max_allowed: maxIPs },
       });
-      await supabase.from('user_security_settings').upsert({
-        user_id: userId, user_email: userEmail,
-        violation_count: newViolations,
-        last_violation_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
-
-      return new Response(JSON.stringify({
-        allowed: false, reason: 'ip_limit',
-        message: 'Login from an unrecognized device. Maximum device limit reached. Contact support to add a new device.',
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      // Don't return — fall through and allow login
     }
 
     // ─── ALL CHECKS PASSED — Create session ──────────────────────────────────
