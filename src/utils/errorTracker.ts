@@ -193,12 +193,18 @@ export const initGlobalErrorTracking = (): void => {
     return false;
   };
 
-  // 2. Catch unhandled Promise rejections
+  // 2. Catch unhandled Promise rejections (filter out auth lock noise)
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;
+    const msg = reason?.message || String(reason) || '';
+    // Suppress auth lock contention — harmless race condition
+    if (shouldSuppressError(msg)) {
+      console.debug('[ErrorTracker] Suppressed unhandled rejection:', msg.substring(0, 80));
+      return;
+    }
     logError(
       'unhandled_rejection',
-      reason?.message || String(reason) || 'Unhandled promise rejection',
+      msg || 'Unhandled promise rejection',
       reason?.stack,
       { type: 'promise_rejection' }
     );
