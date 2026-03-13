@@ -52,6 +52,12 @@ const diagnose = (message: string, errorType: string, module: string): { diagnos
       fix: `Check the component stack trace. The ${module} component has a render error.`,
     };
   }
+  if (msg.includes('lock broken') || msg.includes('lock was not granted')) {
+    return {
+      diagnosis: 'Auth lock contention — multiple concurrent auth requests raced',
+      fix: 'Harmless race condition. Use getSession() instead of getUser() to avoid lock stealing.',
+    };
+  }
   if (msg.includes('supabase') || msg.includes('postgrest')) {
     return {
       diagnosis: 'Database query failed',
