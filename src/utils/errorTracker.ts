@@ -169,6 +169,8 @@ const NEVER_LOG_URLS = [
   'end-session',
   'user_presence',
   'supabase.co/functions/v1/log-error',
+  '/token',       // auth token refresh — never log
+  '/auth/v1/',    // auth endpoints — lock contention noise
 ];
 
 const shouldLogUrl = (url: string): boolean => {
