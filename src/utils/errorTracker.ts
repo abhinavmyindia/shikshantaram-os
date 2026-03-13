@@ -39,6 +39,40 @@ const getModuleFromUrl = (url: string): string => {
 // ─── DEDUPLICATION CACHE ───
 const recentErrors = new Map<string, number>();
 
+// ─── CACHED AUTH (prevents concurrent getUser() lock stealing) ───
+let cachedUserId: string | null = null;
+let cachedUserEmail: string | null = null;
+let authCacheTime = 0;
+const AUTH_CACHE_TTL = 60000; // 1 minute
+
+const getCachedAuth = async (): Promise<{ userId: string | null; userEmail: string | null }> => {
+  if (Date.now() - authCacheTime < AUTH_CACHE_TTL && cachedUserId) {
+    return { userId: cachedUserId, userEmail: cachedUserEmail };
+  }
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    cachedUserId = session?.user?.id || null;
+    cachedUserEmail = session?.user?.email || null;
+    authCacheTime = Date.now();
+  } catch (_) {
+    // Auth unavailable — log anonymously
+  }
+  return { userId: cachedUserId, userEmail: cachedUserEmail };
+};
+
+// ─── ERRORS TO ALWAYS SUPPRESS (never worth logging) ───
+const SUPPRESS_MESSAGES = [
+  'lock broken',
+  'lock was not granted',
+  'navigator.locks',
+  'the operation was aborted',
+];
+
+const shouldSuppressError = (message: string): boolean => {
+  const msg = String(message).toLowerCase();
+  return SUPPRESS_MESSAGES.some(s => msg.includes(s));
+};
+
 // ─── MAIN LOG ERROR FUNCTION ───
 export const logError = async (
   errorType: string,
@@ -47,6 +81,12 @@ export const logError = async (
   additionalData?: Record<string, any>
 ): Promise<void> => {
   try {
+    // Suppress known harmless errors (e.g. auth lock contention)
+    if (shouldSuppressError(message)) {
+      console.debug('[ErrorTracker] Suppressed harmless error:', message.substring(0, 80));
+      return;
+    }
+
     // Dedup check — same error type + message within 10 seconds = skip
     const dedupKey = `${errorType}::${String(message).substring(0, 100)}`;
     const lastLogged = recentErrors.get(dedupKey);
@@ -65,15 +105,8 @@ export const logError = async (
     const pageUrl = window.location.href;
     const module = getModuleFromUrl(pageUrl);
 
-    let userId: string | null = null;
-    let userEmail: string | null = null;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id || null;
-      userEmail = user?.email || null;
-    } catch (_) {
-      // User not logged in — log anonymously
-    }
+    // Use cached auth to avoid concurrent getUser() lock contention
+    const { userId, userEmail } = await getCachedAuth();
 
     const payload = {
       userId,
