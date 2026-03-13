@@ -1566,18 +1566,33 @@ const Index = () => {
     }
   }, [user]);
 
-  // Presence heartbeat — every 60s
+  // Presence heartbeat — every 60s (silent failures, never floods error logs)
   useEffect(() => {
     if (!user) return;
     const updatePresence = async () => {
-      await supabase.from('user_presence').upsert({
-        user_id: user.id,
-        user_email: user.email,
-        user_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
-        last_seen: new Date().toISOString(),
-        current_page: activePage,
-        session_start: sessionStorage.getItem('session_start') || new Date().toISOString(),
-      }, { onConflict: 'user_id' });
+      try {
+        const { error } = await supabase
+          .from('user_presence')
+          .upsert(
+            {
+              user_id: user.id,
+              user_email: user.email,
+              user_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
+              last_seen: new Date().toISOString(),
+              current_page: activePage,
+              session_start: sessionStorage.getItem('session_start') || new Date().toISOString(),
+            },
+            {
+              onConflict: 'user_id',
+              ignoreDuplicates: false,
+            }
+          );
+        if (error) {
+          console.warn('[Presence] Heartbeat failed silently:', error.message);
+        }
+      } catch (_) {
+        // Complete silence — network blip is not worth logging
+      }
     };
     if (!sessionStorage.getItem('session_start')) {
       sessionStorage.setItem('session_start', new Date().toISOString());

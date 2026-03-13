@@ -134,6 +134,7 @@ const NEVER_LOG_URLS = [
   'track-activity',
   'log-session',
   'end-session',
+  'user_presence',
   'supabase.co/functions/v1/log-error',
 ];
 
