@@ -1566,41 +1566,59 @@ const Index = () => {
     }
   }, [user]);
 
-  // Presence heartbeat — every 60s (silent failures, never floods error logs)
+  // Presence heartbeat — every 60s (auth-validated, silent failures, no error flood)
   useEffect(() => {
     if (!user) return;
+
+    let isCancelled = false;
+    let sessionStart = sessionStorage.getItem('session_start');
+    if (!sessionStart) {
+      sessionStart = new Date().toISOString();
+      sessionStorage.setItem('session_start', sessionStart);
+    }
+
     const updatePresence = async () => {
       try {
+        // Extra guard: only heartbeat when an active auth session matches the current user.
+        // This prevents stale/local user state from triggering RLS violations.
+        const { data: { session } } = await supabase.auth.getSession();
+        const sessionUserId = session?.user?.id;
+
+        if (isCancelled || !sessionUserId || sessionUserId !== user.id) return;
+
         const { error } = await supabase
           .from('user_presence')
           .upsert(
             {
-              user_id: user.id,
-              user_email: user.email,
-              user_name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
+              user_id: sessionUserId,
+              user_email: session?.user?.email || user.email,
+              user_name: profile?.full_name || session?.user?.user_metadata?.full_name || user.email?.split('@')[0],
               last_seen: new Date().toISOString(),
-              current_page: activePage,
-              session_start: sessionStorage.getItem('session_start') || new Date().toISOString(),
+              current_page: activePage || 'dashboard',
+              session_start: sessionStart,
             },
             {
               onConflict: 'user_id',
               ignoreDuplicates: false,
             }
           );
+
         if (error) {
           console.warn('[Presence] Heartbeat failed silently:', error.message);
         }
       } catch (_) {
-        // Complete silence — network blip is not worth logging
+        // Complete silence — background presence should never break UX
       }
     };
-    if (!sessionStorage.getItem('session_start')) {
-      sessionStorage.setItem('session_start', new Date().toISOString());
-    }
+
     updatePresence();
     const interval = setInterval(updatePresence, 60000);
-    return () => clearInterval(interval);
-  }, [user, activePage]);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [user, profile?.full_name, activePage]);
 
   // Track page visits
   useEffect(() => {
