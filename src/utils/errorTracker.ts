@@ -64,6 +64,7 @@ const getCachedAuth = async (): Promise<{ userId: string | null; userEmail: stri
 const SUPPRESS_MESSAGES = [
   'lock broken',
   'lock was not granted',
+  'lock was stolen by another request',
   'navigator.locks',
   'the operation was aborted',
 ];
@@ -71,6 +72,48 @@ const SUPPRESS_MESSAGES = [
 const shouldSuppressError = (message: string): boolean => {
   const msg = String(message).toLowerCase();
   return SUPPRESS_MESSAGES.some(s => msg.includes(s));
+};
+
+// ─── TRANSIENT NETWORK FAILURE DAMPENING ───
+const recentNetworkFailures = new Map<string, { count: number; lastAt: number }>();
+const NETWORK_FAILURE_WINDOW_MS = 45000;
+const NETWORK_FAILURE_THRESHOLD = 2;
+
+const shouldLogNetworkFailure = (url: string, message: string): boolean => {
+  const msg = String(message).toLowerCase();
+
+  // Never log known harmless noise
+  if (shouldSuppressError(msg)) return false;
+
+  // If browser is offline, these failures are expected noise
+  if (
+    (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed')) &&
+    typeof navigator !== 'undefined' &&
+    navigator.onLine === false
+  ) {
+    return false;
+  }
+
+  const key = `${String(url).toLowerCase()}::${msg.substring(0, 140)}`;
+  const now = Date.now();
+  const previous = recentNetworkFailures.get(key);
+
+  if (!previous || now - previous.lastAt > NETWORK_FAILURE_WINDOW_MS) {
+    recentNetworkFailures.set(key, { count: 1, lastAt: now });
+    return false; // First failure in window is treated as transient
+  }
+
+  const nextCount = previous.count + 1;
+  recentNetworkFailures.set(key, { count: nextCount, lastAt: now });
+
+  if (recentNetworkFailures.size > 250) {
+    const cutoff = now - NETWORK_FAILURE_WINDOW_MS;
+    recentNetworkFailures.forEach((value, mapKey) => {
+      if (value.lastAt < cutoff) recentNetworkFailures.delete(mapKey);
+    });
+  }
+
+  return nextCount >= NETWORK_FAILURE_THRESHOLD;
 };
 
 // ─── MAIN LOG ERROR FUNCTION ───
