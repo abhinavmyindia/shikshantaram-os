@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.admin-reset-password]
 verify_jwt = false
+
+[functions.upsert-presence]
+verify_jwt = false
