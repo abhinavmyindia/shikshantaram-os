@@ -248,7 +248,13 @@ serve(async (req) => {
       return new Response(JSON.stringify({ result: parsed }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } catch (parseErr) {
       console.error('Parse error:', parseErr);
-      return new Response(JSON.stringify({ error: 'Failed to parse AI response. Please try again.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(
+        JSON.stringify({
+          error: 'AI response format was invalid. Please retry.',
+          code: 'AI_PARSE_ERROR',
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
   } catch (e) {
     console.error('offer-creation error:', e);
