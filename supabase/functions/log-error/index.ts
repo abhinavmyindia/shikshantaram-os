@@ -106,15 +106,39 @@ Deno.serve(async (req) => {
       additionalData = {},
     } = body;
 
-    // Auto-elevate severity
+    // Auto-elevate severity (network blips are warnings unless they indicate server crashes)
     const msgLower = String(message).toLowerCase();
+    const requestUrl = String((additionalData as Record<string, unknown>)?.url || '').toLowerCase();
+    const isTransientNetwork =
+      msgLower.includes('failed to fetch') ||
+      msgLower.includes('networkerror') ||
+      msgLower.includes('load failed');
+
+    const isBackgroundNoiseEndpoint =
+      requestUrl.includes('user_presence') ||
+      requestUrl.includes('/auth/v1/') ||
+      requestUrl.includes('/token') ||
+      requestUrl.includes('track-activity') ||
+      requestUrl.includes('log-session') ||
+      requestUrl.includes('end-session');
+
+    // Drop known background network noise to keep Security tab actionable
+    if (isTransientNetwork && isBackgroundNoiseEndpoint) {
+      return new Response(
+        JSON.stringify({ logged: false, suppressed: true, reason: 'background_network_noise' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const isCritical =
       msgLower.includes('chunkloaderror') ||
-      msgLower.includes('failed to fetch') ||
       msgLower.includes('http 500') ||
       errorType === 'react_error_boundary' ||
       errorType === 'unhandled_rejection';
-    const finalSeverity = isCritical ? 'critical' : severity;
+
+    const finalSeverity = isTransientNetwork && !isCritical
+      ? 'warning'
+      : (isCritical ? 'critical' : severity);
 
     // Generate fingerprint for deduplication
     const fingerprintRaw = `${errorType}::${String(message).substring(0, 100)}::${module}`;

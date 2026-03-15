@@ -278,12 +278,17 @@ export const initGlobalErrorTracking = (): void => {
       }
       return response;
     } catch (fetchError: any) {
-      logError(
-        'network_error',
-        fetchError?.message || 'Network request failed',
-        fetchError?.stack,
-        { url }
-      );
+      const networkMessage = fetchError?.message || 'Network request failed';
+      if (shouldLogNetworkFailure(url, networkMessage)) {
+        logError(
+          'network_error',
+          networkMessage,
+          fetchError?.stack,
+          { url }
+        );
+      } else {
+        console.debug('[ErrorTracker] Suppressed transient network failure:', networkMessage.substring(0, 80));
+      }
       throw fetchError;
     }
   };
