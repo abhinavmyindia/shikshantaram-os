@@ -1579,29 +1579,15 @@ const Index = () => {
 
     const updatePresence = async () => {
       try {
-        // Extra guard: only heartbeat when an active auth session matches the current user.
-        // This prevents stale/local user state from triggering RLS violations.
-        const { data: { session } } = await supabase.auth.getSession();
-        const sessionUserId = session?.user?.id;
+        if (isCancelled) return;
 
-        if (isCancelled || !sessionUserId || sessionUserId !== user.id) return;
-
-        const { error } = await supabase
-          .from('user_presence')
-          .upsert(
-            {
-              user_id: sessionUserId,
-              user_email: session?.user?.email || user.email,
-              user_name: profile?.full_name || session?.user?.user_metadata?.full_name || user.email?.split('@')[0],
-              last_seen: new Date().toISOString(),
-              current_page: activePage || 'dashboard',
-              session_start: sessionStart,
-            },
-            {
-              onConflict: 'user_id',
-              ignoreDuplicates: false,
-            }
-          );
+        const { error } = await supabase.functions.invoke('upsert-presence', {
+          body: {
+            current_page: activePage || 'dashboard',
+            user_name: profile?.full_name || user.email?.split('@')[0],
+            session_start: sessionStart,
+          },
+        });
 
         if (error) {
           console.warn('[Presence] Heartbeat failed silently:', error.message);

@@ -871,6 +871,100 @@ function BlockedUsersSubTab({ adminId, showToast }: { adminId: string; showToast
   );
 }
 
+// ─── HEALTH MONITOR CARD ───
+function HealthMonitorCard() {
+  const [data, setData] = useState<{ last1h: number; last24h: number; trend: 'stable' | 'spike' | 'declining'; spikeAlert: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHealth = async () => {
+      try {
+        const now = new Date();
+        const h1Ago = new Date(now.getTime() - 3600000).toISOString();
+        const h24Ago = new Date(now.getTime() - 86400000).toISOString();
+        const h48Ago = new Date(now.getTime() - 172800000).toISOString();
+
+        const [r1h, r24h, rPrev24h] = await Promise.all([
+          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h1Ago).eq('is_resolved', false),
+          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h24Ago).eq('is_resolved', false),
+          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h48Ago).lt('created_at', h24Ago).eq('is_resolved', false),
+        ]);
+
+        const last1h = r1h.count || 0;
+        const last24h = r24h.count || 0;
+        const prev24h = rPrev24h.count || 0;
+
+        // Spike detection: if last 1h errors > 5 AND last 1h > 50% of entire 24h count
+        let trend: 'stable' | 'spike' | 'declining' = 'stable';
+        let spikeAlert: string | null = null;
+
+        if (last1h >= 5 && (last24h === 0 || last1h / Math.max(last24h, 1) > 0.5)) {
+          trend = 'spike';
+          spikeAlert = `⚠️ ${last1h} errors in the last hour — investigate immediately`;
+        } else if (last24h < prev24h * 0.5) {
+          trend = 'declining';
+        }
+
+        setData({ last1h, last24h, trend, spikeAlert });
+      } catch (_) {
+        setData({ last1h: 0, last24h: 0, trend: 'stable', spikeAlert: null });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 60000); // Auto-refresh every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) return <LoadingSpinner color="#3b82f6" />;
+  if (!data) return null;
+
+  const trendConfig = {
+    stable: { label: '✅ Stable', color: '#15803d', bg: 'rgba(5,150,105,0.08)' },
+    spike: { label: '🔥 Spike Detected', color: '#dc2626', bg: 'rgba(239,68,68,0.08)' },
+    declining: { label: '📉 Declining', color: '#2563eb', bg: 'rgba(59,130,246,0.08)' },
+  };
+
+  const tc = trendConfig[data.trend];
+
+  return (
+    <div style={{ ...glassCard, padding: '18px 20px', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>💓</span>
+          <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>System Health Monitor</span>
+        </div>
+        <span style={{
+          fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 20,
+          background: tc.bg, color: tc.color,
+        }}>{tc.label}</span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: data.spikeAlert ? 12 : 0 }}>
+        <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', textAlign: 'center' as const }}>
+          <div style={{ fontFamily: 'Sora', fontSize: 24, fontWeight: 900, color: data.last1h >= 5 ? '#dc2626' : '#0f172a' }}>{data.last1h}</div>
+          <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginTop: 2 }}>Errors (Last 1h)</div>
+        </div>
+        <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', textAlign: 'center' as const }}>
+          <div style={{ fontFamily: 'Sora', fontSize: 24, fontWeight: 900, color: data.last24h >= 20 ? '#ea580c' : '#0f172a' }}>{data.last24h}</div>
+          <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginTop: 2 }}>Errors (Last 24h)</div>
+        </div>
+      </div>
+
+      {data.spikeAlert && (
+        <div style={{
+          background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+          borderRadius: 10, padding: '10px 14px',
+        }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#dc2626' }}>{data.spikeAlert}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN SECURITY TAB ───
 export default function SecurityTab({ adminId, showToast }: { adminId: string; showToast: (msg: string, type?: string) => void }) {
   const [subTab, setSubTab] = useState('errors');
@@ -891,6 +985,9 @@ export default function SecurityTab({ adminId, showToast }: { adminId: string; s
           <p style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' }}>Error tracking, session management, and security monitoring</p>
         </div>
       </div>
+
+      {/* Health Monitor — always visible at top */}
+      <HealthMonitorCard />
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, flexWrap: 'wrap' }}>
         {subTabs.map(t => (
