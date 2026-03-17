@@ -1755,7 +1755,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           )}
         </ReportSection>
 
-        <ReportSection icon="😤" iconBg="#fee2e2" iconColor="#ef4444" title="5 Pain Points" subtitle="What keeps your buyer up at night">
+        <ReportSection icon="😤" iconBg="#fee2e2" iconColor="#ef4444" title="5 Pain Points" subtitle="What keeps your buyer up at night" status={sectionStatus['painPoints']} onRetry={() => retrySingleSection('painPoints')}>
           {r.painPoints?.map((pp: any, i: number) => {
             const rankColors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e'];
             return (
