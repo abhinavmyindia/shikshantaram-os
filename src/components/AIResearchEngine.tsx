@@ -1790,7 +1790,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           </div>
         </ReportSection>
 
-        <ReportSection icon="🧠" iconBg="#fff7ed" iconColor="#ea580c" title="Empathy Map" subtitle="Inside your buyer's mind">
+        <ReportSection icon="🧠" iconBg="#fff7ed" iconColor="#ea580c" title="Empathy Map" subtitle="Inside your buyer's mind" status={sectionStatus['empathyMap']} onRetry={() => retrySingleSection('empathyMap')}>
           <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 })}>
             {[
               { key: 'thinks', emoji: '💭', label: 'THINKS' },
