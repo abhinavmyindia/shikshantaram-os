@@ -231,20 +231,55 @@ function IdeaAnalyzingScreen() {
   );
 }
 
-/* ───────── Report Section ───────── */
-function ReportSection({ icon, iconBg, iconColor, title, subtitle, defaultOpen, children, glowing }: {
+/* ───────── Report Section (with loading/error/retry) ───────── */
+function ReportSection({ icon, iconBg, iconColor, title, subtitle, defaultOpen, children, glowing, status, onRetry }: {
   icon: string; iconBg: string; iconColor: string; title: string; subtitle: string;
   defaultOpen?: boolean; children: React.ReactNode; glowing?: boolean;
+  status?: 'loading' | 'done' | 'error'; onRetry?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
+
+  const renderContent = () => {
+    if (status === 'loading') {
+      return (
+        <div style={s({ padding: '20px 20px 24px' })}>
+          {[1, 2, 3].map(i => (
+            <div key={i} style={s({ height: 14, background: '#f1f5f9', borderRadius: 8, marginBottom: 10, width: `${90 - i * 15}%`, animation: 'pulse 1.5s ease-in-out infinite' })} />
+          ))}
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 8 })}>
+            ⏳ Researching with live data...
+          </div>
+        </div>
+      );
+    }
+    if (status === 'error') {
+      return (
+        <div style={s({ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 })}>
+          <div>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#dc2626' })}>⚠️ This section couldn't load</div>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 2 })}>The rest of the report is complete. You can retry this section.</div>
+          </div>
+          {onRetry && (
+            <button onClick={onRetry} style={s({ background: 'white', border: '1.5px solid #e2e8f0', padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151', whiteSpace: 'nowrap', flexShrink: 0 })}>
+              🔄 Retry
+            </button>
+          )}
+        </div>
+      );
+    }
+    return open ? <div style={s({ padding: '0 20px 20px' })}>{children}</div> : null;
+  };
+
   return (
     <div style={s({
       background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20,
-      border: glowing ? '1px solid rgba(234,88,12,0.25)' : '1px solid rgba(255,255,255,0.95)',
+      border: status === 'error' ? '1px solid rgba(239,68,68,0.2)' : glowing ? '1px solid rgba(234,88,12,0.25)' : '1px solid rgba(255,255,255,0.95)',
       boxShadow: glowing ? '0 4px 20px rgba(234,88,12,0.08)' : '0 4px 16px rgba(0,0,0,0.05)',
       marginBottom: 16, overflow: 'hidden',
+      opacity: status === 'loading' ? 0.7 : 1,
+      transition: 'opacity 0.3s',
     })}>
-      <div onClick={() => setOpen(!open)} style={s({ padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' })}>
+      <div onClick={() => status !== 'loading' && setOpen(!open)} style={s({ padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: status === 'loading' ? 'default' : 'pointer' })}>
         <div style={s({ display: 'flex', alignItems: 'center', gap: 12 })}>
           <div style={s({ width: 30, height: 30, borderRadius: 8, background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 })}>{icon}</div>
           <div>
@@ -252,9 +287,16 @@ function ReportSection({ icon, iconBg, iconColor, title, subtitle, defaultOpen, 
             <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>{subtitle}</div>
           </div>
         </div>
-        <span style={s({ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 12, color: '#94a3b8' })}>▼</span>
+        <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+          {status === 'done' && <span style={s({ fontSize: 12, color: '#10b981' })}>✅</span>}
+          {status === 'loading' && <div style={s({ width: 14, height: 14, border: '2px solid #e2e8f0', borderTopColor: '#ea580c', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' })} />}
+          {status === 'error' && <span style={s({ fontSize: 12, color: '#ef4444' })}>❌</span>}
+          {status !== 'loading' && status !== 'error' && (
+            <span style={s({ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 12, color: '#94a3b8' })}>▼</span>
+          )}
+        </div>
       </div>
-      {open && <div style={s({ padding: '0 20px 20px' })}>{children}</div>}
+      {renderContent()}
     </div>
   );
 }
