@@ -1889,7 +1889,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           ))}
         </ReportSection>
 
-        <ReportSection icon="📣" iconBg="#cffafe" iconColor="#0e7490" title="Launch Strategy" subtitle="Platform, pricing & content plan">
+        <ReportSection icon="📣" iconBg="#cffafe" iconColor="#0e7490" title="Launch Strategy" subtitle="Platform, pricing & content plan" status={sectionStatus['launchStrategy']} onRetry={() => retrySingleSection('launchStrategy')}>
           <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 16 })}>
             <div style={s({ background: '#f8fafc', borderRadius: 12, padding: 14 })}>
               <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 })}>Best Platform</div>
