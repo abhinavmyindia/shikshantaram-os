@@ -134,6 +134,7 @@ Deno.serve(async (req) => {
     }
 
     const isCritical =
+      isHealthSpike ||
       msgLower.includes('chunkloaderror') ||
       msgLower.includes('http 500') ||
       errorType === 'react_error_boundary' ||
