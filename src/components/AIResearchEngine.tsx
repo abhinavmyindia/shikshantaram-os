@@ -1708,7 +1708,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         )}
 
         {/* SECTIONS */}
-        <ReportSection icon="🌍" iconBg="#dcfce7" iconColor="#059669" title="Market Overview" subtitle="Total addressable market & audience">
+        <ReportSection icon="🌍" iconBg="#dcfce7" iconColor="#059669" title="Market Overview" subtitle="Total addressable market & audience" status={sectionStatus['marketOverview']} onRetry={() => retrySingleSection('marketOverview')}>
           <div style={s({ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 })}>
             {[
               { label: 'Total Addressable Market', value: r.marketOverview?.totalAddressableMarket },
