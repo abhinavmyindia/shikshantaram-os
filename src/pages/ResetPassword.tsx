@@ -137,6 +137,8 @@ const ResetPassword = () => {
               placeholder="Min. 8 characters" style={inputStyle}
             />
 
+            <PasswordStrengthMeter password={password} />
+
             <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
               Confirm Password
             </label>

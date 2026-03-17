@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -6,7 +5,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+// Server-side HaveIBeenPwned check using k-anonymity
+async function checkPwned(password: string): Promise<boolean> {
+  try {
+    const data = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+    const hashHex = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    const prefix = hashHex.substring(0, 5);
+    const suffix = hashHex.substring(5);
+
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+    if (!res.ok) return false; // fail open
+    const text = await res.text();
+    return text.split('\n').some(line => line.startsWith(suffix));
+  } catch {
+    return false;
+  }
+}
+
+// Server-side password strength validation
+function isStrongPassword(password: string): { valid: boolean; reason?: string } {
+  if (password.length < 8) return { valid: false, reason: 'Password must be at least 8 characters' };
+  if (!/[A-Z]/.test(password)) return { valid: false, reason: 'Password must contain an uppercase letter' };
+  if (!/[a-z]/.test(password)) return { valid: false, reason: 'Password must contain a lowercase letter' };
+  if (!/\d/.test(password)) return { valid: false, reason: 'Password must contain a digit' };
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|<>?,./`~]/.test(password)) return { valid: false, reason: 'Password must contain a special character' };
+  return { valid: true };
+}
+
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -43,8 +71,16 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'user_id and new_password are required' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    if (new_password.length < 6) {
-      return new Response(JSON.stringify({ error: 'Password must be at least 6 characters' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Server-side strength validation
+    const strengthCheck = isStrongPassword(new_password);
+    if (!strengthCheck.valid) {
+      return new Response(JSON.stringify({ error: strengthCheck.reason }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // HaveIBeenPwned check
+    const isPwned = await checkPwned(new_password);
+    if (isPwned) {
+      return new Response(JSON.stringify({ error: 'This password has appeared in a known data breach. Please choose a different password.' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const { error: updateError } = await adminClient.auth.admin.updateUserById(user_id, {
@@ -56,7 +92,7 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
