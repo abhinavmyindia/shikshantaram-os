@@ -1737,7 +1737,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           )}
         </ReportSection>
 
-        <ReportSection icon="🔍" iconBg="#f0f9ff" iconColor="#0891b2" title="Search Demand" subtitle="Keywords, trends & timing">
+        <ReportSection icon="🔍" iconBg="#f0f9ff" iconColor="#0891b2" title="Search Demand" subtitle="Keywords, trends & timing" status={sectionStatus['searchDemand']} onRetry={() => retrySingleSection('searchDemand')}>
           {r.searchDemand?.primaryKeyword && (
             <div style={s({ display: 'inline-block', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 50, padding: '8px 20px', fontFamily: 'Sora', fontWeight: 700, fontSize: 16, color: '#0891b2', marginBottom: 12 })}>{r.searchDemand.primaryKeyword}</div>
           )}
