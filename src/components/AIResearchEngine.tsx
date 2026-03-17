@@ -1810,7 +1810,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           </div>
         </ReportSection>
 
-        <ReportSection icon="🎯" iconBg="#dcfce7" iconColor="#059669" title="Primary Solution" subtitle="How this product solves the problem">
+        <ReportSection icon="🎯" iconBg="#dcfce7" iconColor="#059669" title="Primary Solution" subtitle="How this product solves the problem" status={sectionStatus['primarySolution']} onRetry={() => retrySingleSection('primarySolution')}>
           <div style={s({ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: 16, marginBottom: 12 })}>
             <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#166534', lineHeight: 1.75 })}>{r.primarySolution?.howProductSolvesIt}</div>
           </div>
