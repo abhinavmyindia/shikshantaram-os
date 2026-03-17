@@ -1239,13 +1239,49 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     return <LoadingScreen type={isRawResultsMode || rawIdeaStep === 'loading-ideas' ? 'raw-ideas' : 'ideas'} data={{ ...inputData, country: rawIdeaData.country || inputData.country }} startTime={loadingStartTime} />;
   }
 
-  /* ═══════════════════ LOADING REPORT ═══════════════════ */
+  /* ═══════════════════ LOADING REPORT (Section Checklist) ═══════════════════ */
   if (aiStep === 'loading-report') {
+    const sectionMeta = [
+      { key: 'marketOverview', icon: '🌍', label: 'Market Overview & Competitors' },
+      { key: 'searchDemand', icon: '🔍', label: 'Search Volume & Trends' },
+      { key: 'painPoints', icon: '😤', label: 'Customer Pain Points' },
+      { key: 'transformation', icon: '✨', label: 'Buyer Transformation' },
+      { key: 'deepestDesires', icon: '💎', label: 'Deepest Desires' },
+      { key: 'empathyMap', icon: '🧠', label: 'Empathy Map' },
+      { key: 'primarySolution', icon: '🎯', label: 'Product Solution Design' },
+      { key: 'impulsePurchaseAnalysis', icon: '⚡', label: 'Impulse Purchase Analysis' },
+      { key: 'competitorLandscape', icon: '⚔️', label: 'Competitor Landscape' },
+      { key: 'nextSteps', icon: '🚀', label: 'Action Plan & Next Steps' },
+      { key: 'launchStrategy', icon: '📣', label: 'Launch Strategy' },
+    ];
+
     return (
-      <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
-        <div>
+      <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto' })}>
+        <div style={s({ maxWidth: 480, width: '100%', padding: '40px 20px' })}>
           <LoadingScreen type="report" data={{ ...inputData, productName: selectedProduct?.productName, searchKeyword: selectedProduct?.searchKeyword }} startTime={loadingStartTime} />
-          <div style={s({ textAlign: 'center', marginTop: 24 })}>
+
+          {/* Section checklist */}
+          <div style={s({ marginTop: 24, background: 'rgba(255,255,255,0.9)', borderRadius: 16, border: '1px solid #e2e8f0', padding: '16px 20px' })}>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 })}>📋 BUILDING YOUR REPORT</div>
+            {sectionMeta.map((sec, i) => {
+              const st = sectionStatus[sec.key];
+              return (
+                <div key={sec.key} style={s({ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', animation: `fadeUp 0.3s ease ${i * 0.08}s both` })}>
+                  <div style={s({ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>
+                    {st === 'done' ? (
+                      <span style={s({ fontSize: 13, color: '#10b981' })}>✅</span>
+                    ) : (
+                      <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#ea580c', animation: 'spinSlow 0.8s linear infinite' })} />
+                    )}
+                  </div>
+                  <span style={s({ fontSize: 14, marginRight: 4 })}>{sec.icon}</span>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: st === 'done' ? '#10b981' : '#475569', fontWeight: st === 'done' ? 700 : 400 })}>{sec.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={s({ textAlign: 'center', marginTop: 20 })}>
             <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: 'none', fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>← Back to results</button>
           </div>
         </div>
