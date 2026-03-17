@@ -122,6 +122,9 @@ Deno.serve(async (req) => {
       requestUrl.includes('log-session') ||
       requestUrl.includes('end-session');
 
+    // Health spike alerts always get critical treatment and email alert
+    const isHealthSpike = errorType === 'health_spike_alert';
+
     // Drop known background network noise to keep Security tab actionable
     if (isTransientNetwork && isBackgroundNoiseEndpoint) {
       return new Response(

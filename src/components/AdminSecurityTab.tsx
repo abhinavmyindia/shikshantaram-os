@@ -901,6 +901,20 @@ function HealthMonitorCard() {
         if (last1h >= 5 && (last24h === 0 || last1h / Math.max(last24h, 1) > 0.5)) {
           trend = 'spike';
           spikeAlert = `⚠️ ${last1h} errors in the last hour — investigate immediately`;
+
+          // Send spike alert email (fire-and-forget, deduplicated server-side)
+          try {
+            await supabase.functions.invoke('log-error', {
+              body: {
+                errorType: 'health_spike_alert',
+                severity: 'critical',
+                message: `Health Monitor Spike: ${last1h} errors in the last hour (${last24h} in 24h)`,
+                module: 'health_monitor',
+                pageUrl: window.location.href,
+                additionalData: { last1h, last24h, prev24h, detectedAt: new Date().toISOString() },
+              },
+            });
+          } catch (_) { /* alert failure should never block UI */ }
         } else if (last24h < prev24h * 0.5) {
           trend = 'declining';
         }
