@@ -37,9 +37,9 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function KPICard({ label, value, sub, icon, bg }: { label: string; value: string | number; sub: string; icon: string; bg: string }) {
-  return (
-    <div style={{ ...glassCard, padding: '18px 20px' }}>
+const KPICard = forwardRef<HTMLDivElement, { label: string; value: string | number; sub: string; icon: string; bg: string }>(
+  ({ label, value, sub, icon, bg }, ref) => (
+    <div ref={ref} style={{ ...glassCard, padding: '18px 20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{icon}</div>
@@ -47,8 +47,9 @@ function KPICard({ label, value, sub, icon, bg }: { label: string; value: string
       <div style={{ fontFamily: 'Sora', fontSize: 28, fontWeight: 900, color: '#0f172a', marginTop: 8 }}>{value}</div>
       <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{sub}</div>
     </div>
-  );
-}
+  )
+);
+KPICard.displayName = 'KPICard';
 
 function LoadingSpinner({ color = '#7c3aed' }: { color?: string }) {
   return (
