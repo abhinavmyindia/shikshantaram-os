@@ -421,6 +421,17 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   const [filter, setFilter] = useState('All');
   const [sortBy, setSortBy] = useState('demand');
 
+  /* ── Section-by-section loading state ── */
+  const REPORT_SECTIONS = [
+    'marketOverview', 'searchDemand', 'painPoints', 'transformation',
+    'deepestDesires', 'empathyMap', 'primarySolution',
+    'impulsePurchaseAnalysis', 'competitorLandscape', 'nextSteps', 'launchStrategy',
+  ] as const;
+  const [sectionStatus, setSectionStatus] = useState<Record<string, 'loading' | 'done' | 'error'>>({});
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [filter, setFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('demand');
+
   /* ── Generate More state ── */
   const [moreCount, setMoreCount] = useState(10);
   const [moreDirection, setMoreDirection] = useState('different-angle');
