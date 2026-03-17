@@ -557,18 +557,69 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setError('');
     setSelectedProduct(product);
     setLoadingStartTime(Date.now());
+    setResearchReport(null);
+
+    // Initialize all sections as loading
+    const initialStatus: Record<string, 'loading' | 'done' | 'error'> = {};
+    REPORT_SECTIONS.forEach(sec => { initialStatus[sec] = 'loading'; });
+    setSectionStatus(initialStatus);
     setAiStep('loading-report');
+
     try {
       const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: { action: 'deep-research', product, inputData },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
-      setResearchReport(data.result);
+
+      const report = data.result;
+      setResearchReport(report);
+
+      // Mark each section as done or error based on presence
+      const finalStatus: Record<string, 'loading' | 'done' | 'error'> = {};
+      REPORT_SECTIONS.forEach(sec => {
+        finalStatus[sec] = report[sec] ? 'done' : 'error';
+      });
+      setSectionStatus(finalStatus);
       setAiStep('report');
     } catch (err: any) {
+      // Mark all sections as error
+      const errorStatus: Record<string, 'loading' | 'done' | 'error'> = {};
+      REPORT_SECTIONS.forEach(sec => { errorStatus[sec] = 'error'; });
+      setSectionStatus(errorStatus);
       setError(err.message || 'Could not generate report. Please try again.');
       setAiStep('results');
+    }
+  };
+
+  /* ── Retry a single failed section ── */
+  const retrySingleSection = async (sectionKey: string) => {
+    if (!selectedProduct) return;
+    setSectionStatus(prev => ({ ...prev, [sectionKey]: 'loading' }));
+
+    try {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
+        body: { action: 'deep-research', product: selectedProduct, inputData },
+      });
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+
+      const report = data.result;
+      if (report?.[sectionKey]) {
+        setResearchReport((prev: any) => ({ ...prev, [sectionKey]: report[sectionKey] }));
+        setSectionStatus(prev => ({ ...prev, [sectionKey]: 'done' }));
+        // Also fill any other sections that were missing
+        REPORT_SECTIONS.forEach(sec => {
+          if (report[sec] && sectionStatus[sec] === 'error') {
+            setResearchReport((prev: any) => ({ ...prev, [sec]: report[sec] }));
+            setSectionStatus(prev => ({ ...prev, [sec]: 'done' }));
+          }
+        });
+      } else {
+        setSectionStatus(prev => ({ ...prev, [sectionKey]: 'error' }));
+      }
+    } catch {
+      setSectionStatus(prev => ({ ...prev, [sectionKey]: 'error' }));
     }
   };
 
