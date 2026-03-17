@@ -1873,7 +1873,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           )}
         </ReportSection>
 
-        <ReportSection icon="🚀" iconBg="#fff7ed" iconColor="#ea580c" title="Your Next Steps" subtitle="Start building today" glowing>
+        <ReportSection icon="🚀" iconBg="#fff7ed" iconColor="#ea580c" title="Your Next Steps" subtitle="Start building today" glowing status={sectionStatus['nextSteps']} onRetry={() => retrySingleSection('nextSteps')}>
           {r.nextSteps?.map((step: any, i: number) => (
             <div key={i} style={s({ background: 'white', borderRadius: 14, padding: 16, marginBottom: 10, border: '1px solid #f1f5f9', borderLeft: `4px solid ${STEP_COLORS[i % STEP_COLORS.length]}` })}>
               <div style={s({ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 })}>
