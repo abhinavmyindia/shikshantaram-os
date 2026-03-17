@@ -231,20 +231,55 @@ function IdeaAnalyzingScreen() {
   );
 }
 
-/* ───────── Report Section ───────── */
-function ReportSection({ icon, iconBg, iconColor, title, subtitle, defaultOpen, children, glowing }: {
+/* ───────── Report Section (with loading/error/retry) ───────── */
+function ReportSection({ icon, iconBg, iconColor, title, subtitle, defaultOpen, children, glowing, status, onRetry }: {
   icon: string; iconBg: string; iconColor: string; title: string; subtitle: string;
   defaultOpen?: boolean; children: React.ReactNode; glowing?: boolean;
+  status?: 'loading' | 'done' | 'error'; onRetry?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? false);
+
+  const renderContent = () => {
+    if (status === 'loading') {
+      return (
+        <div style={s({ padding: '20px 20px 24px' })}>
+          {[1, 2, 3].map(i => (
+            <div key={i} style={s({ height: 14, background: '#f1f5f9', borderRadius: 8, marginBottom: 10, width: `${90 - i * 15}%`, animation: 'pulse 1.5s ease-in-out infinite' })} />
+          ))}
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 8 })}>
+            ⏳ Researching with live data...
+          </div>
+        </div>
+      );
+    }
+    if (status === 'error') {
+      return (
+        <div style={s({ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 })}>
+          <div>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#dc2626' })}>⚠️ This section couldn't load</div>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 2 })}>The rest of the report is complete. You can retry this section.</div>
+          </div>
+          {onRetry && (
+            <button onClick={onRetry} style={s({ background: 'white', border: '1.5px solid #e2e8f0', padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151', whiteSpace: 'nowrap', flexShrink: 0 })}>
+              🔄 Retry
+            </button>
+          )}
+        </div>
+      );
+    }
+    return open ? <div style={s({ padding: '0 20px 20px' })}>{children}</div> : null;
+  };
+
   return (
     <div style={s({
       background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20,
-      border: glowing ? '1px solid rgba(234,88,12,0.25)' : '1px solid rgba(255,255,255,0.95)',
+      border: status === 'error' ? '1px solid rgba(239,68,68,0.2)' : glowing ? '1px solid rgba(234,88,12,0.25)' : '1px solid rgba(255,255,255,0.95)',
       boxShadow: glowing ? '0 4px 20px rgba(234,88,12,0.08)' : '0 4px 16px rgba(0,0,0,0.05)',
       marginBottom: 16, overflow: 'hidden',
+      opacity: status === 'loading' ? 0.7 : 1,
+      transition: 'opacity 0.3s',
     })}>
-      <div onClick={() => setOpen(!open)} style={s({ padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' })}>
+      <div onClick={() => status !== 'loading' && setOpen(!open)} style={s({ padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: status === 'loading' ? 'default' : 'pointer' })}>
         <div style={s({ display: 'flex', alignItems: 'center', gap: 12 })}>
           <div style={s({ width: 30, height: 30, borderRadius: 8, background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 })}>{icon}</div>
           <div>
@@ -252,9 +287,16 @@ function ReportSection({ icon, iconBg, iconColor, title, subtitle, defaultOpen, 
             <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>{subtitle}</div>
           </div>
         </div>
-        <span style={s({ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 12, color: '#94a3b8' })}>▼</span>
+        <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+          {status === 'done' && <span style={s({ fontSize: 12, color: '#10b981' })}>✅</span>}
+          {status === 'loading' && <div style={s({ width: 14, height: 14, border: '2px solid #e2e8f0', borderTopColor: '#ea580c', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' })} />}
+          {status === 'error' && <span style={s({ fontSize: 12, color: '#ef4444' })}>❌</span>}
+          {status !== 'loading' && status !== 'error' && (
+            <span style={s({ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', fontSize: 12, color: '#94a3b8' })}>▼</span>
+          )}
+        </div>
       </div>
-      {open && <div style={s({ padding: '0 20px 20px' })}>{children}</div>}
+      {renderContent()}
     </div>
   );
 }
@@ -421,6 +463,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   const [filter, setFilter] = useState('All');
   const [sortBy, setSortBy] = useState('demand');
 
+  /* ── Section-by-section loading state ── */
+  const REPORT_SECTIONS = [
+    'marketOverview', 'searchDemand', 'painPoints', 'transformation',
+    'deepestDesires', 'empathyMap', 'primarySolution',
+    'impulsePurchaseAnalysis', 'competitorLandscape', 'nextSteps', 'launchStrategy',
+  ] as const;
+  const [sectionStatus, setSectionStatus] = useState<Record<string, 'loading' | 'done' | 'error'>>({});
+
   /* ── Generate More state ── */
   const [moreCount, setMoreCount] = useState(10);
   const [moreDirection, setMoreDirection] = useState('different-angle');
@@ -549,18 +599,69 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setError('');
     setSelectedProduct(product);
     setLoadingStartTime(Date.now());
+    setResearchReport(null);
+
+    // Initialize all sections as loading
+    const initialStatus: Record<string, 'loading' | 'done' | 'error'> = {};
+    REPORT_SECTIONS.forEach(sec => { initialStatus[sec] = 'loading'; });
+    setSectionStatus(initialStatus);
     setAiStep('loading-report');
+
     try {
       const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
         body: { action: 'deep-research', product, inputData },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
-      setResearchReport(data.result);
+
+      const report = data.result;
+      setResearchReport(report);
+
+      // Mark each section as done or error based on presence
+      const finalStatus: Record<string, 'loading' | 'done' | 'error'> = {};
+      REPORT_SECTIONS.forEach(sec => {
+        finalStatus[sec] = report[sec] ? 'done' : 'error';
+      });
+      setSectionStatus(finalStatus);
       setAiStep('report');
     } catch (err: any) {
+      // Mark all sections as error
+      const errorStatus: Record<string, 'loading' | 'done' | 'error'> = {};
+      REPORT_SECTIONS.forEach(sec => { errorStatus[sec] = 'error'; });
+      setSectionStatus(errorStatus);
       setError(err.message || 'Could not generate report. Please try again.');
       setAiStep('results');
+    }
+  };
+
+  /* ── Retry a single failed section ── */
+  const retrySingleSection = async (sectionKey: string) => {
+    if (!selectedProduct) return;
+    setSectionStatus(prev => ({ ...prev, [sectionKey]: 'loading' }));
+
+    try {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
+        body: { action: 'deep-research', product: selectedProduct, inputData },
+      });
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+
+      const report = data.result;
+      if (report?.[sectionKey]) {
+        setResearchReport((prev: any) => ({ ...prev, [sectionKey]: report[sectionKey] }));
+        setSectionStatus(prev => ({ ...prev, [sectionKey]: 'done' }));
+        // Also fill any other sections that were missing
+        REPORT_SECTIONS.forEach(sec => {
+          if (report[sec] && sectionStatus[sec] === 'error') {
+            setResearchReport((prev: any) => ({ ...prev, [sec]: report[sec] }));
+            setSectionStatus(prev => ({ ...prev, [sec]: 'done' }));
+          }
+        });
+      } else {
+        setSectionStatus(prev => ({ ...prev, [sectionKey]: 'error' }));
+      }
+    } catch {
+      setSectionStatus(prev => ({ ...prev, [sectionKey]: 'error' }));
     }
   };
 
@@ -1138,13 +1239,49 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     return <LoadingScreen type={isRawResultsMode || rawIdeaStep === 'loading-ideas' ? 'raw-ideas' : 'ideas'} data={{ ...inputData, country: rawIdeaData.country || inputData.country }} startTime={loadingStartTime} />;
   }
 
-  /* ═══════════════════ LOADING REPORT ═══════════════════ */
+  /* ═══════════════════ LOADING REPORT (Section Checklist) ═══════════════════ */
   if (aiStep === 'loading-report') {
+    const sectionMeta = [
+      { key: 'marketOverview', icon: '🌍', label: 'Market Overview & Competitors' },
+      { key: 'searchDemand', icon: '🔍', label: 'Search Volume & Trends' },
+      { key: 'painPoints', icon: '😤', label: 'Customer Pain Points' },
+      { key: 'transformation', icon: '✨', label: 'Buyer Transformation' },
+      { key: 'deepestDesires', icon: '💎', label: 'Deepest Desires' },
+      { key: 'empathyMap', icon: '🧠', label: 'Empathy Map' },
+      { key: 'primarySolution', icon: '🎯', label: 'Product Solution Design' },
+      { key: 'impulsePurchaseAnalysis', icon: '⚡', label: 'Impulse Purchase Analysis' },
+      { key: 'competitorLandscape', icon: '⚔️', label: 'Competitor Landscape' },
+      { key: 'nextSteps', icon: '🚀', label: 'Action Plan & Next Steps' },
+      { key: 'launchStrategy', icon: '📣', label: 'Launch Strategy' },
+    ];
+
     return (
-      <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
-        <div>
+      <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto' })}>
+        <div style={s({ maxWidth: 480, width: '100%', padding: '40px 20px' })}>
           <LoadingScreen type="report" data={{ ...inputData, productName: selectedProduct?.productName, searchKeyword: selectedProduct?.searchKeyword }} startTime={loadingStartTime} />
-          <div style={s({ textAlign: 'center', marginTop: 24 })}>
+
+          {/* Section checklist */}
+          <div style={s({ marginTop: 24, background: 'rgba(255,255,255,0.9)', borderRadius: 16, border: '1px solid #e2e8f0', padding: '16px 20px' })}>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 })}>📋 BUILDING YOUR REPORT</div>
+            {sectionMeta.map((sec, i) => {
+              const st = sectionStatus[sec.key];
+              return (
+                <div key={sec.key} style={s({ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', animation: `fadeUp 0.3s ease ${i * 0.08}s both` })}>
+                  <div style={s({ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>
+                    {st === 'done' ? (
+                      <span style={s({ fontSize: 13, color: '#10b981' })}>✅</span>
+                    ) : (
+                      <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#ea580c', animation: 'spinSlow 0.8s linear infinite' })} />
+                    )}
+                  </div>
+                  <span style={s({ fontSize: 14, marginRight: 4 })}>{sec.icon}</span>
+                  <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: st === 'done' ? '#10b981' : '#475569', fontWeight: st === 'done' ? 700 : 400 })}>{sec.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={s({ textAlign: 'center', marginTop: 20 })}>
             <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: 'none', fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>← Back to results</button>
           </div>
         </div>
@@ -1571,7 +1708,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         )}
 
         {/* SECTIONS */}
-        <ReportSection icon="🌍" iconBg="#dcfce7" iconColor="#059669" title="Market Overview" subtitle="Total addressable market & audience">
+        <ReportSection icon="🌍" iconBg="#dcfce7" iconColor="#059669" title="Market Overview" subtitle="Total addressable market & audience" status={sectionStatus['marketOverview']} onRetry={() => retrySingleSection('marketOverview')}>
           <div style={s({ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 })}>
             {[
               { label: 'Total Addressable Market', value: r.marketOverview?.totalAddressableMarket },
@@ -1600,7 +1737,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           )}
         </ReportSection>
 
-        <ReportSection icon="🔍" iconBg="#f0f9ff" iconColor="#0891b2" title="Search Demand" subtitle="Keywords, trends & timing">
+        <ReportSection icon="🔍" iconBg="#f0f9ff" iconColor="#0891b2" title="Search Demand" subtitle="Keywords, trends & timing" status={sectionStatus['searchDemand']} onRetry={() => retrySingleSection('searchDemand')}>
           {r.searchDemand?.primaryKeyword && (
             <div style={s({ display: 'inline-block', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 50, padding: '8px 20px', fontFamily: 'Sora', fontWeight: 700, fontSize: 16, color: '#0891b2', marginBottom: 12 })}>{r.searchDemand.primaryKeyword}</div>
           )}
@@ -1618,7 +1755,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           )}
         </ReportSection>
 
-        <ReportSection icon="😤" iconBg="#fee2e2" iconColor="#ef4444" title="5 Pain Points" subtitle="What keeps your buyer up at night">
+        <ReportSection icon="😤" iconBg="#fee2e2" iconColor="#ef4444" title="5 Pain Points" subtitle="What keeps your buyer up at night" status={sectionStatus['painPoints']} onRetry={() => retrySingleSection('painPoints')}>
           {r.painPoints?.map((pp: any, i: number) => {
             const rankColors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e'];
             return (
@@ -1638,7 +1775,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         {/* ── SECTION 4: BUYER TRANSFORMATION ── */}
         {r.transformation && <BuyerTransformationSection transformation={r.transformation} />}
 
-        <ReportSection icon="💎" iconBg="#ede9fe" iconColor="#7c3aed" title="Deepest Desires" subtitle="What they really want">
+        <ReportSection icon="💎" iconBg="#ede9fe" iconColor="#7c3aed" title="Deepest Desires" subtitle="What they really want" status={sectionStatus['deepestDesires']} onRetry={() => retrySingleSection('deepestDesires')}>
           <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 })}>
             {r.deepestDesires?.map((d: any, i: number) => (
               <div key={i} style={s({ background: 'linear-gradient(135deg,rgba(124,58,237,0.05),rgba(168,85,247,0.03))', border: '1px solid rgba(124,58,237,0.15)', borderRadius: 14, padding: 16 })}>
@@ -1653,7 +1790,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           </div>
         </ReportSection>
 
-        <ReportSection icon="🧠" iconBg="#fff7ed" iconColor="#ea580c" title="Empathy Map" subtitle="Inside your buyer's mind">
+        <ReportSection icon="🧠" iconBg="#fff7ed" iconColor="#ea580c" title="Empathy Map" subtitle="Inside your buyer's mind" status={sectionStatus['empathyMap']} onRetry={() => retrySingleSection('empathyMap')}>
           <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 })}>
             {[
               { key: 'thinks', emoji: '💭', label: 'THINKS' },
@@ -1673,7 +1810,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           </div>
         </ReportSection>
 
-        <ReportSection icon="🎯" iconBg="#dcfce7" iconColor="#059669" title="Primary Solution" subtitle="How this product solves the problem">
+        <ReportSection icon="🎯" iconBg="#dcfce7" iconColor="#059669" title="Primary Solution" subtitle="How this product solves the problem" status={sectionStatus['primarySolution']} onRetry={() => retrySingleSection('primarySolution')}>
           <div style={s({ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: 16, marginBottom: 12 })}>
             <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#166534', lineHeight: 1.75 })}>{r.primarySolution?.howProductSolvesIt}</div>
           </div>
@@ -1689,7 +1826,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           </div>
         </ReportSection>
 
-        <ReportSection icon="⚡" iconBg="#fef9c3" iconColor="#f59e0b" title="Impulse Purchase Analysis" subtitle="Why they buy now">
+        <ReportSection icon="⚡" iconBg="#fef9c3" iconColor="#f59e0b" title="Impulse Purchase Analysis" subtitle="Why they buy now" status={sectionStatus['impulsePurchaseAnalysis']} onRetry={() => retrySingleSection('impulsePurchaseAnalysis')}>
           {r.impulsePurchaseAnalysis?.rating && (
             <div style={s({ textAlign: 'center', marginBottom: 16 })}>
               <span style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 48, background: 'linear-gradient(135deg,#ea580c,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>{r.impulsePurchaseAnalysis.rating}</span>
@@ -1717,7 +1854,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           )}
         </ReportSection>
 
-        <ReportSection icon="⚔️" iconBg="#fce7f3" iconColor="#be185d" title="Competitor Landscape" subtitle="Who you're up against">
+        <ReportSection icon="⚔️" iconBg="#fce7f3" iconColor="#be185d" title="Competitor Landscape" subtitle="Who you're up against" status={sectionStatus['competitorLandscape']} onRetry={() => retrySingleSection('competitorLandscape')}>
           <div style={s({ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 })}>
             {r.competitorLandscape?.directCompetitors?.map((comp: any, i: number) => (
               <div key={i} style={s({ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', minWidth: 200, flex: 1 })}>
@@ -1736,7 +1873,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           )}
         </ReportSection>
 
-        <ReportSection icon="🚀" iconBg="#fff7ed" iconColor="#ea580c" title="Your Next Steps" subtitle="Start building today" glowing>
+        <ReportSection icon="🚀" iconBg="#fff7ed" iconColor="#ea580c" title="Your Next Steps" subtitle="Start building today" glowing status={sectionStatus['nextSteps']} onRetry={() => retrySingleSection('nextSteps')}>
           {r.nextSteps?.map((step: any, i: number) => (
             <div key={i} style={s({ background: 'white', borderRadius: 14, padding: 16, marginBottom: 10, border: '1px solid #f1f5f9', borderLeft: `4px solid ${STEP_COLORS[i % STEP_COLORS.length]}` })}>
               <div style={s({ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 })}>
@@ -1752,7 +1889,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           ))}
         </ReportSection>
 
-        <ReportSection icon="📣" iconBg="#cffafe" iconColor="#0e7490" title="Launch Strategy" subtitle="Platform, pricing & content plan">
+        <ReportSection icon="📣" iconBg="#cffafe" iconColor="#0e7490" title="Launch Strategy" subtitle="Platform, pricing & content plan" status={sectionStatus['launchStrategy']} onRetry={() => retrySingleSection('launchStrategy')}>
           <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 16 })}>
             <div style={s({ background: '#f8fafc', borderRadius: 12, padding: 14 })}>
               <div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 })}>Best Platform</div>
