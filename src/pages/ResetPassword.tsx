@@ -1,5 +1,7 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { validatePassword } from '@/utils/passwordValidation';
+import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 
 const bg: CSSProperties = {
   minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -18,6 +20,26 @@ const inputStyle: CSSProperties = {
   fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#0f172a', outline: 'none',
   boxSizing: 'border-box', background: '#f8fafc', transition: 'all 0.18s', marginBottom: 16,
 };
+
+// Check password against HaveIBeenPwned API using k-anonymity (only first 5 chars of hash sent)
+async function checkPwned(password: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    const prefix = hashHex.substring(0, 5);
+    const suffix = hashHex.substring(5);
+
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+    if (!res.ok) return false; // fail open — don't block user if API is down
+    const text = await res.text();
+    return text.split('\n').some(line => line.startsWith(suffix));
+  } catch {
+    return false; // fail open
+  }
+}
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -43,11 +65,21 @@ const ResetPassword = () => {
 
   const handleReset = async () => {
     if (!password) { setError('Please enter a new password.'); return; }
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+
+    const { allPassed } = validatePassword(password);
+    if (!allPassed) { setError('Password does not meet all strength requirements.'); return; }
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
 
     setLoading(true);
     setError('');
+
+    // Check HaveIBeenPwned
+    const isPwned = await checkPwned(password);
+    if (isPwned) {
+      setError('This password has appeared in a data breach. Please choose a different one.');
+      setLoading(false);
+      return;
+    }
 
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
@@ -104,6 +136,8 @@ const ResetPassword = () => {
               type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder="Min. 8 characters" style={inputStyle}
             />
+
+            <PasswordStrengthMeter password={password} />
 
             <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
               Confirm Password
