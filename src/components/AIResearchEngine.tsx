@@ -1854,7 +1854,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           )}
         </ReportSection>
 
-        <ReportSection icon="⚔️" iconBg="#fce7f3" iconColor="#be185d" title="Competitor Landscape" subtitle="Who you're up against">
+        <ReportSection icon="⚔️" iconBg="#fce7f3" iconColor="#be185d" title="Competitor Landscape" subtitle="Who you're up against" status={sectionStatus['competitorLandscape']} onRetry={() => retrySingleSection('competitorLandscape')}>
           <div style={s({ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 })}>
             {r.competitorLandscape?.directCompetitors?.map((comp: any, i: number) => (
               <div key={i} style={s({ background: 'white', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', minWidth: 200, flex: 1 })}>
