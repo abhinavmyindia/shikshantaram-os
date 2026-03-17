@@ -1826,7 +1826,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           </div>
         </ReportSection>
 
-        <ReportSection icon="⚡" iconBg="#fef9c3" iconColor="#f59e0b" title="Impulse Purchase Analysis" subtitle="Why they buy now">
+        <ReportSection icon="⚡" iconBg="#fef9c3" iconColor="#f59e0b" title="Impulse Purchase Analysis" subtitle="Why they buy now" status={sectionStatus['impulsePurchaseAnalysis']} onRetry={() => retrySingleSection('impulsePurchaseAnalysis')}>
           {r.impulsePurchaseAnalysis?.rating && (
             <div style={s({ textAlign: 'center', marginBottom: 16 })}>
               <span style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 48, background: 'linear-gradient(135deg,#ea580c,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' } as any)}>{r.impulsePurchaseAnalysis.rating}</span>
