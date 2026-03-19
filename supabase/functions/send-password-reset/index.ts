@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     }
 
     // Generate reset link
-    const APP_URL = Deno.env.get('APP_URL') || 'https://app.shikshantaram.in';
+    const APP_URL = Deno.env.get('APP_URL') || 'https://os.shikshantaram.in';
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
