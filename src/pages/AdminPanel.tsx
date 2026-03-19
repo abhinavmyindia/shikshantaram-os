@@ -209,7 +209,7 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
         const tempPwd = 'Shk' + Math.random().toString(36).slice(2, 6).toUpperCase() + Math.random().toString(36).slice(2, 5);
         await supabase.functions.invoke('admin-reset-password', { body: { user_id: user.id, new_password: tempPwd } });
         await supabase.functions.invoke('send-welcome-email', {
-          body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier, temp_password: tempPwd, login_url: 'https://app.shikshantaram.in' },
+          body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier, temp_password: tempPwd, login_url: 'https://os.shikshantaram.in' },
         });
       }
       setSendingEmail(p => ({ ...p, [type]: false }));
