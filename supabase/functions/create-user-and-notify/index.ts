@@ -80,7 +80,7 @@ serve(async (req) => {
     const toolsLine = access_tier === 'basic'
       ? 'You have access to Niche Clarity and Product Navigator.'
       : 'You have full Premium access to all tools as they unlock.';
-    const appUrl = 'https://shikshantaram-os.lovable.app';
+    const appUrl = Deno.env.get('APP_URL') || 'https://os.shikshantaram.in';
 
     const html = `
       <div style="max-width:520px;margin:0 auto;font-family:'Segoe UI',Arial,sans-serif;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
