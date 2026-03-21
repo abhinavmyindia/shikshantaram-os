@@ -560,11 +560,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setIdeaAnalysis(data.result);
       setSelectedAngle(data.result.recommendedAngle);
       setRawIdeaStep('analysis-result');
+      credits.deductAfterSuccess('product_navigator', 'idea_analysis');
     } catch (err: any) {
       setError(err.message || 'Could not analyze idea. Please try again.');
       setRawIdeaStep('input');
     }
   };
+
+  const gatedRunIdeaAnalysis = () => credits.gateAction('product_navigator', 'idea_analysis', runIdeaAnalysis);
 
   const generateIdeasFromRawIdea = async () => {
     if (!ideaAnalysis || !selectedAngle) return;
