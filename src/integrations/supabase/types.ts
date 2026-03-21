@@ -194,6 +194,87 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_pricing: {
+        Row: {
+          call_type: string
+          credits: number
+          display_name: string
+          id: string
+          is_active: boolean | null
+          tool_module: string
+          updated_at: string | null
+        }
+        Insert: {
+          call_type: string
+          credits: number
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          tool_module: string
+          updated_at?: string | null
+        }
+        Update: {
+          call_type?: string
+          credits?: number
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          tool_module?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          ai_usage_log_id: string | null
+          amount: number
+          balance_after: number
+          call_type: string | null
+          created_at: string | null
+          description: string | null
+          gifted_by: string | null
+          id: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          tool_module: string | null
+          type: string
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_usage_log_id?: string | null
+          amount: number
+          balance_after: number
+          call_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          gifted_by?: string | null
+          id?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          tool_module?: string | null
+          type: string
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_usage_log_id?: string | null
+          amount?: number
+          balance_after?: number
+          call_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          gifted_by?: string | null
+          id?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          tool_module?: string | null
+          type?: string
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       error_logs: {
         Row: {
           additional_data: Json | null
@@ -350,6 +431,48 @@ export type Database = {
           user_agent?: string | null
           user_email?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      razorpay_orders: {
+        Row: {
+          amount_inr: number
+          bonus_credits: number | null
+          created_at: string | null
+          credits_to_add: number
+          id: string
+          paid_at: string | null
+          razorpay_order_id: string
+          razorpay_payment_id: string | null
+          status: string | null
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_inr: number
+          bonus_credits?: number | null
+          created_at?: string | null
+          credits_to_add: number
+          id?: string
+          paid_at?: string | null
+          razorpay_order_id: string
+          razorpay_payment_id?: string | null
+          status?: string | null
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_inr?: number
+          bonus_credits?: number | null
+          created_at?: string | null
+          credits_to_add?: number
+          id?: string
+          paid_at?: string | null
+          razorpay_order_id?: string
+          razorpay_payment_id?: string | null
+          status?: string | null
+          user_email?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -562,6 +685,33 @@ export type Database = {
           },
         ]
       }
+      user_credits: {
+        Row: {
+          balance: number
+          free_credits_given: number
+          lifetime_spent: number
+          lifetime_topped: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          free_credits_given?: number
+          lifetime_spent?: number
+          lifetime_topped?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          free_credits_given?: number
+          lifetime_spent?: number
+          lifetime_topped?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           current_page: string | null
@@ -753,6 +903,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_user_credits: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_gifted_by?: string
+          p_razorpay_order_id?: string
+          p_razorpay_payment_id?: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      deduct_user_credits: {
+        Args: {
+          p_amount: number
+          p_call_type: string
+          p_description: string
+          p_tool_module: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_my_admin_role: { Args: never; Returns: string }
       get_signup_count: { Args: never; Returns: number }
       has_admin_role: {
