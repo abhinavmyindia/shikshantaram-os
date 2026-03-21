@@ -1698,6 +1698,7 @@ export default function AdminPanel() {
     canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview' },
     canDo.viewUsers(role) && { id: 'users', label: '👥 Users' },
     canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups' },
+    canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits' },
     canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics' },
     canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security' },
     canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access' },
