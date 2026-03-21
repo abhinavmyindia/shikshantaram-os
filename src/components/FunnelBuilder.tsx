@@ -192,6 +192,7 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
 /* ───────── Main Component ───────── */
 export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () => void; funnelPrefill?: FunnelPrefillData | null }) {
   const { saveItem, isSaved, isSaving } = useSaveItem();
+  const credits = useCreditGate();
   const [funnelStep, setFunnelStep] = useState<FunnelStepId>('brief');
   const [funnelBrief, setFunnelBrief] = useState<FunnelBrief>({ productName: '', offer: '', audience: '', goal: '', trafficSources: [] });
   const [funnelType, setFunnelType] = useState<string | null>(null);
