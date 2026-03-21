@@ -262,6 +262,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (data?.error) throw new Error(data.error);
       setFunnelData(data.result);
       setFunnelStep('visualizer');
+      credits.deductAfterSuccess('funnel_builder', 'generate_funnel_architecture');
     } catch (err: any) {
       setError(err.message || 'Could not generate funnel. Please try again.');
       setFunnelStep('brief');
