@@ -157,6 +157,7 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
   const [copiedAll, setCopiedAll] = useState(false);
 
   const { saveItem, isSaved, isSaving } = useSaveItem();
+  const credits = useCreditGate();
 
   const mainRef = useRef<HTMLDivElement>(null);
 
