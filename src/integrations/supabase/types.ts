@@ -903,6 +903,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_user_credits: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_gifted_by?: string
+          p_razorpay_order_id?: string
+          p_razorpay_payment_id?: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      deduct_user_credits: {
+        Args: {
+          p_amount: number
+          p_call_type: string
+          p_description: string
+          p_tool_module: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       get_my_admin_role: { Args: never; Returns: string }
       get_signup_count: { Args: never; Returns: number }
       has_admin_role: {
