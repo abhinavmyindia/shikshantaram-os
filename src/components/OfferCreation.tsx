@@ -287,6 +287,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       if (data?.error) throw new Error(data.error);
       setOfferStructures(data.result);
       setOfferStep('structures');
+      credits.deductAfterSuccess('offer_creation', 'generate_offer_structures');
     } catch (err: any) {
       setError(err.message || 'Could not generate structures. Please try again.');
       setOfferStep('brief');
