@@ -2,6 +2,10 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
+import { useCreditGate } from '@/hooks/useCreditGate';
+import CreditBalance from '@/components/CreditBalance';
+import TopUpModal from '@/components/TopUpModal';
+import CreditConfirmModal from '@/components/CreditConfirmModal';
 
 /* ───────── Types ───────── */
 interface ProductIdea {
@@ -452,6 +456,7 @@ function CountryDropdown({ value, onChange, accentColor }: { value: string; onCh
 export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (data: any) => void } = {}) {
   /* ── Shared state ── */
   const { saveItem, isSaved, isSaving } = useSaveItem();
+  const credits = useCreditGate();
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
   const [loadingStartTime, setLoadingStartTime] = useState<number>(Date.now());
   const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
@@ -534,11 +539,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setProductIdeas(ideas);
       setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
       setAiStep('results');
+      credits.deductAfterSuccess('product_navigator', 'generate_30_ideas');
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setAiStep('input');
     }
   };
+
+  const gatedGenerateIdeas = () => credits.gateAction('product_navigator', 'generate_30_ideas', generateIdeas);
 
   const runIdeaAnalysis = async () => {
     setError('');
@@ -552,11 +560,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setIdeaAnalysis(data.result);
       setSelectedAngle(data.result.recommendedAngle);
       setRawIdeaStep('analysis-result');
+      credits.deductAfterSuccess('product_navigator', 'idea_analysis');
     } catch (err: any) {
       setError(err.message || 'Could not analyze idea. Please try again.');
       setRawIdeaStep('input');
     }
   };
+
+  const gatedRunIdeaAnalysis = () => credits.gateAction('product_navigator', 'idea_analysis', runIdeaAnalysis);
 
   const generateIdeasFromRawIdea = async () => {
     if (!ideaAnalysis || !selectedAngle) return;
@@ -588,12 +599,15 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         productType: chosenAngle?.productFormat || 'Digital Product',
       }));
       setAiStep('results');
+      credits.deductAfterSuccess('product_navigator', 'generate_more_ideas');
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setRawIdeaStep('analysis-result');
       setAiStep('input');
     }
   };
+
+  const gatedGenerateIdeasFromRawIdea = () => credits.gateAction('product_navigator', 'generate_more_ideas', generateIdeasFromRawIdea);
 
   const generateReport = async (product: ProductIdea) => {
     setError('');
@@ -624,6 +638,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       });
       setSectionStatus(finalStatus);
       setAiStep('report');
+      credits.deductAfterSuccess('product_navigator', 'deep_research_report');
     } catch (err: any) {
       // Mark all sections as error
       const errorStatus: Record<string, 'loading' | 'done' | 'error'> = {};
@@ -633,6 +648,8 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setAiStep('results');
     }
   };
+
+  const gatedGenerateReport = (product: ProductIdea) => credits.gateAction('product_navigator', 'deep_research_report', () => generateReport(product));
 
   /* ── Retry a single failed section ── */
   const retrySingleSection = async (sectionKey: string) => {

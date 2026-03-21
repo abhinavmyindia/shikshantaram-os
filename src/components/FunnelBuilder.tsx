@@ -2,6 +2,7 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
+import { useCreditGate } from '@/hooks/useCreditGate';
 
 /* ───────── Prefill Types ───────── */
 interface FunnelPrefillData {
@@ -191,6 +192,7 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
 /* ───────── Main Component ───────── */
 export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () => void; funnelPrefill?: FunnelPrefillData | null }) {
   const { saveItem, isSaved, isSaving } = useSaveItem();
+  const credits = useCreditGate();
   const [funnelStep, setFunnelStep] = useState<FunnelStepId>('brief');
   const [funnelBrief, setFunnelBrief] = useState<FunnelBrief>({ productName: '', offer: '', audience: '', goal: '', trafficSources: [] });
   const [funnelType, setFunnelType] = useState<string | null>(null);
@@ -260,6 +262,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (data?.error) throw new Error(data.error);
       setFunnelData(data.result);
       setFunnelStep('visualizer');
+      credits.deductAfterSuccess('funnel_builder', 'generate_funnel_architecture');
     } catch (err: any) {
       setError(err.message || 'Could not generate funnel. Please try again.');
       setFunnelStep('brief');
@@ -275,6 +278,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setStepCopy(prev => ({ ...prev, [step.stepId]: data.result }));
+      credits.deductAfterSuccess('funnel_builder', 'generate_step_copy');
     } catch (err: any) {
       setError(err.message || 'Could not generate copy.');
     } finally {
@@ -292,6 +296,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setEmailSequence(data.result);
+      credits.deductAfterSuccess('funnel_builder', 'generate_email_sequence');
     } catch (err: any) {
       setError(err.message || 'Could not generate emails.');
     } finally {

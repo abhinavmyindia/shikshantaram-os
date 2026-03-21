@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
+import { useCreditGate } from '@/hooks/useCreditGate';
 
 /* ───────── Types ───────── */
 interface BaseBrief {
@@ -156,6 +157,7 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
   const [copiedAll, setCopiedAll] = useState(false);
 
   const { saveItem, isSaved, isSaving } = useSaveItem();
+  const credits = useCreditGate();
 
   const mainRef = useRef<HTMLDivElement>(null);
 
@@ -219,6 +221,7 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
       setSections(safeSections);
       setScore(data.score || null);
       setStep('output');
+      credits.deductAfterSuccess('copywriting_suite', 'generate_copy');
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {

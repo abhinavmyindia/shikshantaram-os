@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
+import { useCreditGate } from '@/hooks/useCreditGate';
 
 /* ───────── Types ───────── */
 interface OfferBrief {
@@ -210,6 +211,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 /* ───────── Main Component ───────── */
 export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBuildFunnel }: { onBack: () => void; prefill?: any; onPrefillConsumed?: () => void; onBuildFunnel?: (data: any) => void }) {
   const { saveItem, isSaved, isSaving } = useSaveItem();
+  const credits = useCreditGate();
   const [offerStep, setOfferStep] = useState<OfferStep>('brief');
   const [offerBrief, setOfferBrief] = useState<OfferBrief>({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
   const [showPrefillBanner, setShowPrefillBanner] = useState(false);
@@ -285,6 +287,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       if (data?.error) throw new Error(data.error);
       setOfferStructures(data.result);
       setOfferStep('structures');
+      credits.deductAfterSuccess('offer_creation', 'generate_offer_structures');
     } catch (err: any) {
       setError(err.message || 'Could not generate structures. Please try again.');
       setOfferStep('brief');
@@ -305,6 +308,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       setOfferData(data.result);
       setOfferScore(data.result.offerScore?.total || 0);
       setOfferStep('builder');
+      credits.deductAfterSuccess('offer_creation', 'build_full_offer');
     } catch (err: any) {
       setError(err.message || 'Could not build offer. Please try again.');
       setOfferStep('structures');

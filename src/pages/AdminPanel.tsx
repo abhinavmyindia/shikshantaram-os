@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import SecurityTab from '@/components/AdminSecurityTab';
+import AdminCreditsTab from '@/components/AdminCreditsTab';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 interface UserRow {
   id: string;
@@ -1697,6 +1698,7 @@ export default function AdminPanel() {
     canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview' },
     canDo.viewUsers(role) && { id: 'users', label: '👥 Users' },
     canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups' },
+    canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits' },
     canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics' },
     canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security' },
     canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access' },
@@ -1770,6 +1772,7 @@ export default function AdminPanel() {
             {tab === 'overview' && canDo.viewOverview(role) && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
             {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
             {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+            {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
             {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab />}
             {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
             {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
