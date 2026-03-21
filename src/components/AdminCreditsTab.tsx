@@ -177,20 +177,24 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   useEffect(() => { loadData(); }, []);
 
   const handleGift = async () => {
-    if (!giftTarget || !giftAmount) return;
+    if (!giftEmail.trim() || !giftAmount) return;
     setGiftLoading(true);
+    setGiftResult(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke('gift-credits', {
-        body: { targetUserId: giftTarget, amount: parseInt(giftAmount), reason: giftReason },
+        body: { targetEmail: giftEmail.trim().toLowerCase(), amount: parseInt(giftAmount), reason: giftReason || 'Admin gift' },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      if (error || !data?.success) throw new Error(data?.error || 'Gift failed');
-      showToast(`✅ ${giftAmount} credits gifted!`, 'success');
-      setGiftTarget(''); setGiftAmount(''); setGiftReason('');
-      loadData();
+      if (error || !data?.success) {
+        setGiftResult({ success: false, message: `❌ ${data?.error || 'Gift failed'}` });
+      } else {
+        setGiftResult({ success: true, message: `✅ ${giftAmount} credits gifted to ${data.giftedTo?.email}` });
+        setGiftEmail(''); setGiftAmount(''); setGiftReason('');
+        loadData();
+      }
     } catch (err: any) {
-      showToast(`❌ ${err.message}`, 'error');
+      setGiftResult({ success: false, message: `❌ ${err.message}` });
     }
     setGiftLoading(false);
   };
