@@ -1772,6 +1772,7 @@ export default function AdminPanel() {
             {tab === 'overview' && canDo.viewOverview(role) && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
             {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
             {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+            {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
             {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab />}
             {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
             {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
