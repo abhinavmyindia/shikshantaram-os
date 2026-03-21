@@ -103,3 +103,8 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 8px 32px rgba(124,58,237,0.3); }
+  50%      { box-shadow: 0 8px 48px rgba(124,58,237,0.55); }
+}
