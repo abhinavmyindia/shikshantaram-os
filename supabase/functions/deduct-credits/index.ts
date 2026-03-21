@@ -17,6 +17,7 @@ Deno.serve(async (req) => {
   try {
     const { userId, toolModule, callType, aiUsageLogId } = await req.json();
 
+    // Get pricing
     const { data: pricing } = await supabase
       .from('credit_pricing')
       .select('credits, display_name')
@@ -29,6 +30,85 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    // Check global enforcement mode
+    const { data: globalSetting } = await supabase
+      .from('global_settings')
+      .select('value')
+      .eq('key', 'credits_enforcement_mode')
+      .single();
+
+    const globalMode = globalSetting?.value || 'shadow';
+
+    // Check per-user enforcement
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('credits_enforcement')
+      .eq('id', userId)
+      .single();
+
+    const userEnforcement = userProfile?.credits_enforcement || 'shadow';
+    const isExempt = userEnforcement === 'exempt';
+    const isShadow = globalMode === 'shadow' || userEnforcement === 'shadow';
+
+    // Get current balance for logging
+    const { data: credits } = await supabase
+      .from('user_credits')
+      .select('balance')
+      .eq('user_id', userId)
+      .single();
+
+    if (isExempt) {
+      // Exempt users: log the call but never touch their balance
+      await supabase.from('credit_transactions').insert({
+        user_id: userId,
+        type: 'shadow_deduction',
+        amount: 0,
+        balance_after: credits?.balance ?? 0,
+        description: `[EXEMPT] ${pricing.display_name}`,
+        tool_module: toolModule,
+        call_type: callType,
+      });
+
+      return new Response(JSON.stringify({ success: true, deducted: 0, mode: 'exempt' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    if (isShadow) {
+      // Shadow mode: deduct virtually for tracking, mark as shadow_deduction
+      const { data } = await supabase.rpc('deduct_user_credits', {
+        p_user_id: userId,
+        p_amount: pricing.credits,
+        p_description: `[SHADOW] ${pricing.display_name}`,
+        p_tool_module: toolModule,
+        p_call_type: callType,
+      });
+
+      // Update the transaction type to shadow_deduction
+      if (data?.success) {
+        await supabase
+          .from('credit_transactions')
+          .update({ type: 'shadow_deduction' })
+          .eq('user_id', userId)
+          .eq('type', 'deduction')
+          .eq('description', `[SHADOW] ${pricing.display_name}`)
+          .order('created_at', { ascending: false })
+          .limit(1);
+      }
+
+      if (aiUsageLogId && data?.success) {
+        await supabase
+          .from('credit_transactions')
+          .update({ ai_usage_log_id: aiUsageLogId })
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+      }
+
+      return new Response(JSON.stringify({ success: true, deducted: pricing.credits, mode: 'shadow', newBalance: data?.new_balance }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Normal enforcement — standard deduction
     const { data } = await supabase.rpc('deduct_user_credits', {
       p_user_id: userId,
       p_amount: pricing.credits,

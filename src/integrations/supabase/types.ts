@@ -353,6 +353,30 @@ export type Database = {
         }
         Relationships: []
       }
+      global_settings: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       login_sessions: {
         Row: {
           browser: string | null
@@ -747,6 +771,7 @@ export type Database = {
           avatar_initials: string | null
           bio: string | null
           created_at: string | null
+          credits_enforcement: string | null
           facebook: string | null
           full_name: string
           id: string
@@ -769,6 +794,7 @@ export type Database = {
           avatar_initials?: string | null
           bio?: string | null
           created_at?: string | null
+          credits_enforcement?: string | null
           facebook?: string | null
           full_name?: string
           id: string
@@ -791,6 +817,7 @@ export type Database = {
           avatar_initials?: string | null
           bio?: string | null
           created_at?: string | null
+          credits_enforcement?: string | null
           facebook?: string | null
           full_name?: string
           id?: string
