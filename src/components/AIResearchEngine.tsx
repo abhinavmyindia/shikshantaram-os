@@ -638,6 +638,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       });
       setSectionStatus(finalStatus);
       setAiStep('report');
+      credits.deductAfterSuccess('product_navigator', 'deep_research_report');
     } catch (err: any) {
       // Mark all sections as error
       const errorStatus: Record<string, 'loading' | 'done' | 'error'> = {};
@@ -647,6 +648,8 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setAiStep('results');
     }
   };
+
+  const gatedGenerateReport = (product: ProductIdea) => credits.gateAction('product_navigator', 'deep_research_report', () => generateReport(product));
 
   /* ── Retry a single failed section ── */
   const retrySingleSection = async (sectionKey: string) => {
