@@ -1,14 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
+const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization,x-client-info,apikey,content-type',
 };
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
-  const anonClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
+  const anonClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!
+  );
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -24,22 +26,40 @@ Deno.serve(async (req) => {
       .from('admin_users').select('role').eq('user_id', adminUser.id).single();
     if (!adminRow) throw new Error('Not an admin');
 
-    const { targetUserId, amount, reason } = await req.json();
-    if (!targetUserId || !amount || amount <= 0) throw new Error('targetUserId and amount required');
+    const { targetEmail, amount, reason } = await req.json();
+    if (!targetEmail || !amount || amount <= 0) throw new Error('Email and amount are required');
+
+    const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers();
+    if (listErr) throw new Error('Could not fetch users');
+
+    const targetUser = users.find(
+      u => u.email?.toLowerCase() === targetEmail.trim().toLowerCase()
+    );
+
+    if (!targetUser) {
+      return new Response(
+        JSON.stringify({ success: false, error: `No user found with email: ${targetEmail}` }),
+        { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const { data: result } = await supabase.rpc('add_user_credits', {
-      p_user_id: targetUserId,
+      p_user_id: targetUser.id,
       p_amount: amount,
       p_type: 'gift',
       p_description: reason || 'Gift from admin',
       p_gifted_by: adminUser.id,
     });
 
-    return new Response(JSON.stringify({ success: true, result }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(
+      JSON.stringify({ success: true, result, giftedTo: { email: targetUser.email, userId: targetUser.id } }),
+      { headers: { ...cors, 'Content-Type': 'application/json' } }
+    );
 
   } catch (err: any) {
-    return new Response(JSON.stringify({ success: false, error: err.message }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(
+      JSON.stringify({ success: false, error: err.message }),
+      { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } }
+    );
   }
 });

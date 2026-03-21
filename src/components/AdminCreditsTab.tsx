@@ -151,10 +151,11 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   const [allCredits, setAllCredits] = useState<any[]>([]);
   const [recentTx, setRecentTx] = useState<any[]>([]);
   const [revenue, setRevenue] = useState(0);
-  const [giftTarget, setGiftTarget] = useState('');
+  const [giftEmail, setGiftEmail] = useState('');
   const [giftAmount, setGiftAmount] = useState('');
   const [giftReason, setGiftReason] = useState('');
   const [giftLoading, setGiftLoading] = useState(false);
+  const [giftResult, setGiftResult] = useState<{ success: boolean; message: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'balances' | 'transactions'>('balances');
   const [userProfiles, setUserProfiles] = useState<any>({});
 
