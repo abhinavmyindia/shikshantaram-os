@@ -296,6 +296,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setEmailSequence(data.result);
+      credits.deductAfterSuccess('funnel_builder', 'generate_email_sequence');
     } catch (err: any) {
       setError(err.message || 'Could not generate emails.');
     } finally {

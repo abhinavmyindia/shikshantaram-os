@@ -221,6 +221,7 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
       setSections(safeSections);
       setScore(data.score || null);
       setStep('output');
+      credits.deductAfterSuccess('copywriting_suite', 'generate_copy');
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {

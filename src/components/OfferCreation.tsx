@@ -308,6 +308,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       setOfferData(data.result);
       setOfferScore(data.result.offerScore?.total || 0);
       setOfferStep('builder');
+      credits.deductAfterSuccess('offer_creation', 'build_full_offer');
     } catch (err: any) {
       setError(err.message || 'Could not build offer. Please try again.');
       setOfferStep('structures');
