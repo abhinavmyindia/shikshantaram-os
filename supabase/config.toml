@@ -44,3 +44,18 @@ verify_jwt = false
 
 [functions.upsert-presence]
 verify_jwt = false
+
+[functions.check-credits]
+verify_jwt = false
+
+[functions.deduct-credits]
+verify_jwt = false
+
+[functions.create-razorpay-order]
+verify_jwt = false
+
+[functions.verify-razorpay-payment]
+verify_jwt = false
+
+[functions.gift-credits]
+verify_jwt = false
