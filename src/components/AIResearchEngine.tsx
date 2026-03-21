@@ -599,12 +599,15 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         productType: chosenAngle?.productFormat || 'Digital Product',
       }));
       setAiStep('results');
+      credits.deductAfterSuccess('product_navigator', 'generate_more_ideas');
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setRawIdeaStep('analysis-result');
       setAiStep('input');
     }
   };
+
+  const gatedGenerateIdeasFromRawIdea = () => credits.gateAction('product_navigator', 'generate_more_ideas', generateIdeasFromRawIdea);
 
   const generateReport = async (product: ProductIdea) => {
     setError('');
