@@ -539,11 +539,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setProductIdeas(ideas);
       setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
       setAiStep('results');
+      credits.deductAfterSuccess('product_navigator', 'generate_30_ideas');
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setAiStep('input');
     }
   };
+
+  const gatedGenerateIdeas = () => credits.gateAction('product_navigator', 'generate_30_ideas', generateIdeas);
 
   const runIdeaAnalysis = async () => {
     setError('');
