@@ -1269,48 +1269,119 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
 
   /* ═══════════════════ LOADING REPORT (Section Checklist) ═══════════════════ */
   if (aiStep === 'loading-report') {
-    const sectionMeta = [
-      { key: 'marketOverview', icon: '🌍', label: 'Market Overview & Competitors' },
-      { key: 'searchDemand', icon: '🔍', label: 'Search Volume & Trends' },
-      { key: 'painPoints', icon: '😤', label: 'Customer Pain Points' },
-      { key: 'transformation', icon: '✨', label: 'Buyer Transformation' },
-      { key: 'deepestDesires', icon: '💎', label: 'Deepest Desires' },
-      { key: 'empathyMap', icon: '🧠', label: 'Empathy Map' },
-      { key: 'primarySolution', icon: '🎯', label: 'Product Solution Design' },
-      { key: 'impulsePurchaseAnalysis', icon: '⚡', label: 'Impulse Purchase Analysis' },
-      { key: 'competitorLandscape', icon: '⚔️', label: 'Competitor Landscape' },
-      { key: 'nextSteps', icon: '🚀', label: 'Action Plan & Next Steps' },
-      { key: 'launchStrategy', icon: '📣', label: 'Launch Strategy' },
+    const ESTIMATED = 90;
+    const researchProgress = Math.min(95, Math.round((reportElapsed / ESTIMATED) * 100));
+    const remainingSec = Math.max(0, ESTIMATED - reportElapsed);
+    const researchTimeRemaining = remainingSec > 60 ? `${Math.ceil(remainingSec / 60)}m` : remainingSec > 0 ? `${remainingSec}s` : 'almost done';
+
+    const stepsList = [
+      `Searching ${inputData.country || 'global'} market for ${selectedProduct?.searchKeyword || 'data'}...`,
+      `Analyzing buyer psychology and pain points...`,
+      `Mapping desires, fears, and purchase triggers...`,
+      `Building your full research report...`,
     ];
+    const activeStepIdx = Math.min(stepsList.length - 1, Math.floor((reportElapsed / ESTIMATED) * stepsList.length));
+    const currentResearchStep = stepsList[activeStepIdx];
 
     return (
-      <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto' })}>
-        <div style={s({ maxWidth: 480, width: '100%', padding: '40px 20px' })}>
-          <LoadingScreen type="report" data={{ ...inputData, productName: selectedProduct?.productName, searchKeyword: selectedProduct?.searchKeyword }} startTime={loadingStartTime} />
+      <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '40px 16px' })}>
+        <div style={s({ maxWidth: 560, width: '100%', display: 'flex', flexDirection: 'column', gap: 0 })}>
 
-          {/* Section checklist */}
-          <div style={s({ marginTop: 24, background: 'rgba(255,255,255,0.9)', borderRadius: 16, border: '1px solid #e2e8f0', padding: '16px 20px' })}>
-            <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 })}>📋 BUILDING YOUR REPORT</div>
-            {sectionMeta.map((sec, i) => {
-              const st = sectionStatus[sec.key];
+          {/* ── SECTION 1: Animated icon ── */}
+          <div style={s({ textAlign: 'center', marginBottom: 28 })}>
+            <div style={s({
+              width: 88, height: 88, margin: '0 auto 20px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(124,58,237,0.1), rgba(168,85,247,0.15))',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: 'pulse-ring 2s ease-in-out infinite',
+            })}>
+              <span style={s({ fontSize: 40 })}>🔬</span>
+            </div>
+            <div style={s({ fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: 22, color: '#0f172a', marginBottom: 8 })}>
+              Deep Research in progress...
+            </div>
+            <div style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#64748b', lineHeight: 1.7, maxWidth: 440, margin: '0 auto' })}>
+              {selectedProduct?.productName
+                ? `Analyzing market data, buyer psychology & competitive landscape for "${selectedProduct.productName}"`
+                : 'Analyzing market data, buyer psychology & competitive landscape...'}
+            </div>
+          </div>
+
+          {/* ── SECTION 2: Progress bar ── */}
+          <div style={s({ marginBottom: 28 })}>
+            <div style={s({ background: '#f1f5f9', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 8 })}>
+              <div style={s({
+                height: '100%', borderRadius: 999,
+                background: 'linear-gradient(90deg, #7c3aed, #a855f7)',
+                width: `${researchProgress}%`,
+                transition: 'width 1s linear',
+              })} />
+            </div>
+            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+              <span style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 12, fontWeight: 700, color: '#7c3aed' })}>
+                {researchProgress}%
+              </span>
+              <span style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#94a3b8' })}>
+                ~{researchTimeRemaining} remaining
+              </span>
+            </div>
+
+            {currentResearchStep && (
+              <div style={s({ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 })}>
+                <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#7c3aed', animation: 'spinSlow 0.8s linear infinite', flexShrink: 0 })} />
+                <span style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#475569', fontWeight: 600 })}>
+                  {currentResearchStep}
+                </span>
+              </div>
+            )}
+
+            <div style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#94a3b8', marginTop: 10, textAlign: 'center' })}>
+              ⏱ Deep Research typically takes 60–90 seconds
+            </div>
+          </div>
+
+          {/* ── SECTION 3: Building Your Report checklist ── */}
+          <div style={s({ background: 'rgba(255,255,255,0.9)', borderRadius: 16, border: '1px solid #e2e8f0', padding: '16px 20px' })}>
+            <div style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 })}>
+              📋 Building Your Report
+            </div>
+
+            {[
+              { key: 'marketOverview',          icon: '🌐', label: 'Market Overview & Competitors' },
+              { key: 'searchDemand',            icon: '🔍', label: 'Search Volume & Trends' },
+              { key: 'painPoints',              icon: '😤', label: 'Customer Pain Points' },
+              { key: 'transformation',          icon: '✨', label: 'Buyer Transformation' },
+              { key: 'deepestDesires',          icon: '💎', label: 'Deepest Desires' },
+              { key: 'empathyMap',              icon: '🧠', label: 'Empathy Map' },
+              { key: 'primarySolution',         icon: '🎯', label: 'Product Solution Design' },
+              { key: 'impulsePurchaseAnalysis', icon: '⚡', label: 'Impulse Purchase Analysis' },
+              { key: 'competitorLandscape',     icon: '⚔️', label: 'Competitor Landscape' },
+              { key: 'nextSteps',               icon: '🚀', label: 'Action Plan & Next Steps' },
+              { key: 'launchStrategy',          icon: '📣', label: 'Launch Strategy' },
+            ].map((section, i) => {
+              const status = sectionStatus?.[section.key] || 'loading';
               return (
-                <div key={sec.key} style={s({ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', animation: `fadeUp 0.3s ease ${i * 0.08}s both` })}>
+                <div key={section.key} style={s({ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid #f1f5f9', animation: `fadeUp 0.3s ease ${i * 0.06}s both` })}>
                   <div style={s({ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>
-                    {st === 'done' ? (
-                      <span style={s({ fontSize: 13, color: '#10b981' })}>✅</span>
+                    {status === 'done' ? (
+                      <span style={s({ fontSize: 13 })}>✅</span>
+                    ) : status === 'error' ? (
+                      <span style={s({ fontSize: 13 })}>⚠️</span>
                     ) : (
-                      <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#ea580c', animation: 'spinSlow 0.8s linear infinite' })} />
+                      <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#7c3aed', animation: 'spinSlow 0.8s linear infinite' })} />
                     )}
                   </div>
-                  <span style={s({ fontSize: 14, marginRight: 4 })}>{sec.icon}</span>
-                  <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: st === 'done' ? '#10b981' : '#475569', fontWeight: st === 'done' ? 700 : 400 })}>{sec.label}</span>
+                  <span style={s({ fontSize: 14 })}>{section.icon}</span>
+                  <span style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: status === 'done' ? '#10b981' : status === 'error' ? '#ea580c' : '#475569', fontWeight: status === 'done' ? 700 : 400 })}>
+                    {section.label}
+                  </span>
                 </div>
               );
             })}
           </div>
 
           <div style={s({ textAlign: 'center', marginTop: 20 })}>
-            <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: 'none', fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>← Back to results</button>
+            <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: 'none', fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>← Back to results</button>
           </div>
         </div>
       </div>
