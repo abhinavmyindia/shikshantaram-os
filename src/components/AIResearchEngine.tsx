@@ -475,6 +475,17 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     'impulsePurchaseAnalysis', 'competitorLandscape', 'nextSteps', 'launchStrategy',
   ] as const;
   const [sectionStatus, setSectionStatus] = useState<Record<string, 'loading' | 'done' | 'error'>>({});
+  const [reportElapsed, setReportElapsed] = useState(0);
+
+  // Timer for report loading progress
+  useEffect(() => {
+    if (aiStep !== 'loading-report') return;
+    const start = loadingStartTime || Date.now();
+    const tick = () => setReportElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [aiStep, loadingStartTime]);
 
   /* ── Generate More state ── */
   const [moreCount, setMoreCount] = useState(10);
