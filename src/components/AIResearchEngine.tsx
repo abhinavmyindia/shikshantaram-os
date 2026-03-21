@@ -2,6 +2,10 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
+import { useCreditGate } from '@/hooks/useCreditGate';
+import CreditBalance from '@/components/CreditBalance';
+import TopUpModal from '@/components/TopUpModal';
+import CreditConfirmModal from '@/components/CreditConfirmModal';
 
 /* ───────── Types ───────── */
 interface ProductIdea {
