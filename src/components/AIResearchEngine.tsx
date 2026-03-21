@@ -456,6 +456,7 @@ function CountryDropdown({ value, onChange, accentColor }: { value: string; onCh
 export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (data: any) => void } = {}) {
   /* ── Shared state ── */
   const { saveItem, isSaved, isSaving } = useSaveItem();
+  const credits = useCreditGate();
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
   const [loadingStartTime, setLoadingStartTime] = useState<number>(Date.now());
   const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
