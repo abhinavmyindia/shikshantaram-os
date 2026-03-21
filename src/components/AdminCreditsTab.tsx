@@ -239,8 +239,8 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
         <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 16 })}>🎁 Gift Credits to User</div>
         <div style={s({ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr auto', gap: 10, alignItems: 'end' })}>
           <div>
-            <label style={s({ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 })}>User ID</label>
-            <input value={giftTarget} onChange={e => setGiftTarget(e.target.value)} placeholder="Paste user UUID" style={inputStyle} />
+            <label style={s({ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 })}>User Email</label>
+            <input value={giftEmail} onChange={e => setGiftEmail(e.target.value)} placeholder="user@example.com" style={inputStyle} />
           </div>
           <div>
             <label style={s({ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 })}>Credits</label>
@@ -250,10 +250,15 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
             <label style={s({ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 })}>Reason</label>
             <input value={giftReason} onChange={e => setGiftReason(e.target.value)} placeholder="e.g. Compensation for issue" style={inputStyle} />
           </div>
-          <button onClick={handleGift} disabled={giftLoading || !giftTarget || !giftAmount} style={s({ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: giftLoading ? 'not-allowed' : 'pointer', opacity: giftLoading ? 0.5 : 1, whiteSpace: 'nowrap' })}>
+          <button onClick={handleGift} disabled={giftLoading || !giftEmail.trim() || !giftAmount} style={s({ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: giftLoading ? 'not-allowed' : 'pointer', opacity: giftLoading ? 0.5 : 1, whiteSpace: 'nowrap' })}>
             {giftLoading ? 'Gifting...' : '🎁 Gift'}
           </button>
         </div>
+        {giftResult && (
+          <div style={s({ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: giftResult.success ? 'rgba(5,150,105,0.08)' : 'rgba(239,68,68,0.08)', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: giftResult.success ? '#059669' : '#dc2626' })}>
+            {giftResult.message}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
