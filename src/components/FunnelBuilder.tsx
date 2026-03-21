@@ -278,6 +278,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setStepCopy(prev => ({ ...prev, [step.stepId]: data.result }));
+      credits.deductAfterSuccess('funnel_builder', 'generate_step_copy');
     } catch (err: any) {
       setError(err.message || 'Could not generate copy.');
     } finally {
