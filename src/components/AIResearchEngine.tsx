@@ -273,8 +273,12 @@ function LoadingScreen({ type, data, startTime }: { type: 'ideas' | 'report' | '
           fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: 0,
         })}>
           ⏱ {type === 'report' ? 'Deep Research typically takes 60–90 seconds' : 'Idea generation typically takes 30–45 seconds'}
-        </div>
-      )}
+        </p>
+
+      </div>
+    </div>
+  );
+}
     </div>
   );
 }
