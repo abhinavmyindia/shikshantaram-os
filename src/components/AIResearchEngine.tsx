@@ -1284,67 +1284,118 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     const currentResearchStep = stepsList[activeStepIdx];
 
     return (
-      <div style={s({ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '40px 16px' })}>
-        <div style={s({ maxWidth: 560, width: '100%', display: 'flex', flexDirection: 'column', gap: 0 })}>
+      <div style={{
+        width: '100%',
+        minHeight: '70vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: '40px',
+        paddingBottom: '60px',
+        paddingLeft: '16px',
+        paddingRight: '16px',
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '520px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
 
-          {/* ── SECTION 1: Animated icon ── */}
-          <div style={s({ textAlign: 'center', marginBottom: 28 })}>
-            <div style={s({
-              width: 88, height: 88, margin: '0 auto 20px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(124,58,237,0.1), rgba(168,85,247,0.15))',
+          {/* ── Animated icon + title ── */}
+          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '18px',
+              background: 'linear-gradient(135deg,#7c3aed,#a855f7)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: 'pulse-ring 2s ease-in-out infinite',
-            })}>
-              <span style={s({ fontSize: 40 })}>🔬</span>
+              margin: '0 auto 14px',
+              boxShadow: '0 8px 28px rgba(124,58,237,0.28)',
+            }}>
+              <span style={{ fontSize: '28px' }}>🔬</span>
             </div>
-            <div style={s({ fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: 22, color: '#0f172a', marginBottom: 8 })}>
+            <h2 style={{
+              fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: '20px',
+              color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.02em',
+            }}>
               Deep Research in progress...
-            </div>
-            <div style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#64748b', lineHeight: 1.7, maxWidth: 440, margin: '0 auto' })}>
+            </h2>
+            <p style={{
+              fontFamily: 'DM Sans, sans-serif', fontSize: '14px',
+              color: '#64748b', lineHeight: 1.6, margin: 0,
+            }}>
               {selectedProduct?.productName
                 ? `Analyzing market data, buyer psychology & competitive landscape for "${selectedProduct.productName}"`
                 : 'Analyzing market data, buyer psychology & competitive landscape...'}
-            </div>
+            </p>
           </div>
 
-          {/* ── SECTION 2: Progress bar ── */}
-          <div style={s({ marginBottom: 28 })}>
-            <div style={s({ background: '#f1f5f9', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 8 })}>
-              <div style={s({
-                height: '100%', borderRadius: 999,
-                background: 'linear-gradient(90deg, #7c3aed, #a855f7)',
-                width: `${researchProgress}%`,
-                transition: 'width 1s linear',
-              })} />
+          {/* ── Progress card ── */}
+          <div style={{
+            background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)',
+            borderRadius: '16px', padding: '18px 20px',
+            border: '1px solid rgba(255,255,255,0.95)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+          }}>
+            <div style={{ height: '7px', background: '#f1f5f9', borderRadius: '50px', overflow: 'hidden', marginBottom: '8px' }}>
+              <div style={{
+                height: '100%', width: `${researchProgress}%`,
+                background: 'linear-gradient(135deg,#ea580c,#f59e0b)',
+                borderRadius: '50px', transition: 'width 0.8s ease',
+              }} />
             </div>
-            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
-              <span style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 12, fontWeight: 700, color: '#7c3aed' })}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: '13px', color: '#ea580c' }}>
                 {researchProgress}%
               </span>
-              <span style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#94a3b8' })}>
+              <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: '12px', color: '#94a3b8' }}>
                 ~{researchTimeRemaining} remaining
               </span>
             </div>
 
             {currentResearchStep && (
-              <div style={s({ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 })}>
-                <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#7c3aed', animation: 'spinSlow 0.8s linear infinite', flexShrink: 0 })} />
-                <span style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#475569', fontWeight: 600 })}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 12px', background: 'rgba(124,58,237,0.05)',
+                borderRadius: '10px', border: '1px solid rgba(124,58,237,0.1)', marginBottom: '10px',
+              }}>
+                <div style={{
+                  width: '14px', height: '14px', borderRadius: '50%',
+                  border: '2px solid #7c3aed', borderTopColor: 'transparent',
+                  animation: 'spin 0.8s linear infinite', flexShrink: 0,
+                }} />
+                <p style={{
+                  fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: '13px',
+                  color: '#374151', margin: 0, lineHeight: 1.5,
+                }}>
                   {currentResearchStep}
-                </span>
+                </p>
               </div>
             )}
 
-            <div style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#94a3b8', marginTop: 10, textAlign: 'center' })}>
+            <p style={{
+              fontFamily: 'DM Sans,sans-serif', fontSize: '11px', color: '#94a3b8',
+              textAlign: 'center', margin: 0,
+            }}>
               ⏱ Deep Research typically takes 60–90 seconds
-            </div>
+            </p>
           </div>
 
-          {/* ── SECTION 3: Building Your Report checklist ── */}
-          <div style={s({ background: 'rgba(255,255,255,0.9)', borderRadius: 16, border: '1px solid #e2e8f0', padding: '16px 20px' })}>
-            <div style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 })}>
-              📋 Building Your Report
-            </div>
+          {/* ── Building Your Report checklist card ── */}
+          <div style={{
+            background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)',
+            borderRadius: '16px', padding: '18px 20px',
+            border: '1px solid rgba(255,255,255,0.95)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+          }}>
+            <p style={{
+              fontFamily: 'DM Sans,sans-serif', fontWeight: 800, fontSize: '10px',
+              color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em',
+              margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px',
+            }}>
+              <span style={{ fontSize: '12px' }}>📋</span>
+              Building Your Report
+            </p>
 
             {[
               { key: 'marketOverview',          icon: '🌐', label: 'Market Overview & Competitors' },
@@ -1358,21 +1409,34 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
               { key: 'competitorLandscape',     icon: '⚔️', label: 'Competitor Landscape' },
               { key: 'nextSteps',               icon: '🚀', label: 'Action Plan & Next Steps' },
               { key: 'launchStrategy',          icon: '📣', label: 'Launch Strategy' },
-            ].map((section, i) => {
+            ].map((section, i, arr) => {
               const status = sectionStatus?.[section.key] || 'loading';
               return (
-                <div key={section.key} style={s({ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: '1px solid #f1f5f9', animation: `fadeUp 0.3s ease ${i * 0.06}s both` })}>
-                  <div style={s({ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>
+                <div key={section.key} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '8px 0',
+                  borderBottom: i < arr.length - 1 ? '1px solid #f8fafc' : 'none',
+                }}>
+                  <div style={{ width: '18px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
                     {status === 'done' ? (
-                      <span style={s({ fontSize: 13 })}>✅</span>
+                      <span style={{ fontSize: '13px' }}>✅</span>
                     ) : status === 'error' ? (
-                      <span style={s({ fontSize: 13 })}>⚠️</span>
+                      <span style={{ fontSize: '13px' }}>⚠️</span>
                     ) : (
-                      <div style={s({ width: 14, height: 14, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#7c3aed', animation: 'spinSlow 0.8s linear infinite' })} />
+                      <div style={{
+                        width: '14px', height: '14px', border: '2px solid #e2e8f0',
+                        borderTopColor: '#7c3aed', borderRadius: '50%',
+                        animation: 'spin 0.8s linear infinite',
+                      }} />
                     )}
                   </div>
-                  <span style={s({ fontSize: 14 })}>{section.icon}</span>
-                  <span style={s({ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: status === 'done' ? '#10b981' : status === 'error' ? '#ea580c' : '#475569', fontWeight: status === 'done' ? 700 : 400 })}>
+                  <span style={{ fontSize: '15px', flexShrink: 0, lineHeight: 1 }}>{section.icon}</span>
+                  <span style={{
+                    fontFamily: 'DM Sans,sans-serif',
+                    fontWeight: status === 'done' ? 700 : 400, fontSize: '13px',
+                    color: status === 'done' ? '#059669' : status === 'error' ? '#dc2626' : '#64748b',
+                    transition: 'color 0.3s ease', flex: 1,
+                  }}>
                     {section.label}
                   </span>
                 </div>
@@ -1380,8 +1444,8 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
             })}
           </div>
 
-          <div style={s({ textAlign: 'center', marginTop: 20 })}>
-            <button onClick={() => setAiStep('results')} style={s({ background: 'none', border: 'none', fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>← Back to results</button>
+          <div style={{ textAlign: 'center', marginTop: '12px' }}>
+            <button onClick={() => setAiStep('results')} style={{ background: 'none', border: 'none', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: '#94a3b8', cursor: 'pointer' }}>← Back to results</button>
           </div>
         </div>
       </div>
