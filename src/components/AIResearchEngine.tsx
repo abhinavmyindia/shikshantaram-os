@@ -150,64 +150,129 @@ function LoadingScreen({ type, data, startTime }: { type: 'ideas' | 'report' | '
   const activeStep = Math.min(steps.length - 1, Math.floor((elapsed / ESTIMATED_SECONDS) * steps.length));
 
   return (
-    <div style={s({ textAlign: 'center', padding: '60px 20px', maxWidth: 500, margin: '0 auto', animation: 'fadeUp 0.4s ease' })}>
-      <div style={s({ width: 80, height: 80, margin: '0 auto 24px', position: 'relative' })}>
-        <div style={s({ width: 80, height: 80, border: '3px solid #f1f5f9', borderTop: '3px solid #ea580c', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' })} />
-        <div style={s({ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 })}>
-          {type === 'raw-ideas' ? '💡' : type === 'ideas' ? '🤖' : '🔬'}
-        </div>
-      </div>
-      <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 8 })}>
-        {type === 'ideas' ? 'Researching your market...' : type === 'raw-ideas' ? 'Building ideas from your concept...' : `Deep Research in progress...`}
-      </div>
-      <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', lineHeight: 1.7, maxWidth: 400, margin: '0 auto' })}>
-        {type === 'ideas'
-          ? `Our AI is analyzing ${data.country} market data, buyer psychology, and product opportunities for ${data.niche}.`
-          : type === 'raw-ideas'
-          ? `Generating 30 product ideas anchored to your original concept for ${data.country}...`
-          : `Analyzing market data, buyer psychology & competitive landscape for "${data.productName}"`}
-      </div>
+    <div style={s({
+      width: '100%',
+      minHeight: '60vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      paddingTop: 40,
+      paddingBottom: 60,
+      paddingLeft: 16,
+      paddingRight: 16,
+    })}>
+      <div style={s({
+        width: '100%',
+        maxWidth: 520,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      })}>
 
-      {/* Progress bar */}
-      <div style={s({ marginTop: 24, maxWidth: 360, margin: '24px auto 0' })}>
-        <div style={s({ background: '#f1f5f9', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 8 })}>
+        {/* Animated icon + title */}
+        <div style={s({ textAlign: 'center', marginBottom: 8 })}>
           <div style={s({
-            height: '100%',
-            borderRadius: 999,
-            background: type === 'report' ? 'linear-gradient(90deg, #ea580c, #f59e0b)' : '#ea580c',
-            width: `${progress}%`,
-            transition: 'width 1s linear',
-          })} />
+            width: 64, height: 64, borderRadius: 18,
+            background: 'linear-gradient(135deg,#7c3aed,#a855f7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 14px',
+            boxShadow: '0 8px 28px rgba(124,58,237,0.28)',
+          })}>
+            <span style={s({ fontSize: 28 })}>
+              {type === 'raw-ideas' ? '💡' : type === 'ideas' ? '🤖' : '🔬'}
+            </span>
+          </div>
+          <h2 style={s({
+            fontFamily: 'Sora', fontWeight: 900, fontSize: 20, color: '#0f172a',
+            margin: '0 0 8px', letterSpacing: '-0.02em',
+          })}>
+            {type === 'ideas' ? 'Researching your market...' : type === 'raw-ideas' ? 'Building ideas from your concept...' : 'Deep Research in progress...'}
+          </h2>
+          <p style={s({
+            fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: 0,
+          })}>
+            {type === 'ideas'
+              ? `Our AI is analyzing ${data.country} market data, buyer psychology, and product opportunities for ${data.niche}.`
+              : type === 'raw-ideas'
+              ? `Generating 30 product ideas anchored to your original concept for ${data.country}...`
+              : `Analyzing market data, buyer psychology & competitive landscape for "${data.productName}"`}
+          </p>
         </div>
-        <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
-          <span style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: '#ea580c' })}>{Math.round(progress)}%</span>
-          <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>{timeLabel}</span>
-        </div>
-      </div>
 
-      {/* Steps with active indicator */}
-      <div style={s({ marginTop: 20, maxWidth: 360, margin: '20px auto 0' })}>
-        {steps.map((step, i) => {
-          const isDone = i < activeStep;
-          const isActive = i === activeStep;
-          return (
-            <div key={i} style={s({ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 0', opacity: isDone ? 0.5 : 1, animation: `fadeUp 0.4s ease ${i * 0.3}s both` })}>
-              {isDone ? (
-                <div style={s({ width: 16, height: 16, borderRadius: '50%', background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>
-                  <span style={s({ color: 'white', fontSize: 10, fontWeight: 900 })}>✓</span>
+        {/* Progress card */}
+        <div style={s({
+          background: 'rgba(255,255,255,0.88)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: 16, padding: '18px 20px',
+          border: '1px solid rgba(255,255,255,0.95)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+        })}>
+          <div style={s({ height: 7, background: '#f1f5f9', borderRadius: 50, overflow: 'hidden', marginBottom: 8 })}>
+            <div style={s({
+              height: '100%',
+              width: `${progress}%`,
+              background: 'linear-gradient(135deg,#ea580c,#f59e0b)',
+              borderRadius: 50,
+              transition: 'width 0.8s ease',
+            })} />
+          </div>
+          <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center' })}>
+            <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: '#ea580c' })}>{Math.round(progress)}%</span>
+            <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>{timeLabel}</span>
+          </div>
+        </div>
+
+        {/* Steps checklist card */}
+        <div style={s({
+          background: 'rgba(255,255,255,0.88)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: 16, padding: '18px 20px',
+          border: '1px solid rgba(255,255,255,0.95)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+        })}>
+          <p style={s({
+            fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10, color: '#94a3b8',
+            textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px',
+            display: 'flex', alignItems: 'center', gap: 6,
+          })}>
+            <span style={s({ fontSize: 12 })}>📋</span>
+            {type === 'report' ? 'Building Your Report' : 'Generating Ideas'}
+          </p>
+          {steps.map((step, i) => {
+            const isDone = i < activeStep;
+            const isActive = i === activeStep;
+            return (
+              <div key={i} style={s({
+                display: 'flex', gap: 10, alignItems: 'center', padding: '8px 0',
+                borderBottom: i < steps.length - 1 ? '1px solid #f8fafc' : 'none',
+              })}>
+                <div style={s({ width: 18, flexShrink: 0, display: 'flex', justifyContent: 'center' })}>
+                  {isDone ? (
+                    <span style={s({ fontSize: 13 })}>✅</span>
+                  ) : (
+                    <div style={s({
+                      width: 14, height: 14, borderRadius: '50%',
+                      border: '2px solid #e2e8f0',
+                      borderTopColor: isActive ? '#7c3aed' : '#e2e8f0',
+                      animation: isActive ? 'spin 0.8s linear infinite' : 'none',
+                    })} />
+                  )}
                 </div>
-              ) : (
-                <div style={s({ width: 16, height: 16, borderRadius: '50%', border: '2px solid #f1f5f9', borderTop: `2px solid ${isActive ? '#ea580c' : '#cbd5e1'}`, animation: isActive ? 'spinSlow 0.8s linear infinite' : 'none', flexShrink: 0 })} />
-              )}
-              <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: isActive ? '#0f172a' : isDone ? '#94a3b8' : '#475569', fontWeight: isActive ? 700 : 400 })}>{step}</span>
-            </div>
-          );
-        })}
-      </div>
+                <span style={s({
+                  fontFamily: 'DM Sans', fontSize: 13,
+                  fontWeight: isDone ? 700 : isActive ? 700 : 400,
+                  color: isDone ? '#059669' : isActive ? '#374151' : '#64748b',
+                  transition: 'color 0.3s ease', flex: 1,
+                })}>{step}</span>
+              </div>
+            );
+          })}
+        </div>
 
-      {type === 'report' && (
-        <div style={s({ marginTop: 20, fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>
-          ⏱ Deep Research typically takes 60–90 seconds
+        <p style={s({
+          fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: 0,
+        })}>
+          ⏱ {type === 'report' ? 'Deep Research typically takes 60–90 seconds' : 'Idea generation typically takes 30–45 seconds'}
         </div>
       )}
     </div>
