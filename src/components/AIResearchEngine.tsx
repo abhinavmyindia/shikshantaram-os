@@ -279,9 +279,6 @@ function LoadingScreen({ type, data, startTime }: { type: 'ideas' | 'report' | '
     </div>
   );
 }
-    </div>
-  );
-}
 
 /* ───────── Idea Analyzing Screen ───────── */
 function IdeaAnalyzingScreen() {
