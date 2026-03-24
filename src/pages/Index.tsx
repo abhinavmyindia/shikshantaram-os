@@ -1668,7 +1668,7 @@ const Index = () => {
         display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden',
         background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)',
       }}>
-        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} />
+        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} avatarColor={avatarColor} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
           {/* Mobile hamburger */}
           {isMobile && !sidebarOpen && (
