@@ -1491,6 +1491,7 @@ const Index = () => {
   const [usageMsg, setUsageMsg] = useState<typeof USAGE_MESSAGES[0] | null>(null);
   const [sessionCostUsd, setSessionCostUsd] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
+  const [avatarColor, setAvatarColor] = useState('#7c3aed');
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
   const usagePopupShown = useRef(false);
@@ -1498,6 +1499,20 @@ const Index = () => {
   const tier = profile?.access_tier || 'basic';
   const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
   const journeyDay = getJourneyDay(profile?.created_at);
+
+  // Load avatar color from profile
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('user_profiles').select('avatar_color').eq('id', user.id).single()
+      .then(({ data }) => { if ((data as any)?.avatar_color) setAvatarColor((data as any).avatar_color); });
+  }, [user]);
+
+  // Listen for live avatar color changes from profile page
+  useEffect(() => {
+    const handler = (e: any) => setAvatarColor(e.detail.color);
+    window.addEventListener('avatarColorChanged', handler);
+    return () => window.removeEventListener('avatarColorChanged', handler);
+  }, []);
 
   // Fetch saved items count
   useEffect(() => {
