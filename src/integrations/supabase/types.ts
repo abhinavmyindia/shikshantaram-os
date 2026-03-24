@@ -767,11 +767,14 @@ export type Database = {
         Row: {
           access_tier: string
           added_by: string | null
+          avatar_color: string | null
           avatar_gradient: string | null
           avatar_initials: string | null
           bio: string | null
           created_at: string | null
           credits_enforcement: string | null
+          deletion_requested: boolean | null
+          deletion_requested_at: string | null
           facebook: string | null
           full_name: string
           id: string
@@ -779,6 +782,8 @@ export type Database = {
           is_beta_user: boolean | null
           linkedin: string | null
           notes: string | null
+          notif_new_tools: boolean | null
+          notif_tips: boolean | null
           payment_amount: number | null
           payment_status: string
           phone: string | null
@@ -790,11 +795,14 @@ export type Database = {
         Insert: {
           access_tier?: string
           added_by?: string | null
+          avatar_color?: string | null
           avatar_gradient?: string | null
           avatar_initials?: string | null
           bio?: string | null
           created_at?: string | null
           credits_enforcement?: string | null
+          deletion_requested?: boolean | null
+          deletion_requested_at?: string | null
           facebook?: string | null
           full_name?: string
           id: string
@@ -802,6 +810,8 @@ export type Database = {
           is_beta_user?: boolean | null
           linkedin?: string | null
           notes?: string | null
+          notif_new_tools?: boolean | null
+          notif_tips?: boolean | null
           payment_amount?: number | null
           payment_status?: string
           phone?: string | null
@@ -813,11 +823,14 @@ export type Database = {
         Update: {
           access_tier?: string
           added_by?: string | null
+          avatar_color?: string | null
           avatar_gradient?: string | null
           avatar_initials?: string | null
           bio?: string | null
           created_at?: string | null
           credits_enforcement?: string | null
+          deletion_requested?: boolean | null
+          deletion_requested_at?: string | null
           facebook?: string | null
           full_name?: string
           id?: string
@@ -825,6 +838,8 @@ export type Database = {
           is_beta_user?: boolean | null
           linkedin?: string | null
           notes?: string | null
+          notif_new_tools?: boolean | null
+          notif_tips?: boolean | null
           payment_amount?: number | null
           payment_status?: string
           phone?: string | null

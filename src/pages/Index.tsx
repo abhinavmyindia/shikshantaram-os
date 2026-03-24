@@ -228,7 +228,7 @@ const TOOL_CARDS = [
 ];
 
 /* ───────── Navbar ───────── */
-function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void }) {
+function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatarColor = '#7c3aed' }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void; avatarColor?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
@@ -257,7 +257,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick }: { us
         </div>
         <div style={{ width: 1, height: 20, background: '#e2e8f0' }} />
         <div onClick={() => setMenuOpen(!menuOpen)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px 4px 4px', background: 'rgba(255,255,255,0.9)', border: '1px solid #e2e8f0', borderRadius: 50, cursor: 'pointer' }}>
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>
             <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: 'white' }}>{initials}</span>
           </div>
           <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12.5, color: '#0f172a' }}>{userName.split(' ')[0]}</span>
@@ -276,7 +276,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick }: { us
             }}>
               {/* User info */}
               <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: avatarColor, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>
                   <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: 'white' }}>{initials}</span>
                 </div>
                 <div>
@@ -1491,6 +1491,7 @@ const Index = () => {
   const [usageMsg, setUsageMsg] = useState<typeof USAGE_MESSAGES[0] | null>(null);
   const [sessionCostUsd, setSessionCostUsd] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
+  const [avatarColor, setAvatarColor] = useState('#7c3aed');
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
   const usagePopupShown = useRef(false);
@@ -1498,6 +1499,20 @@ const Index = () => {
   const tier = profile?.access_tier || 'basic';
   const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
   const journeyDay = getJourneyDay(profile?.created_at);
+
+  // Load avatar color from profile
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('user_profiles').select('avatar_color').eq('id', user.id).single()
+      .then(({ data }) => { if ((data as any)?.avatar_color) setAvatarColor((data as any).avatar_color); });
+  }, [user]);
+
+  // Listen for live avatar color changes from profile page
+  useEffect(() => {
+    const handler = (e: any) => setAvatarColor(e.detail.color);
+    window.addEventListener('avatarColorChanged', handler);
+    return () => window.removeEventListener('avatarColorChanged', handler);
+  }, []);
 
   // Fetch saved items count
   useEffect(() => {
@@ -1653,7 +1668,7 @@ const Index = () => {
         display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden',
         background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)',
       }}>
-        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} />
+        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} avatarColor={avatarColor} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
           {/* Mobile hamburger */}
           {isMobile && !sidebarOpen && (

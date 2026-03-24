@@ -1,203 +1,31 @@
-import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import TopUpModal from '@/components/TopUpModal';
 
-interface ProfileData {
-  full_name: string;
-  phone: string;
-  access_tier: string;
-  payment_status: string;
-  is_beta_user: boolean;
-  created_at: string;
-  updated_at: string;
-  username: string;
-  bio: string;
-  instagram: string;
-  linkedin: string;
-  twitter: string;
-  facebook: string;
-  website: string;
-  avatar_gradient: string;
-}
-
-interface FormData {
-  fullName: string;
-  username: string;
-  phone: string;
-  bio: string;
-  instagram: string;
-  linkedin: string;
-  twitter: string;
-  facebook: string;
-  website: string;
-  avatarGradient: string;
-}
-
-const GRADIENT_OPTIONS = [
-  'linear-gradient(135deg,#7c3aed,#ec4899)',
-  'linear-gradient(135deg,#ea580c,#f59e0b)',
-  'linear-gradient(135deg,#059669,#06b6d4)',
-  'linear-gradient(135deg,#0891b2,#6366f1)',
-  'linear-gradient(135deg,#ec4899,#f97316)',
-  'linear-gradient(135deg,#0f172a,#334155)',
+const AVATAR_COLORS = [
+  '#7c3aed', '#6366f1', '#0284c7', '#0891b2', '#059669', '#16a34a',
+  '#ca8a04', '#ea580c', '#dc2626', '#db2777', '#9333ea', '#0f172a',
 ];
 
-const GRADIENT_ACCENTS = ['#7c3aed', '#ea580c', '#059669', '#0891b2', '#ec4899', '#334155'];
-
-const inputStyle: CSSProperties = {
-  width: '100%', padding: '11px 14px', borderRadius: 10,
-  border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'DM Sans', color: '#0f172a', fontWeight: 500,
-  background: '#f8fafc', outline: 'none', transition: 'all 0.18s',
+const tierMeta: Record<string, { label: string; color: string; bg: string }> = {
+  basic:   { label: 'Basic',   color: '#059669', bg: 'rgba(5,150,105,0.1)'   },
+  premium: { label: 'Premium', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+  beta:    { label: 'Beta',    color: '#ec4899', bg: 'rgba(236,72,153,0.1)'  },
+  revoked: { label: 'Revoked', color: '#64748b', bg: 'rgba(100,116,139,0.1)' },
 };
 
-const labelStyle: CSSProperties = {
-  fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#64748b',
-  letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 6, display: 'block',
+const formatRelative = (dateStr: string) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
+  if (diff < 604800000) return `${Math.floor(diff/86400000)}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-IN', { day:'numeric', month:'short' });
 };
 
-const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  e.target.style.borderColor = '#7c3aed';
-  e.target.style.background = 'white';
-  e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.08)';
-};
-const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  e.target.style.borderColor = '#e2e8f0';
-  e.target.style.background = '#f8fafc';
-  e.target.style.boxShadow = 'none';
-};
+const deviceIcon = (type: string) =>
+  type === 'mobile' ? '📱' : type === 'tablet' ? '📋' : '💻';
 
-function getInitials(name: string): string {
-  if (!name.trim()) return '?';
-  const parts = name.trim().split(/\s+/);
-  return (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
-}
-
-function formatMemberSince(dateStr?: string): string {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
-
-function getRelativeTime(date: Date | null): string {
-  if (!date) return 'Not saved yet';
-  const secs = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (secs < 10) return 'just now';
-  if (secs < 60) return `${secs} seconds ago`;
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins} minute${mins > 1 ? 's' : ''} ago`;
-  return `${Math.floor(mins / 60)} hour${Math.floor(mins / 60) > 1 ? 's' : ''} ago`;
-}
-
-/* ─── SVG Icons ─── */
-const InstagramSvg = ({ color = '#e1306c', size = 14 }: { color?: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill={color} stroke="none"/></svg>
-);
-const LinkedInSvg = ({ color = '#0a66c2', size = 14 }: { color?: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-);
-const TwitterSvg = ({ color = '#000', size = 14 }: { color?: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-);
-const FacebookSvg = ({ color = '#1877f2', size = 14 }: { color?: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-);
-const GlobeSvg = ({ color = '#7c3aed', size = 14 }: { color?: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-);
-const LockSmallSvg = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-);
-
-/* ─── Skeleton ─── */
-const Pulse = ({ w, h, r = 6, mt = 0, mx }: { w: number | string; h: number; r?: number; mt?: number; mx?: string }) => (
-  <div style={{ width: w, height: h, borderRadius: r, background: '#f1f5f9', animation: 'pulse 1.4s ease-in-out infinite', marginTop: mt, marginLeft: mx === 'auto' ? 'auto' : undefined, marginRight: mx === 'auto' ? 'auto' : undefined }} />
-);
-
-function SkeletonLeft() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ background: 'rgba(255,255,255,0.88)', borderRadius: 20, padding: '28px 24px', textAlign: 'center' }}>
-        <Pulse w={88} h={88} r={44} mx="auto" />
-        <Pulse w={140} h={14} mt={16} mx="auto" />
-        <Pulse w={100} h={12} mt={8} mx="auto" />
-        <Pulse w={200} h={12} mt={10} mx="auto" />
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 16 }}>
-          {[0,1,2,3,4,5].map(i => <Pulse key={i} w={22} h={22} r={11} />)}
-        </div>
-      </div>
-      <div style={{ background: 'rgba(124,58,237,0.04)', borderRadius: 20, padding: '20px 22px' }}>
-        <Pulse w={160} h={14} />
-        {[0,1,2].map(i => <Pulse key={i} w="100%" h={16} mt={12} />)}
-      </div>
-    </div>
-  );
-}
-
-function SkeletonRight() {
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.88)', borderRadius: 20, padding: '28px 28px' }}>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <Pulse w={30} h={30} r={8} />
-        <div><Pulse w={120} h={14} /><Pulse w={160} h={10} mt={4} /></div>
-      </div>
-      {[0,1,2].map(i => <Pulse key={i} w="100%" h={40} mt={16} />)}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 28 }}>
-        <Pulse w={30} h={30} r={8} />
-        <div><Pulse w={80} h={14} /><Pulse w={180} h={10} mt={4} /></div>
-      </div>
-      <Pulse w="100%" h={110} mt={16} />
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 28 }}>
-        <Pulse w={30} h={30} r={8} />
-        <div><Pulse w={100} h={14} /><Pulse w={150} h={10} mt={4} /></div>
-      </div>
-      {[0,1,2,3,4].map(i => (
-        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 14 }}>
-          <Pulse w={32} h={32} r={8} />
-          <Pulse w="100%" h={40} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ─── Social pill for left card ─── */
-const PLATFORM_COLORS: Record<string, { color: string; lightBg: string; label: string }> = {
-  instagram: { color: '#e1306c', lightBg: '#fce7f3', label: 'Instagram' },
-  linkedin: { color: '#0a66c2', lightBg: '#dbeafe', label: 'LinkedIn' },
-  twitter: { color: '#000000', lightBg: '#f1f5f9', label: 'X / Twitter' },
-  facebook: { color: '#1877f2', lightBg: '#dbeafe', label: 'Facebook' },
-  website: { color: '#7c3aed', lightBg: '#ede9fe', label: 'Website' },
-};
-
-const PLATFORM_ICONS: Record<string, (s: number) => JSX.Element> = {
-  instagram: (s) => <InstagramSvg size={s} />,
-  linkedin: (s) => <LinkedInSvg size={s} />,
-  twitter: (s) => <TwitterSvg size={s} />,
-  facebook: (s) => <FacebookSvg size={s} />,
-  website: (s) => <GlobeSvg size={s} />,
-};
-
-function SocialPill({ platform, url }: { platform: string; url: string }) {
-  const [hovered, setHovered] = useState(false);
-  const info = PLATFORM_COLORS[platform];
-  if (!info) return null;
-  return (
-    <a href={url.startsWith('http') ? url : `https://${url}`} target="_blank" rel="noopener noreferrer"
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', gap: 5, alignItems: 'center', textDecoration: 'none',
-        background: hovered ? info.lightBg : '#f8fafc',
-        border: `1px solid ${hovered ? info.color : '#e2e8f0'}`,
-        borderRadius: 50, padding: '6px 12px', transition: 'all 0.15s',
-        color: hovered ? info.color : '#475569',
-      }}>
-      {PLATFORM_ICONS[platform](14)}
-      <span style={{ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 600 }}>{info.label}</span>
-    </a>
-  );
-}
-
-/* ═══════════ MAIN COMPONENT ═══════════ */
 export default function ProfilePage({
   user, profile, onProfileUpdate, onNavigateDashboard,
 }: {
@@ -206,455 +34,457 @@ export default function ProfilePage({
   onProfileUpdate: () => Promise<void>;
   onNavigateDashboard: () => void;
 }) {
+  const [profileData, setProfileData] = useState<any>(null);
+  const [credits, setCredits] = useState<number>(0);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [formData, setFormData] = useState<FormData>({
-    fullName: '', username: '', phone: '', bio: '',
-    instagram: '', linkedin: '', twitter: '', facebook: '', website: '',
-    avatarGradient: GRADIENT_OPTIONS[0],
-  });
-  const [originalData, setOriginalData] = useState<FormData | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [showSavedIndicator, setShowSavedIndicator] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [activeSection, setActiveSection] = useState<'personal' | 'security' | 'account'>('personal');
 
-  const loadProfileData = useCallback(async () => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      if (error) throw error;
-      const p = data as any;
-      setProfileData(p);
-      const fd: FormData = {
-        fullName: p.full_name || '',
-        username: p.username || '',
-        phone: p.phone || '',
-        bio: p.bio || '',
-        instagram: p.instagram || '',
-        linkedin: p.linkedin || '',
-        twitter: p.twitter || '',
-        facebook: p.facebook || '',
-        website: p.website || '',
-        avatarGradient: p.avatar_gradient || GRADIENT_OPTIONS[0],
-      };
-      setFormData(fd);
-      setOriginalData(fd);
-      setIsDirty(false);
-      if (p.updated_at) setLastSaved(new Date(p.updated_at));
-    } catch {
-      setLoadError(true);
-    } finally {
+  // Personal Info
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [selectedColor, setSelectedColor] = useState('#7c3aed');
+  const [savingPersonal, setSavingPersonal] = useState(false);
+  const [personalSaved, setPersonalSaved] = useState(false);
+
+  // Security
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [logoutOtherLoading, setLogoutOtherLoading] = useState(false);
+
+  // Account
+  const [notifNewTools, setNotifNewTools] = useState(true);
+  const [notifTips, setNotifTips] = useState(true);
+  const [savingNotif, setSavingNotif] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showTopUp, setShowTopUp] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: pd } = await supabase.from('user_profiles').select('*').eq('id', user.id).single();
+      if (pd) {
+        setProfileData(pd);
+        setEditName((pd as any).full_name || '');
+        setEditPhone((pd as any).phone || '');
+        setSelectedColor((pd as any).avatar_color || '#7c3aed');
+        setNotifNewTools((pd as any).notif_new_tools ?? true);
+        setNotifTips((pd as any).notif_tips ?? true);
+      }
+      const { data: cd } = await supabase.from('user_credits').select('balance').eq('user_id', user.id).single();
+      setCredits(cd?.balance ?? 0);
+      const { data: sd } = await supabase.from('login_sessions').select('id, ip_city, ip_state, browser, os, device_type, created_at, is_active').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
+      setSessions(sd || []);
       setLoading(false);
-    }
+    };
+    load();
   }, [user.id]);
 
-  useEffect(() => { loadProfileData(); }, [loadProfileData]);
-
-  const updateField = (key: keyof FormData, value: string) => {
-    setFormData(prev => {
-      const next = { ...prev, [key]: value };
-      setIsDirty(JSON.stringify(next) !== JSON.stringify(originalData));
-      return next;
-    });
-    if (saveError) setSaveError(null);
+  const handleColorChange = (color: string) => {
+    setSelectedColor(color);
+    window.dispatchEvent(new CustomEvent('avatarColorChanged', { detail: { color } }));
   };
 
-  const handleUsernameChange = (val: string) => {
-    updateField('username', val.toLowerCase().replace(/[^a-z0-9_]/g, ''));
-  };
-
-  const saveProfile = async () => {
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          full_name: formData.fullName.trim(),
-          username: formData.username.toLowerCase().trim().replace(/[^a-z0-9_]/g, ''),
-          phone: formData.phone.trim(),
-          bio: formData.bio.trim().slice(0, 280),
-          instagram: formData.instagram.trim(),
-          linkedin: formData.linkedin.trim(),
-          twitter: formData.twitter.trim(),
-          facebook: formData.facebook.trim(),
-          website: formData.website.trim(),
-          avatar_gradient: formData.avatarGradient,
-          updated_at: new Date().toISOString(),
-        } as any)
-        .eq('id', user.id);
-      if (error) throw error;
-      setIsDirty(false);
-      setOriginalData({ ...formData });
-      setLastSaved(new Date());
-      setShowSavedIndicator(true);
-      setTimeout(() => setShowSavedIndicator(false), 3000);
+  const savePersonalInfo = async () => {
+    setSavingPersonal(true);
+    setPersonalSaved(false);
+    const { error } = await supabase.from('user_profiles').update({
+      full_name: editName.trim(),
+      phone: editPhone.trim(),
+      avatar_color: selectedColor,
+    } as any).eq('id', user.id);
+    setSavingPersonal(false);
+    if (!error) {
+      setPersonalSaved(true);
+      setProfileData((prev: any) => ({ ...prev, full_name: editName, phone: editPhone, avatar_color: selectedColor }));
       await onProfileUpdate();
-    } catch (err: any) {
-      setSaveError(err.message || 'Save failed');
-      setTimeout(() => setSaveError(null), 5000);
-    } finally {
-      setSaving(false);
+      setTimeout(() => setPersonalSaved(false), 3000);
     }
   };
 
-  const discardChanges = () => {
-    if (originalData) {
-      setFormData({ ...originalData });
-      setIsDirty(false);
-    }
+  const handlePasswordChange = async () => {
+    setPwError('');
+    setPwSuccess(false);
+    if (!currentPassword) { setPwError('Please enter your current password.'); return; }
+    if (!newPassword) { setPwError('Please enter a new password.'); return; }
+    if (newPassword.length < 8) { setPwError('New password must be at least 8 characters.'); return; }
+    if (newPassword !== confirmPassword) { setPwError('New passwords do not match.'); return; }
+    if (currentPassword === newPassword) { setPwError('New password must be different from current password.'); return; }
+    setPwLoading(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: user.email!, password: currentPassword });
+      if (signInError) { setPwError('Current password is incorrect. Please try again.'); setPwLoading(false); return; }
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) { setPwError(updateError.message || 'Failed to update password.'); }
+      else { setPwSuccess(true); setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); setTimeout(() => setPwSuccess(false), 5000); }
+    } catch { setPwError('Something went wrong. Please try again.'); }
+    setPwLoading(false);
   };
 
-  const initials = getInitials(formData.fullName).toUpperCase();
-  const tier = profileData?.access_tier || profile?.access_tier || 'basic';
-  const paymentStatus = profileData?.payment_status || profile?.payment_status || 'none';
-
-  const socials = [
-    { key: 'instagram', val: formData.instagram },
-    { key: 'linkedin', val: formData.linkedin },
-    { key: 'twitter', val: formData.twitter },
-    { key: 'facebook', val: formData.facebook },
-    { key: 'website', val: formData.website },
-  ].filter(s => s.val.trim());
-
-  /* ─── Error state ─── */
-  if (loadError && !loading) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, gap: 12 }}>
-        <span style={{ fontSize: 32 }}>😕</span>
-        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a' }}>Could not load profile</div>
-        <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b' }}>Please refresh the page or contact support.</div>
-        <button onClick={loadProfileData} style={{
-          marginTop: 8, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none',
-          borderRadius: 10, padding: '10px 22px', fontFamily: 'Sora', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-        }}>Retry</button>
-      </div>
-    );
-  }
-
-  /* ─── Loading skeleton ─── */
-  if (loading) {
-    return (
-      <div>
-        <div style={{ marginBottom: 28, animation: 'fadeUp 0.4s ease' }}>
-          <Pulse w={180} h={12} />
-          <Pulse w={140} h={26} mt={8} />
-          <Pulse w={320} h={14} mt={6} />
-        </div>
-        <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24 }}>
-          <SkeletonLeft />
-          <SkeletonRight />
-        </div>
-      </div>
-    );
-  }
-
-  /* ─── Tier badge ─── */
-  const tierBadge = () => {
-    if (tier === 'premium') return <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', padding: '3px 10px', borderRadius: 50, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white' }}>PREMIUM ✦</span>;
-    if (tier === 'beta') return <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', padding: '3px 10px', borderRadius: 50, background: 'linear-gradient(135deg,#ec4899,#c026d3)', color: 'white' }}>BETA 🧪</span>;
-    return <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', padding: '3px 10px', borderRadius: 50, background: '#dcfce7', color: '#15803d' }}>BASIC</span>;
+  const logoutOtherSessions = async () => {
+    setLogoutOtherLoading(true);
+    const currentToken = localStorage.getItem('shikshantaram_session_token');
+    await supabase.from('login_sessions').update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'user_logout_other_devices' } as any).eq('user_id', user.id).eq('is_active', true).neq('session_token', currentToken || '');
+    const { data } = await supabase.from('login_sessions').select('id, ip_city, ip_state, browser, os, device_type, created_at, is_active').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
+    setSessions(data || []);
+    setLogoutOtherLoading(false);
   };
 
-  const paymentLabel = () => {
-    if (paymentStatus === 'reserved') return <span style={{ color: '#059669', fontWeight: 700 }}>Reserve Paid ✓</span>;
-    if (paymentStatus === 'paid') return <span style={{ color: '#059669', fontWeight: 700 }}>Full Payment ✓</span>;
-    if (paymentStatus === 'beta') return <span style={{ color: '#ec4899', fontWeight: 700 }}>Beta Access</span>;
-    return <span style={{ color: '#f59e0b', fontWeight: 700 }}>Pending</span>;
+  const saveNotifications = async () => {
+    setSavingNotif(true);
+    await supabase.from('user_profiles').update({ notif_new_tools: notifNewTools, notif_tips: notifTips } as any).eq('id', user.id);
+    setSavingNotif(false);
   };
 
-  const toolsLabel = () => {
-    if (tier === 'premium') return <span style={{ color: '#7c3aed', fontWeight: 700 }}>All tools ✦</span>;
-    if (tier === 'beta') return <span style={{ color: '#ec4899', fontWeight: 700 }}>All tools 🧪</span>;
-    return <span style={{ color: '#64748b' }}>2 of 8 tools</span>;
+  const requestDeletion = async () => {
+    if (deleteInput !== 'DELETE') return;
+    setDeleteLoading(true);
+    await supabase.from('user_profiles').update({ deletion_requested: true, deletion_requested_at: new Date().toISOString() } as any).eq('id', user.id);
+    await supabase.functions.invoke('log-error', {
+      body: { errorType: 'account_deletion_request', severity: 'warning', message: `User ${user.email} has requested account deletion`, module: 'profile', additionalData: { userId: user.id, email: user.email } },
+    });
+    setDeleteLoading(false);
+    setShowDeleteConfirm(false);
+    alert('Your deletion request has been received. Our team will process it within 48 hours and confirm via email.');
   };
 
-  const cardStyle: CSSProperties = {
-    background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20,
-    border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-  };
+  const tier = tierMeta[profileData?.access_tier || profile?.access_tier || 'basic'];
 
-  const sectionHeader = (emoji: string, bgColor: string, title: string, subtitle: string) => (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>{emoji}</div>
-        <div>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>{title}</div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' }}>{subtitle}</div>
-        </div>
-      </div>
-      <div style={{ height: 1, background: '#f1f5f9' }} />
+  if (loading) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh' }}>
+      <div style={{ width:'32px', height:'32px', border:'3px solid #e2e8f0', borderTopColor:'#7c3aed', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
     </div>
   );
 
-  const socialFieldData = [
-    { key: 'instagram' as const, icon: (s: number) => <InstagramSvg size={s} />, bg: '#fce7f3', placeholder: 'instagram.com/yourusername' },
-    { key: 'linkedin' as const, icon: (s: number) => <LinkedInSvg size={s} />, bg: '#dbeafe', placeholder: 'linkedin.com/in/yourprofile' },
-    { key: 'twitter' as const, icon: (s: number) => <TwitterSvg size={s} />, bg: '#f1f5f9', placeholder: 'twitter.com/yourhandle or x.com/yourhandle' },
-    { key: 'facebook' as const, icon: (s: number) => <FacebookSvg size={s} />, bg: '#dbeafe', placeholder: 'facebook.com/yourprofile' },
-    { key: 'website' as const, icon: (s: number) => <GlobeSvg size={s} />, bg: '#ede9fe', placeholder: 'https://yourwebsite.com' },
-  ];
+  const cardStyle: CSSProperties = {
+    background:'rgba(255,255,255,0.88)', backdropFilter:'blur(20px)',
+    borderRadius:'16px', padding:'22px', border:'1px solid rgba(255,255,255,0.95)',
+    boxShadow:'0 4px 20px rgba(0,0,0,0.05)',
+  };
 
   return (
-    <div>
-      {/* ═══ PAGE HEADER ═══ */}
-      <div style={{ animation: 'fadeUp 0.4s ease', marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#94a3b8' }}>
-            <span onClick={onNavigateDashboard} style={{ cursor: 'pointer', color: '#94a3b8' }}>Dashboard</span>
-            {' / '}
-            <span style={{ fontWeight: 700, color: '#0f172a' }}>My Profile</span>
-          </div>
-          <h1 style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 26, color: '#0f172a', letterSpacing: '-0.02em', marginTop: 4 }}>My Profile</h1>
-          <p style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', marginTop: 3 }}>
-            Manage your account, access details & public creator profile.
-          </p>
-        </div>
-        {isDirty && (
-          <button onClick={saveProfile} disabled={saving} style={{
-            background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 12,
-            padding: '10px 22px', fontFamily: 'Sora', fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
-            boxShadow: '0 4px 16px rgba(124,58,237,0.35)', animation: 'fadeUp 0.3s ease', transition: 'transform 0.15s',
-          }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-1px)')}
-            onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}>
-            {saving ? 'Saving...' : 'Save Changes ✓'}
-          </button>
-        )}
+    <div style={{ maxWidth:'680px', margin:'0 auto', padding:'0 16px 80px' }}>
+
+      {/* PAGE HEADER */}
+      <div style={{ marginBottom:'28px' }}>
+        <h1 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'24px', color:'#0f172a', margin:'0 0 4px', letterSpacing:'-0.02em' }}>
+          My Profile
+        </h1>
+        <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#64748b', margin:0 }}>
+          Manage your personal info, security, and account settings
+        </p>
       </div>
 
-      {/* ═══ TWO COLUMN LAYOUT ═══ */}
-      <div className="profile-grid" style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 24 }}>
-        {/* ── LEFT COLUMN ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Card A — Identity */}
-          <div style={{ ...cardStyle, padding: '28px 24px', textAlign: 'center', animation: 'fadeUp 0.4s ease 0.05s both' }}>
-            {/* Avatar */}
-            <div style={{
-              width: 88, height: 88, borderRadius: '50%', margin: '0 auto 16px',
-              background: formData.avatarGradient, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 8px 24px rgba(124,58,237,0.3)',
-            }}>
-              <span style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 28, color: 'white', letterSpacing: '-0.02em' }}>{initials}</span>
-            </div>
+      {/* PROFILE HEADER CARD */}
+      <div style={{
+        background:'rgba(255,255,255,0.88)', backdropFilter:'blur(20px)',
+        borderRadius:'20px', padding:'24px', border:'1px solid rgba(255,255,255,0.95)',
+        boxShadow:'0 4px 24px rgba(0,0,0,0.06)', marginBottom:'20px',
+        display:'flex', alignItems:'center', gap:'18px', flexWrap:'wrap',
+      }}>
+        <div style={{
+          width:'64px', height:'64px', borderRadius:'18px',
+          background: selectedColor,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          flexShrink:0, boxShadow:`0 4px 16px ${selectedColor}44`,
+          transition:'background 0.2s, box-shadow 0.2s',
+        }}>
+          <span style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'24px', color:'white' }}>
+            {(editName || user?.email || 'U')[0].toUpperCase()}
+          </span>
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <h2 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'18px', color:'#0f172a', margin:'0 0 2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {editName || 'Your Name'}
+          </h2>
+          <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:'0 0 8px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {user?.email}
+          </p>
+          <span style={{
+            background: tier.bg, color: tier.color,
+            padding:'3px 12px', borderRadius:'50px',
+            fontFamily:'DM Sans,sans-serif', fontWeight:800, fontSize:'10px',
+            textTransform:'uppercase', letterSpacing:'0.08em',
+          }}>
+            {tier.label}
+          </span>
+        </div>
+        <div style={{
+          background:'rgba(124,58,237,0.08)', border:'1px solid rgba(124,58,237,0.15)',
+          borderRadius:'12px', padding:'10px 14px', textAlign:'center', flexShrink:0,
+        }}>
+          <p style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'20px', color:'#7c3aed', margin:'0 0 2px' }}>{credits}</p>
+          <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'10px', color:'#94a3b8', margin:0, textTransform:'uppercase', letterSpacing:'0.06em' }}>credits</p>
+        </div>
+      </div>
 
-            {/* Gradient picker */}
-            <div style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Pick your colour</div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
-              {GRADIENT_OPTIONS.map((g, i) => (
-                <div key={g} onClick={() => updateField('avatarGradient', g)} style={{
-                  width: 22, height: 22, borderRadius: '50%', background: g, cursor: 'pointer',
-                  border: formData.avatarGradient === g ? '2px solid white' : '2px solid transparent',
-                  boxShadow: formData.avatarGradient === g ? `0 0 0 2px ${GRADIENT_ACCENTS[i]}` : 'none',
-                  transition: 'all 0.15s',
-                }} />
+      {/* SECTION TABS */}
+      <div style={{ display:'flex', gap:'4px', background:'#f8fafc', borderRadius:'14px', padding:'4px', marginBottom:'20px' }}>
+        {([
+          { id:'personal' as const, icon:'👤', label:'Personal Info' },
+          { id:'security' as const, icon:'🔒', label:'Security' },
+          { id:'account' as const, icon:'⚙️', label:'Account' },
+        ]).map(tab => (
+          <button key={tab.id} onClick={() => setActiveSection(tab.id)}
+            style={{
+              flex:1, padding:'10px 8px', borderRadius:'10px', border:'none',
+              cursor:'pointer', transition:'all 0.15s',
+              background: activeSection === tab.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'transparent',
+              color: activeSection === tab.id ? 'white' : '#64748b',
+              fontFamily:'DM Sans,sans-serif', fontWeight: activeSection === tab.id ? 800 : 600, fontSize:'13px',
+              boxShadow: activeSection === tab.id ? '0 2px 12px rgba(124,58,237,0.25)' : 'none',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:'6px',
+            }}
+          >
+            <span style={{ fontSize:'14px' }}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ═══ PERSONAL INFO ═══ */}
+      {activeSection === 'personal' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+          {/* Full name */}
+          <div style={cardStyle}>
+            <label style={{ fontFamily:'DM Sans', fontWeight:700, fontSize:'11px', color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em', display:'block', marginBottom:'8px' }}>Full Name</label>
+            <input type="text" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your full name"
+              style={{ width:'100%', padding:'11px 14px', borderRadius:'12px', border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:'14px', color:'#0f172a', outline:'none', boxSizing:'border-box', transition:'border-color 0.15s' }}
+              onFocus={e => e.target.style.borderColor='#7c3aed'} onBlur={e => e.target.style.borderColor='#e2e8f0'} />
+          </div>
+          {/* Email */}
+          <div style={cardStyle}>
+            <label style={{ fontFamily:'DM Sans', fontWeight:700, fontSize:'11px', color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em', display:'block', marginBottom:'8px' }}>Email Address</label>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+              <input type="email" value={user?.email || ''} disabled style={{ flex:1, padding:'11px 14px', borderRadius:'12px', border:'1.5px solid #f1f5f9', fontFamily:'DM Sans', fontSize:'14px', color:'#94a3b8', background:'#f8fafc', cursor:'not-allowed', boxSizing:'border-box' }} />
+              <span style={{ fontFamily:'DM Sans', fontSize:'11px', color:'#94a3b8', whiteSpace:'nowrap' }}>🔒 Contact support to change</span>
+            </div>
+          </div>
+          {/* Phone */}
+          <div style={cardStyle}>
+            <label style={{ fontFamily:'DM Sans', fontWeight:700, fontSize:'11px', color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em', display:'block', marginBottom:'8px' }}>Phone Number</label>
+            <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="+91 98765 43210"
+              style={{ width:'100%', padding:'11px 14px', borderRadius:'12px', border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:'14px', color:'#0f172a', outline:'none', boxSizing:'border-box', transition:'border-color 0.15s' }}
+              onFocus={e => e.target.style.borderColor='#7c3aed'} onBlur={e => e.target.style.borderColor='#e2e8f0'} />
+          </div>
+          {/* Avatar color */}
+          <div style={cardStyle}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'14px' }}>
+              <label style={{ fontFamily:'DM Sans', fontWeight:700, fontSize:'11px', color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em' }}>Avatar Color</label>
+              <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:selectedColor, boxShadow:`0 2px 8px ${selectedColor}44`, transition:'background 0.2s' }} />
+                <span style={{ fontFamily:'DM Sans', fontWeight:700, fontSize:'12px', color:'#64748b' }}>{selectedColor}</span>
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:'10px', flexWrap:'wrap' }}>
+              {AVATAR_COLORS.map(color => (
+                <button key={color} onClick={() => handleColorChange(color)} title={color}
+                  style={{
+                    width:'36px', height:'36px', borderRadius:'10px', background:color, border:'none', cursor:'pointer', transition:'all 0.15s',
+                    boxShadow: selectedColor === color ? `0 0 0 3px white, 0 0 0 5px ${color}` : '0 2px 6px rgba(0,0,0,0.15)',
+                    transform: selectedColor === color ? 'scale(1.1)' : 'scale(1)',
+                  }} />
               ))}
             </div>
-
-            {/* Name */}
-            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: formData.fullName.trim() ? '#0f172a' : '#94a3b8', letterSpacing: '-0.02em', marginTop: 16 }}>
-              {formData.fullName.trim() || 'Your Name'}
-            </div>
-
-            {/* Username */}
-            <div style={{ marginTop: 4 }}>
-              {formData.username.trim() ? (
-                <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>@{formData.username}</span>
-              ) : (
-                <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' }}>Set a username →</span>
-              )}
-            </div>
-
-            {/* Bio preview */}
-            <div style={{
-              fontFamily: 'DM Sans', fontSize: 13, color: formData.bio.trim() ? '#64748b' : '#cbd5e1',
-              lineHeight: 1.65, textAlign: 'center', marginTop: 10, marginBottom: 16,
-              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-            } as CSSProperties}>
-              {formData.bio.trim() || 'Add a bio to introduce yourself to the community.'}
-            </div>
-
-            {/* Divider */}
-            <div style={{ height: 1, background: '#f1f5f9', margin: '16px 0' }} />
-
-            {/* Social pills */}
-            {socials.length > 0 ? (
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-                {socials.map(s => <SocialPill key={s.key} platform={s.key} url={s.val} />)}
-              </div>
-            ) : (
-              <div style={{ fontSize: 11, color: '#cbd5e1', textAlign: 'center' }}>Add your socials below →</div>
-            )}
-
-            {/* Member since */}
-            <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 14 }}>
-              Member since {formatMemberSince(profileData?.created_at)}
-            </div>
+            <p style={{ fontFamily:'DM Sans', fontSize:'11px', color:'#94a3b8', margin:'10px 0 0' }}>Color updates everywhere in the app instantly when you click. Save to make it permanent.</p>
           </div>
+          {/* Save */}
+          <button onClick={savePersonalInfo} disabled={savingPersonal}
+            style={{
+              width:'100%', padding:'14px', borderRadius:'14px', border:'none',
+              background: personalSaved ? 'linear-gradient(135deg,#059669,#10b981)' : savingPersonal ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#a855f7)',
+              color:'white', cursor: savingPersonal ? 'not-allowed' : 'pointer',
+              fontFamily:'Sora', fontWeight:900, fontSize:'15px',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+              boxShadow: savingPersonal || personalSaved ? 'none' : '0 4px 20px rgba(124,58,237,0.3)',
+              transition:'all 0.2s',
+            }}>
+            {savingPersonal ? (<><span style={{ width:'16px', height:'16px', border:'2px solid white', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />Saving...</>)
+              : personalSaved ? (<>✅ Saved!</>)
+              : (<>💾 Save Changes</>)}
+          </button>
+        </div>
+      )}
 
-          {/* Card B — Access & Plan */}
-          <div style={{
-            background: 'linear-gradient(135deg,rgba(124,58,237,0.06),rgba(168,85,247,0.04))',
-            border: '1px solid rgba(124,58,237,0.15)', borderRadius: 20, padding: '20px 22px',
-            animation: 'fadeUp 0.4s ease 0.1s both',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>🔐 Access & Plan</span>
-              {tierBadge()}
-            </div>
-
+      {/* ═══ SECURITY ═══ */}
+      {activeSection === 'security' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+          {/* Change password */}
+          <div style={{ ...cardStyle, padding:'24px' }}>
+            <h3 style={{ fontFamily:'Sora', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 4px' }}>🔒 Change Password</h3>
+            <p style={{ fontFamily:'DM Sans', fontSize:'13px', color:'#64748b', margin:'0 0 20px', lineHeight:1.6 }}>Enter your current password to verify your identity, then set a new one.</p>
             {[
-              { label: 'Plan Type', value: <span style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#0f172a', fontWeight: 700 }}>{tier === 'basic' ? 'Basic Access' : tier === 'premium' ? 'Premium Access' : 'Beta Access'}</span> },
-              { label: 'Payment Status', value: paymentLabel() },
-              { label: 'Tools Available', value: toolsLabel(), noBorder: true },
-            ].map((row, i) => (
-              <div key={i} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0',
-                borderBottom: row.noBorder ? 'none' : '1px solid rgba(124,58,237,0.08)',
-              }}>
-                <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', fontWeight: 600 }}>{row.label}</span>
-                <span style={{ fontFamily: 'DM Sans', fontSize: 12.5 }}>{row.value}</span>
+              { label:'Current Password', value:currentPassword, setter:setCurrentPassword, show:showCurrentPw, toggle:()=>setShowCurrentPw(p=>!p) },
+              { label:'New Password', value:newPassword, setter:setNewPassword, show:showNewPw, toggle:()=>setShowNewPw(p=>!p) },
+              { label:'Confirm New Password', value:confirmPassword, setter:setConfirmPassword, show:showConfirmPw, toggle:()=>setShowConfirmPw(p=>!p) },
+            ].map((f, i) => (
+              <div key={f.label} style={{ marginBottom: i < 2 ? '14px' : '0' }}>
+                <label style={{ fontFamily:'DM Sans', fontWeight:700, fontSize:'11px', color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em', display:'block', marginBottom:'6px' }}>{f.label}</label>
+                <div style={{ position:'relative' }}>
+                  <input type={f.show ? 'text' : 'password'} value={f.value} onChange={e => f.setter(e.target.value)} placeholder="••••••••"
+                    style={{ width:'100%', padding:'11px 44px 11px 14px', borderRadius:'12px', border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:'14px', color:'#0f172a', outline:'none', boxSizing:'border-box', transition:'border-color 0.15s' }}
+                    onFocus={e => e.target.style.borderColor='#7c3aed'} onBlur={e => e.target.style.borderColor='#e2e8f0'} />
+                  <button onClick={f.toggle} style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'16px', color:'#94a3b8', padding:'4px' }}>
+                    {f.show ? '🙈' : '👁️'}
+                  </button>
+                </div>
               </div>
             ))}
-
-            {tier === 'basic' && (
-              <div style={{ marginTop: 14, padding: 12, background: 'rgba(234,88,12,0.06)', border: '1px solid rgba(234,88,12,0.15)', borderRadius: 10 }}>
-                <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, fontWeight: 700, color: '#ea580c' }}>⚡ Want full access?</div>
-                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>Upgrade to Premium to unlock all 8 tools.</div>
-                <a href="mailto:support@shikshantaram.com?subject=Upgrade to Premium" style={{ fontSize: 11.5, color: '#ea580c', fontWeight: 700, textDecoration: 'none', display: 'inline-block', marginTop: 4 }}>
-                  Contact to Upgrade →
-                </a>
+            {newPassword.length > 0 && (
+              <div style={{ marginTop:'10px' }}>
+                <div style={{ display:'flex', gap:'4px', marginBottom:'4px' }}>
+                  {[1,2,3,4].map(i => (
+                    <div key={i} style={{ flex:1, height:'3px', borderRadius:'50px', background: newPassword.length >= i * 2 ? i <= 1 ? '#dc2626' : i <= 2 ? '#f59e0b' : i <= 3 ? '#3b82f6' : '#059669' : '#f1f5f9', transition:'background 0.2s' }} />
+                  ))}
+                </div>
+                <p style={{ fontFamily:'DM Sans', fontSize:'11px', color:'#94a3b8', margin:0 }}>{newPassword.length < 4 ? 'Too short' : newPassword.length < 6 ? 'Weak' : newPassword.length < 8 ? 'Fair' : 'Strong ✓'}</p>
               </div>
             )}
+            {pwError && <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'10px', padding:'10px 14px', marginTop:'14px', fontFamily:'DM Sans', fontSize:'13px', color:'#dc2626', fontWeight:600 }}>❌ {pwError}</div>}
+            {pwSuccess && <div style={{ background:'rgba(5,150,105,0.08)', border:'1px solid rgba(5,150,105,0.2)', borderRadius:'10px', padding:'10px 14px', marginTop:'14px', fontFamily:'DM Sans', fontSize:'13px', color:'#059669', fontWeight:600 }}>✅ Password updated successfully!</div>}
+            <button onClick={handlePasswordChange} disabled={pwLoading}
+              style={{
+                width:'100%', padding:'13px', borderRadius:'12px', border:'none', marginTop:'18px',
+                background: pwLoading ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#a855f7)',
+                color:'white', cursor: pwLoading ? 'not-allowed' : 'pointer',
+                fontFamily:'Sora', fontWeight:800, fontSize:'14px',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+              }}>
+              {pwLoading ? (<><span style={{ width:'15px', height:'15px', border:'2px solid white', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />Verifying &amp; Updating...</>) : '🔒 Update Password'}
+            </button>
+          </div>
+
+          {/* Sessions */}
+          <div style={{ ...cardStyle, padding:'24px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'16px', gap:'12px', flexWrap:'wrap' }}>
+              <div>
+                <h3 style={{ fontFamily:'Sora', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 4px' }}>📱 Login Sessions</h3>
+                <p style={{ fontFamily:'DM Sans', fontSize:'13px', color:'#64748b', margin:0 }}>Your recent logins. {sessions.filter(s=>s.is_active).length} active right now.</p>
+              </div>
+              {sessions.filter(s => s.is_active).length > 1 && (
+                <button onClick={logoutOtherSessions} disabled={logoutOtherLoading}
+                  style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#dc2626', padding:'8px 16px', borderRadius:'10px', cursor:'pointer', fontFamily:'DM Sans', fontWeight:700, fontSize:'12px', flexShrink:0 }}>
+                  {logoutOtherLoading ? 'Logging out...' : '🚪 Log Out Other Devices'}
+                </button>
+              )}
+            </div>
+            {sessions.length === 0 ? (
+              <p style={{ fontFamily:'DM Sans', fontSize:'13px', color:'#94a3b8', textAlign:'center', padding:'16px 0' }}>No session history found.</p>
+            ) : sessions.map((session, i) => (
+              <div key={session.id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 0', borderBottom: i < sessions.length - 1 ? '1px solid #f8fafc' : 'none' }}>
+                <div style={{ width:'36px', height:'36px', borderRadius:'10px', flexShrink:0, background: session.is_active ? 'rgba(5,150,105,0.1)' : '#f8fafc', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px' }}>
+                  {deviceIcon(session.device_type)}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'2px' }}>
+                    <span style={{ fontFamily:'DM Sans', fontWeight:700, fontSize:'13px', color:'#0f172a' }}>{session.browser || 'Browser'} on {session.os || 'Unknown OS'}</span>
+                    {session.is_active && <span style={{ background:'rgba(5,150,105,0.1)', color:'#059669', padding:'1px 8px', borderRadius:'50px', fontFamily:'DM Sans', fontWeight:800, fontSize:'9px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Active</span>}
+                  </div>
+                  <p style={{ fontFamily:'DM Sans', fontSize:'11px', color:'#94a3b8', margin:0 }}>
+                    {[session.ip_city, session.ip_state].filter(Boolean).join(', ') || 'Unknown location'} · {formatRelative(session.created_at)}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      )}
 
-        {/* ── RIGHT COLUMN (EDIT FORM) ── */}
-        <div style={{ ...cardStyle, padding: '28px 28px', animation: 'fadeUp 0.4s ease 0.08s both' }}>
-          {/* SECTION 1 — Basic Info */}
-          {sectionHeader('👤', '#ede9fe', 'Basic Information', 'Your name and contact details')}
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>FULL NAME *</label>
-            <input style={inputStyle} value={formData.fullName} placeholder="e.g. Abhinav Sharma"
-              onChange={e => updateField('fullName', e.target.value)}
-              onFocus={handleFocus} onBlur={handleBlur} />
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>USERNAME</label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontWeight: 700, fontSize: 14, pointerEvents: 'none' }}>@</span>
-              <input style={{ ...inputStyle, paddingLeft: 30 }} value={formData.username} placeholder="yourname"
-                onChange={e => handleUsernameChange(e.target.value)}
-                onFocus={handleFocus} onBlur={handleBlur} />
-            </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>This will be your handle in the community. Only letters, numbers, and underscores.</div>
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>EMAIL ADDRESS</label>
-            <div style={{ position: 'relative' }}>
-              <input style={{ ...inputStyle, background: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed' }} value={user.email || ''} disabled />
-              <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)' }}><LockSmallSvg /></div>
-            </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Email cannot be changed. Contact support if needed.</div>
-          </div>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>PHONE NUMBER</label>
-            <input style={inputStyle} type="tel" value={formData.phone} placeholder="+91 98765 43210"
-              onChange={e => updateField('phone', e.target.value)}
-              onFocus={handleFocus} onBlur={handleBlur} />
-          </div>
-
-          {/* SECTION 2 — Bio */}
-          <div style={{ marginTop: 28 }}>
-            {sectionHeader('✍️', '#fff7ed', 'Your Bio', 'Introduce yourself to the community')}
-            <label style={labelStyle}>ABOUT YOU</label>
-            <textarea
-              style={{
-                ...inputStyle, minHeight: 110, fontSize: 13.5, lineHeight: 1.7, resize: 'vertical',
-                padding: '12px 14px',
-              } as CSSProperties}
-              value={formData.bio}
-              maxLength={280}
-              placeholder="e.g. I help Indian creators launch digital products and build online income. Building Shikshantaram OS to make it easier for everyone."
-              onChange={e => updateField('bio', e.target.value)}
-              onFocus={handleFocus as any} onBlur={handleBlur as any}
-            />
-            <div style={{
-              textAlign: 'right', fontFamily: 'DM Sans', fontSize: 11, marginTop: 4,
-              color: formData.bio.length >= 280 ? '#ef4444' : formData.bio.length > 250 ? '#f59e0b' : '#94a3b8',
-            }}>
-              {formData.bio.length}/280
-            </div>
-          </div>
-
-          {/* SECTION 3 — Social Links */}
-          <div style={{ marginTop: 28 }}>
-            {sectionHeader('🌐', '#f0f9ff', 'Social Profiles', 'Connect your online presence')}
-            {socialFieldData.map(sf => (
-              <div key={sf.key} style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: sf.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {sf.icon(16)}
+      {/* ═══ ACCOUNT ═══ */}
+      {activeSection === 'account' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+          {/* Credits */}
+          <div style={{ background:'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.06))', backdropFilter:'blur(20px)', borderRadius:'16px', padding:'24px', border:'1px solid rgba(124,58,237,0.15)', boxShadow:'0 4px 20px rgba(0,0,0,0.05)' }}>
+            <h3 style={{ fontFamily:'Sora', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 16px' }}>⚡ My Credits</h3>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px', flexWrap:'wrap' }}>
+              <div>
+                <div style={{ display:'flex', alignItems:'baseline', gap:'6px', marginBottom:'4px' }}>
+                  <span style={{ fontFamily:'Sora', fontWeight:900, fontSize:'42px', color:'#7c3aed', lineHeight:1 }}>{credits}</span>
+                  <span style={{ fontFamily:'DM Sans', fontSize:'15px', color:'#94a3b8' }}>credits remaining</span>
                 </div>
-                <input style={{ ...inputStyle, flex: 1 }} value={formData[sf.key]} placeholder={sf.placeholder}
-                  onChange={e => updateField(sf.key, e.target.value)}
-                  onFocus={handleFocus} onBlur={handleBlur} />
+                <p style={{ fontFamily:'DM Sans', fontSize:'12px', color:'#94a3b8', margin:0 }}>≈ ₹{credits} in AI research value · Credits never expire</p>
+              </div>
+              <button onClick={() => setShowTopUp(true)}
+                style={{ background:'linear-gradient(135deg,#7c3aed,#a855f7)', color:'white', border:'none', borderRadius:'12px', padding:'12px 24px', cursor:'pointer', fontFamily:'Sora', fontWeight:800, fontSize:'14px', boxShadow:'0 4px 16px rgba(124,58,237,0.3)', flexShrink:0 }}>
+                ⚡ Add Credits
+              </button>
+            </div>
+            {credits < 20 && credits >= 0 && (
+              <div style={{ background: credits === 0 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${credits === 0 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`, borderRadius:'10px', padding:'10px 14px', marginTop:'14px', fontFamily:'DM Sans', fontSize:'13px', color: credits === 0 ? '#dc2626' : '#b45309', fontWeight:600 }}>
+                {credits === 0 ? '🚨 You have no credits left. Top up to continue using AI tools.' : `⚠️ Low balance — only ${credits} credits remaining.`}
+              </div>
+            )}
+          </div>
+
+          {/* Notifications */}
+          <div style={{ ...cardStyle, padding:'24px' }}>
+            <h3 style={{ fontFamily:'Sora', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 4px' }}>🔔 Notification Preferences</h3>
+            <p style={{ fontFamily:'DM Sans', fontSize:'13px', color:'#64748b', margin:'0 0 20px' }}>Choose what emails you receive from Shikshantaram OS.</p>
+            {[
+              { key:'newTools', label:'New tools & feature launches', sub:'Get notified when we add new modules or capabilities', value:notifNewTools, setter:setNotifNewTools },
+              { key:'tips', label:'Product tips & tutorials', sub:'Weekly tips to help you get more from Shikshantaram OS', value:notifTips, setter:setNotifTips },
+            ].map(item => (
+              <div key={item.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', padding:'14px 0', borderBottom: item.key === 'newTools' ? '1px solid #f8fafc' : 'none' }}>
+                <div style={{ flex:1 }}>
+                  <p style={{ fontFamily:'DM Sans', fontWeight:700, fontSize:'14px', color:'#0f172a', margin:'0 0 2px' }}>{item.label}</p>
+                  <p style={{ fontFamily:'DM Sans', fontSize:'12px', color:'#94a3b8', margin:0 }}>{item.sub}</p>
+                </div>
+                <div onClick={() => { item.setter((p: boolean) => !p); setTimeout(saveNotifications, 300); }}
+                  style={{ width:'44px', height:'24px', borderRadius:'50px', flexShrink:0, background: item.value ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#e2e8f0', position:'relative', cursor:'pointer', transition:'background 0.2s' }}>
+                  <div style={{ position:'absolute', top:'3px', left: item.value ? '23px' : '3px', width:'18px', height:'18px', borderRadius:'50%', background:'white', boxShadow:'0 1px 4px rgba(0,0,0,0.2)', transition:'left 0.2s' }} />
+                </div>
               </div>
             ))}
+            {savingNotif && <p style={{ fontFamily:'DM Sans', fontSize:'11px', color:'#94a3b8', margin:'8px 0 0', textAlign:'right' }}>Saving preferences...</p>}
           </div>
 
-          {/* SECTION 4 — Save Footer */}
-          <div style={{ marginTop: 28, paddingTop: 20, borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: showSavedIndicator ? '#059669' : '#94a3b8' }}>
-              {showSavedIndicator ? '✅ Saved just now' : `Last saved: ${getRelativeTime(lastSaved)}`}
-            </div>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              {isDirty && (
-                <button onClick={discardChanges} style={{
-                  background: 'none', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: 10,
-                  padding: '9px 18px', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-                }}>Discard Changes</button>
-              )}
-              <button onClick={saveProfile} disabled={saving} style={{
-                background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10,
-                padding: '10px 22px', fontFamily: 'Sora', fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(124,58,237,0.3)', opacity: saving ? 0.7 : 1,
-              }}>
-                {saving ? 'Saving...' : 'Save Profile →'}
+          {/* Danger zone */}
+          <div style={{ background:'rgba(239,68,68,0.03)', backdropFilter:'blur(20px)', borderRadius:'16px', padding:'24px', border:'1px solid rgba(239,68,68,0.12)', boxShadow:'0 4px 20px rgba(0,0,0,0.04)' }}>
+            <h3 style={{ fontFamily:'Sora', fontWeight:800, fontSize:'16px', color:'#dc2626', margin:'0 0 4px' }}>⚠️ Danger Zone</h3>
+            <p style={{ fontFamily:'DM Sans', fontSize:'13px', color:'#64748b', margin:'0 0 16px', lineHeight:1.6 }}>Requesting deletion will notify our team. We will delete your account and all associated data within 48 hours.</p>
+            <button onClick={() => setShowDeleteConfirm(true)}
+              style={{ background:'rgba(239,68,68,0.08)', border:'1.5px solid rgba(239,68,68,0.2)', color:'#dc2626', padding:'11px 20px', borderRadius:'12px', cursor:'pointer', fontFamily:'DM Sans', fontWeight:700, fontSize:'13px' }}>
+              🗑️ Request Account Deletion
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE MODAL */}
+      {showDeleteConfirm && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
+          <div style={{ background:'white', borderRadius:'24px', padding:'36px 32px', maxWidth:'400px', width:'100%', boxShadow:'0 24px 80px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize:'48px', textAlign:'center', marginBottom:'16px' }}>⚠️</div>
+            <h2 style={{ fontFamily:'Sora', fontWeight:900, fontSize:'20px', color:'#0f172a', textAlign:'center', marginBottom:'10px' }}>Delete Account?</h2>
+            <p style={{ fontFamily:'DM Sans', fontSize:'14px', color:'#64748b', textAlign:'center', lineHeight:1.7, marginBottom:'20px' }}>
+              This will permanently delete your account, all saved work, and credits. Type <strong>DELETE</strong> to confirm.
+            </p>
+            <input type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder="Type DELETE to confirm"
+              style={{ width:'100%', padding:'11px 14px', borderRadius:'12px', border:`1.5px solid ${deleteInput === 'DELETE' ? '#dc2626' : '#e2e8f0'}`, fontFamily:'DM Sans', fontSize:'14px', outline:'none', boxSizing:'border-box', marginBottom:'16px', textAlign:'center', fontWeight:700 }} />
+            <div style={{ display:'flex', gap:'10px' }}>
+              <button onClick={() => { setShowDeleteConfirm(false); setDeleteInput(''); }} style={{ flex:1, padding:'12px', borderRadius:'12px', border:'1.5px solid #e2e8f0', background:'transparent', cursor:'pointer', fontFamily:'DM Sans', fontWeight:700, fontSize:'14px', color:'#64748b' }}>Cancel</button>
+              <button onClick={requestDeletion} disabled={deleteInput !== 'DELETE' || deleteLoading}
+                style={{ flex:2, padding:'12px', borderRadius:'12px', border:'none', background: deleteInput === 'DELETE' ? '#dc2626' : 'rgba(239,68,68,0.3)', color:'white', cursor: deleteInput === 'DELETE' ? 'pointer' : 'not-allowed', fontFamily:'DM Sans', fontWeight:800, fontSize:'14px' }}>
+                {deleteLoading ? 'Requesting...' : 'Yes, Delete My Account'}
               </button>
             </div>
           </div>
-
-          {/* Save error */}
-          {saveError && (
-            <div style={{
-              marginTop: 12, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8,
-              padding: '8px 14px', fontFamily: 'DM Sans', fontSize: 13, color: '#991b1b',
-            }}>
-              ⚠ Could not save. Please try again.
-            </div>
-          )}
         </div>
-      </div>
+      )}
 
-      <style>{`
-        @media (max-width: 768px) {
-          .profile-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+      {/* TopUp modal */}
+      {showTopUp && (
+        <TopUpModal userId={user.id} userEmail={user.email || ''} userName={editName || ''} currentBalance={credits}
+          onClose={() => setShowTopUp(false)} onSuccess={(newBalance) => { setCredits(newBalance); setShowTopUp(false); }} />
+      )}
     </div>
   );
 }
