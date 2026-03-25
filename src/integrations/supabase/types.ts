@@ -194,6 +194,51 @@ export type Database = {
         }
         Relationships: []
       }
+      byok_usage_logs: {
+        Row: {
+          call_type: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          input_tokens: number | null
+          model: string
+          module: string
+          output_tokens: number | null
+          provider: string
+          success: boolean | null
+          user_email: string | null
+          user_id: string
+        }
+        Insert: {
+          call_type: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          input_tokens?: number | null
+          model: string
+          module: string
+          output_tokens?: number | null
+          provider: string
+          success?: boolean | null
+          user_email?: string | null
+          user_id: string
+        }
+        Update: {
+          call_type?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          input_tokens?: number | null
+          model?: string
+          module?: string
+          output_tokens?: number | null
+          provider?: string
+          success?: boolean | null
+          user_email?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_pricing: {
         Row: {
           call_type: string
@@ -748,6 +793,51 @@ export type Database = {
           },
         ]
       }
+      user_byok_keys: {
+        Row: {
+          created_at: string | null
+          encrypted_key: string
+          id: string
+          is_active: boolean | null
+          is_valid: boolean | null
+          iv: string
+          key_hint: string
+          last_used_at: string | null
+          last_validated_at: string | null
+          provider: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          encrypted_key: string
+          id?: string
+          is_active?: boolean | null
+          is_valid?: boolean | null
+          iv: string
+          key_hint: string
+          last_used_at?: string | null
+          last_validated_at?: string | null
+          provider: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          encrypted_key?: string
+          id?: string
+          is_active?: boolean | null
+          is_valid?: boolean | null
+          iv?: string
+          key_hint?: string
+          last_used_at?: string | null
+          last_validated_at?: string | null
+          provider?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_credits: {
         Row: {
           balance: number
@@ -810,6 +900,7 @@ export type Database = {
           avatar_gradient: string | null
           avatar_initials: string | null
           bio: string | null
+          byok_preferred_provider: string | null
           created_at: string | null
           credits_enforcement: string | null
           deletion_requested: boolean | null
@@ -845,6 +936,7 @@ export type Database = {
           avatar_gradient?: string | null
           avatar_initials?: string | null
           bio?: string | null
+          byok_preferred_provider?: string | null
           created_at?: string | null
           credits_enforcement?: string | null
           deletion_requested?: boolean | null
@@ -880,6 +972,7 @@ export type Database = {
           avatar_gradient?: string | null
           avatar_initials?: string | null
           bio?: string | null
+          byok_preferred_provider?: string | null
           created_at?: string | null
           credits_enforcement?: string | null
           deletion_requested?: boolean | null

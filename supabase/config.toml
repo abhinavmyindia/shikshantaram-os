@@ -59,3 +59,15 @@ verify_jwt = false
 
 [functions.gift-credits]
 verify_jwt = false
+
+[functions.save-byok-key]
+verify_jwt = false
+
+[functions.delete-byok-key]
+verify_jwt = false
+
+[functions.get-byok-status]
+verify_jwt = false
+
+[functions.update-byok-preference]
+verify_jwt = false
