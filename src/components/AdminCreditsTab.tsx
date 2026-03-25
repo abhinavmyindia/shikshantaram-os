@@ -255,7 +255,9 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
     setTxLoading(true);
     let q = supabase.from('credit_transactions').select('*')
       .order('created_at', { ascending:false }).limit(100);
-    if (txFilter !== 'all') q = q.eq('type', txFilter);
+    if (txFilter === 'deduction') q = q.in('type', ['deduction', 'shadow_deduction']);
+    else if (txFilter === 'gift') q = q.in('type', ['gift', 'promo']);
+    else if (txFilter !== 'all') q = q.eq('type', txFilter);
     const { data } = await q;
     setTransactions(data || []);
     setTxLoading(false);

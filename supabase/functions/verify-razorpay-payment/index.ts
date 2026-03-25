@@ -22,7 +22,10 @@ Deno.serve(async (req) => {
     const webhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET') || '';
     const signature = req.headers.get('x-razorpay-signature') || '';
 
-    if (webhookSecret && signature) {
+    if (webhookSecret) {
+      if (!signature) {
+        return new Response('Missing signature', { status: 400 });
+      }
       const key = await crypto.subtle.importKey(
         'raw', new TextEncoder().encode(webhookSecret),
         { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
