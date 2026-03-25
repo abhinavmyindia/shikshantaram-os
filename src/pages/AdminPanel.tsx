@@ -1107,6 +1107,46 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
   const [securityUser, setSecurityUser] = useState<UserRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deletionReqs, setDeletionReqs] = useState<any[]>([]);
+  const [showDeletionQueue, setShowDeletionQueue] = useState(false);
+
+  const fetchDeletionRequests = async () => {
+    const { data } = await supabase
+      .from('deletion_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: false });
+    setDeletionReqs(data || []);
+  };
+
+  useEffect(() => {
+    fetchDeletionRequests();
+  }, []);
+
+  const approveDeletion = async (req: any) => {
+    const { data: { user: adminUser } } = await supabase.auth.getUser();
+    await supabase.from('user_profiles')
+      .update({ access_tier: 'revoked' })
+      .eq('id', req.user_id);
+    await supabase.from('deletion_requests')
+      .update({ status: 'completed', reviewed_at: new Date().toISOString(), reviewed_by: adminUser?.id })
+      .eq('id', req.id);
+    fetchDeletionRequests();
+    onRefresh();
+    showToast(`✅ ${req.user_email} access revoked. Data preserved.`, 'success');
+  };
+
+  const rejectDeletion = async (req: any) => {
+    const { data: { user: adminUser } } = await supabase.auth.getUser();
+    await supabase.from('deletion_requests')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: adminUser?.id })
+      .eq('id', req.id);
+    await supabase.from('user_profiles')
+      .update({ deletion_requested: false, deletion_requested_at: null })
+      .eq('id', req.user_id);
+    fetchDeletionRequests();
+    showToast(`Deletion request rejected for ${req.user_email}`, 'success');
+  };
 
   const filtered = users.filter(u => {
     if (filter !== 'All' && u.access_tier !== filter.toLowerCase()) return false;
