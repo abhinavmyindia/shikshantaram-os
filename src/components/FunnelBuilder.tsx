@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
 import { useCreditGate } from '@/hooks/useCreditGate';
+import { exportFunnelPDF } from '@/utils/exportFunnel';
 
 /* ───────── Prefill Types ───────── */
 interface FunnelPrefillData {
