@@ -1169,6 +1169,12 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [deleting, setDeleting] = useState(false);
   const [deletionReqs, setDeletionReqs] = useState<any[]>([]);
   const [showDeletionQueue, setShowDeletionQueue] = useState(false);
+  const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from('user_byok_keys').select('user_id, provider').eq('is_active', true).eq('is_valid', true)
+      .then(({ data }) => setByokKeys(data || []));
+  }, [users]);
 
   const fetchDeletionRequests = async () => {
     const { data } = await supabase
