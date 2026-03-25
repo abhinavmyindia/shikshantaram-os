@@ -163,6 +163,32 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
 
   const mainRef = useRef<HTMLDivElement>(null);
 
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [recentWorkData, setRecentWorkData] = useState<any>(null);
+
+  // Check for recent work on mount
+  useEffect(() => {
+    const checkRecent = async () => {
+      if (!credits.currentUser?.id) return;
+      const recent = await loadRecentWork(credits.currentUser.id, 'copy_suite', 'copy_output');
+      if (recent?.outputData?.sections) {
+        setRecentWorkData(recent);
+        setShowRestoreBanner(true);
+      }
+    };
+    checkRecent();
+  }, [credits.currentUser?.id]);
+
+  const handleRestoreCopy = () => {
+    if (!recentWorkData) return;
+    setSections(recentWorkData.outputData.sections);
+    setScore(recentWorkData.outputData.score || null);
+    setBrief(recentWorkData.inputData || brief);
+    setTone(recentWorkData.inputData?.tone || 'conversational');
+    setStep('output');
+    setShowRestoreBanner(false);
+  };
+
   // Loading step animation
   useEffect(() => {
     if (!loading) return;

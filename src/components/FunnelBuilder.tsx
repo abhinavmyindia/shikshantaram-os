@@ -215,6 +215,31 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   const [showPrefillBanner, setShowPrefillBanner] = useState(false);
   const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set());
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [recentWorkData, setRecentWorkData] = useState<any>(null);
+
+  // Check for recent work on mount
+  useEffect(() => {
+    const checkRecent = async () => {
+      if (!credits.currentUser?.id) return;
+      const recent = await loadRecentWork(credits.currentUser.id, 'funnel_builder', 'funnel_map');
+      if (recent?.outputData?.funnelData) {
+        setRecentWorkData(recent);
+        setShowRestoreBanner(true);
+      }
+    };
+    checkRecent();
+  }, [credits.currentUser?.id]);
+
+  const handleRestoreFunnel = () => {
+    if (!recentWorkData) return;
+    setFunnelData(recentWorkData.outputData.funnelData);
+    setStepCopy(recentWorkData.outputData.stepCopy || {});
+    setEmailSequence(recentWorkData.outputData.emailSequence || null);
+    setFunnelBrief(recentWorkData.inputData?.funnelBrief || funnelBrief);
+    setFunnelStep('visualizer');
+    setShowRestoreBanner(false);
+  };
 
   // Consume prefill on mount
   useEffect(() => {
