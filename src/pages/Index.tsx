@@ -1515,7 +1515,7 @@ const Index = () => {
 
   // Listen for live avatar color changes from profile page
   useEffect(() => {
-    const handler = (e: any) => setAvatarColor(e.detail.color);
+    const handler = (e: any) => setAvatarColor(e.detail.gradient || e.detail.color || 'linear-gradient(135deg,#7c3aed,#a855f7)');
     window.addEventListener('avatarColorChanged', handler);
     return () => window.removeEventListener('avatarColorChanged', handler);
   }, []);
