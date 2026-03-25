@@ -441,6 +441,9 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       {/* ═══ STEP 1 — BRIEF ═══ */}
       {offerStep === 'brief' && (
         <div style={s({ maxWidth: 680, margin: '0 auto', animation: 'fadeUp 0.4s ease' })}>
+          {showRestoreBanner && recentWorkData && (
+            <RestoreBanner title={recentWorkData.title} createdAt={recentWorkData.createdAt} onRestore={handleRestoreOffer} onDismiss={() => setShowRestoreBanner(false)} />
+          )}
           <div style={s({ textAlign: 'center', marginBottom: 28 })}>
             <span style={s({ fontSize: 10, fontWeight: 800, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', padding: '3px 10px', borderRadius: 50 })}>Step 1 of 4</span>
             <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 28, color: '#0f172a', marginTop: 10 })}>Tell us about your product</h2>

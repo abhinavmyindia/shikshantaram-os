@@ -414,6 +414,9 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   if (funnelStep === 'brief') {
     return (
       <div style={s({ animation: 'fadeUp 0.4s ease' })}>
+        {showRestoreBanner && recentWorkData && (
+          <RestoreBanner title={recentWorkData.title} createdAt={recentWorkData.createdAt} onRestore={handleRestoreFunnel} onDismiss={() => setShowRestoreBanner(false)} />
+        )}
         {/* Header */}
         <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 })}>
           <div>

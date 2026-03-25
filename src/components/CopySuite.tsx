@@ -340,6 +340,10 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
 
       {/* ── STATE 1: SELECT ── */}
       {step === 'select' && (
+        <div>
+          {showRestoreBanner && recentWorkData && (
+            <RestoreBanner title={recentWorkData.title} createdAt={recentWorkData.createdAt} onRestore={handleRestoreCopy} onDismiss={() => setShowRestoreBanner(false)} />
+          )}
         <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14, marginTop: 24 })}>
           {COPY_TYPES.map((type, i) => {
             const isHovered = hoveredType === type.id;
