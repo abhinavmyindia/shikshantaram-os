@@ -1491,7 +1491,7 @@ const Index = () => {
   const [usageMsg, setUsageMsg] = useState<typeof USAGE_MESSAGES[0] | null>(null);
   const [sessionCostUsd, setSessionCostUsd] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
-  const [avatarColor, setAvatarColor] = useState('linear-gradient(135deg,#7c3aed,#a855f7)');
+  const [avatarColor, setAvatarColor] = useState('#7c3aed');
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
   const usagePopupShown = useRef(false);
@@ -1514,7 +1514,7 @@ const Index = () => {
 
   // Listen for live avatar color changes from profile page
   useEffect(() => {
-    const handler = (e: any) => setAvatarColor(e.detail.gradient || e.detail.color || 'linear-gradient(135deg,#7c3aed,#a855f7)');
+    const handler = (e: any) => setAvatarColor(e.detail.color || '#7c3aed');
     window.addEventListener('avatarColorChanged', handler);
     return () => window.removeEventListener('avatarColorChanged', handler);
   }, []);
