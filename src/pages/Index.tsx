@@ -12,7 +12,7 @@ import { productCategories, ProductCategory } from '@/data/products';
 import { useAuth } from '@/hooks/useAuth';
 import { useTracking } from '@/hooks/useTracking';
 import BetaFeedback from '@/components/BetaFeedback';
-import ProfilePage, { AVATAR_GRADIENTS } from '@/components/ProfilePage';
+import ProfilePage, { AVATAR_COLORS } from '@/components/ProfilePage';
 import { supabase } from '@/integrations/supabase/client';
 import { trackPageView } from '@/utils/activityTracker';
 
