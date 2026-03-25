@@ -1107,6 +1107,46 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [deleteUser, setDeleteUser] = useState<UserRow | null>(null);
   const [securityUser, setSecurityUser] = useState<UserRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deletionReqs, setDeletionReqs] = useState<any[]>([]);
+  const [showDeletionQueue, setShowDeletionQueue] = useState(false);
+
+  const fetchDeletionRequests = async () => {
+    const { data } = await supabase
+      .from('deletion_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: false });
+    setDeletionReqs(data || []);
+  };
+
+  useEffect(() => {
+    fetchDeletionRequests();
+  }, []);
+
+  const approveDeletion = async (req: any) => {
+    const { data: { user: adminUser } } = await supabase.auth.getUser();
+    await supabase.from('user_profiles')
+      .update({ access_tier: 'revoked' })
+      .eq('id', req.user_id);
+    await supabase.from('deletion_requests')
+      .update({ status: 'completed', reviewed_at: new Date().toISOString(), reviewed_by: adminUser?.id })
+      .eq('id', req.id);
+    fetchDeletionRequests();
+    onRefresh();
+    showToast(`✅ ${req.user_email} access revoked. Data preserved.`, 'success');
+  };
+
+  const rejectDeletion = async (req: any) => {
+    const { data: { user: adminUser } } = await supabase.auth.getUser();
+    await supabase.from('deletion_requests')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: adminUser?.id })
+      .eq('id', req.id);
+    await supabase.from('user_profiles')
+      .update({ deletion_requested: false, deletion_requested_at: null })
+      .eq('id', req.user_id);
+    fetchDeletionRequests();
+    showToast(`Deletion request rejected for ${req.user_email}`, 'success');
+  };
 
   const filtered = users.filter(u => {
     if (filter !== 'All' && u.access_tier !== filter.toLowerCase()) return false;
@@ -1139,6 +1179,63 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
 
   return (
     <div>
+      {/* Deletion requests warning strip */}
+      {deletionReqs.length > 0 && (
+        <div style={{
+          background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.2)',
+          borderRadius:'12px', padding:'14px 18px', marginBottom:'16px',
+          display:'flex', justifyContent:'space-between', alignItems:'center', gap:'12px', flexWrap:'wrap',
+        }}>
+          <span style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'13px', color:'#b45309' }}>
+            ⚠️ {deletionReqs.length} pending account deletion request{deletionReqs.length > 1 ? 's' : ''}
+          </span>
+          <button onClick={() => setShowDeletionQueue(true)} style={{ background:'#b45309', color:'white', border:'none', borderRadius:'8px', padding:'6px 14px', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px' }}>
+            Review Requests
+          </button>
+        </div>
+      )}
+
+      {/* Deletion queue modal */}
+      {showDeletionQueue && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
+          <div style={{ background:'white', borderRadius:'24px', padding:'32px', maxWidth:'520px', width:'100%', boxShadow:'0 24px 80px rgba(0,0,0,0.2)', maxHeight:'80vh', overflowY:'auto' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
+              <h2 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'18px', color:'#0f172a', margin:0 }}>⚠️ Deletion Requests</h2>
+              <button onClick={() => setShowDeletionQueue(false)} style={{ background:'#f1f5f9', border:'none', width:'30px', height:'30px', borderRadius:'50%', cursor:'pointer', fontSize:'14px' }}>✕</button>
+            </div>
+            {deletionReqs.map((req: any) => (
+              <div key={req.id} style={{ border:'1px solid #f1f5f9', borderRadius:'12px', padding:'16px', marginBottom:'12px' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'8px', gap:'8px', flexWrap:'wrap' }}>
+                  <div>
+                    <p style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'14px', color:'#0f172a', margin:'0 0 2px' }}>{req.user_name || req.user_email}</p>
+                    <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#94a3b8', margin:0 }}>{req.user_email}</p>
+                  </div>
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:0, flexShrink:0 }}>
+                    {new Date(req.requested_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}
+                  </p>
+                </div>
+                {req.reason && (
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', background:'#f8fafc', borderRadius:'8px', padding:'8px 12px', margin:'0 0 12px' }}>
+                    "{req.reason}"
+                  </p>
+                )}
+                <div style={{ display:'flex', gap:'8px' }}>
+                  <button onClick={() => rejectDeletion(req)} style={{ flex:1, padding:'8px', borderRadius:'8px', border:'1.5px solid #e2e8f0', background:'transparent', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px', color:'#64748b' }}>
+                    ✕ Reject
+                  </button>
+                  <button onClick={() => approveDeletion(req)} style={{ flex:2, padding:'8px', borderRadius:'8px', border:'none', background:'#dc2626', color:'white', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px' }}>
+                    ✓ Approve & Revoke Access
+                  </button>
+                </div>
+              </div>
+            ))}
+            {deletionReqs.length === 0 && (
+              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#94a3b8', textAlign:'center', padding:'20px 0' }}>No pending requests.</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '8px 12px', border: '1.5px solid #e2e8f0' }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: 13, fontFamily: 'DM Sans' }} />
