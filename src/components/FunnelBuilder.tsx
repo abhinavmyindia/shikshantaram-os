@@ -262,7 +262,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (data?.error) throw new Error(data.error);
       setFunnelData(data.result);
       setFunnelStep('visualizer');
-      credits.deductAfterSuccess('funnel_builder', 'generate_funnel_architecture', data?.byok);
+      credits.deductAfterSuccess('funnel_builder', 'generate_funnel_architecture', data?.byok, data?.provider);
     } catch (err: any) {
       setError(err.message || 'Could not generate funnel. Please try again.');
       setFunnelStep('brief');
@@ -278,7 +278,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setStepCopy(prev => ({ ...prev, [step.stepId]: data.result }));
-      credits.deductAfterSuccess('funnel_builder', 'generate_step_copy', data?.byok);
+      credits.deductAfterSuccess('funnel_builder', 'generate_step_copy', data?.byok, data?.provider);
     } catch (err: any) {
       setError(err.message || 'Could not generate copy.');
     } finally {
@@ -296,7 +296,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setEmailSequence(data.result);
-      credits.deductAfterSuccess('funnel_builder', 'generate_email_sequence', data?.byok);
+      credits.deductAfterSuccess('funnel_builder', 'generate_email_sequence', data?.byok, data?.provider);
     } catch (err: any) {
       setError(err.message || 'Could not generate emails.');
     } finally {
@@ -819,7 +819,11 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
             </div>
             <h1 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 26, color: '#0f172a', letterSpacing: '-0.02em', marginTop: 4 })}>Funnel Builder</h1>
             <p style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', marginTop: 3 })}>Design your complete sales system — from first touch to final sale.</p>
-          </div>
+            {credits.lastCallByok && credits.lastCallProvider && (
+              <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#059669', marginTop: 6 })}>
+                🔑 Generated with your {credits.lastCallProvider === 'anthropic' ? 'Claude' : credits.lastCallProvider === 'openai' ? 'GPT-4o' : 'Gemini'} key · No credits used
+              </div>
+            )}
           <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
             {chosenType && <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(6,182,212,0.1)', color: '#0891b2', padding: '4px 12px', borderRadius: 50 })}>🔀 {chosenType.name}</span>}
             <button onClick={() => saveItem({ tool: 'funnel_builder', item_type: 'funnel_map', title: funnelData.funnelName, summary: funnelData.funnelTagline, full_data: { brief: funnelBrief, funnel: funnelData } })}

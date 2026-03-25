@@ -616,7 +616,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setProductIdeas(ideas);
       setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
       setAiStep('results');
-      credits.deductAfterSuccess('product_navigator', 'generate_30_ideas', data?.byok);
+      credits.deductAfterSuccess('product_navigator', 'generate_30_ideas', data?.byok, data?.provider);
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setAiStep('input');
@@ -637,7 +637,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setIdeaAnalysis(data.result);
       setSelectedAngle(data.result.recommendedAngle);
       setRawIdeaStep('analysis-result');
-      credits.deductAfterSuccess('product_navigator', 'idea_analysis', data?.byok);
+      credits.deductAfterSuccess('product_navigator', 'idea_analysis', data?.byok, data?.provider);
     } catch (err: any) {
       setError(err.message || 'Could not analyze idea. Please try again.');
       setRawIdeaStep('input');
@@ -678,7 +678,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         productType: chosenAngle?.productFormat || 'Digital Product',
       }));
       setAiStep('results');
-      credits.deductAfterSuccess('product_navigator', 'generate_more_ideas', data?.byok);
+      credits.deductAfterSuccess('product_navigator', 'generate_more_ideas', data?.byok, data?.provider);
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setRawIdeaStep('analysis-result');
@@ -717,7 +717,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       });
       setSectionStatus(finalStatus);
       setAiStep('report');
-      credits.deductAfterSuccess('product_navigator', 'deep_research_report', data?.byok);
+      credits.deductAfterSuccess('product_navigator', 'deep_research_report', data?.byok, data?.provider);
     } catch (err: any) {
       // Mark all sections as error
       const errorStatus: Record<string, 'loading' | 'done' | 'error'> = {};
@@ -1552,6 +1552,11 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
                 ? `Based on: '${(productIdeas[0]?.originalIdea || '').substring(0, 60)}${(productIdeas[0]?.originalIdea || '').length > 60 ? '...' : ''}' · ${ideaAnalysis?.angles?.find(a => a.angleId === selectedAngle)?.angleName || ''} · ${inputData.country}`
                 : `${inputData.productType} products for ${inputData.country} market · Click any idea for deep research →`}
             </p>
+            {credits.lastCallByok && credits.lastCallProvider && (
+              <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#059669', marginTop: 6 })}>
+                🔑 Generated with your {credits.lastCallProvider === 'anthropic' ? 'Claude' : credits.lastCallProvider === 'openai' ? 'GPT-4o' : 'Gemini'} key · No credits used
+              </div>
+            )}
           </div>
           <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
             <button onClick={() => {
@@ -1868,10 +1873,15 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
             <div>
               <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 24, color: '#0f172a', letterSpacing: '-0.02em' })}>{selectedProduct.productName}</h2>
               <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginTop: 4 })}>{selectedProduct.tagline}</p>
-              <div style={s({ display: 'flex', gap: 6, marginTop: 8 })}>
+              <div style={s({ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' })}>
                 <span style={s({ fontSize: 10, fontWeight: 700, background: '#fff7ed', color: '#ea580c', padding: '3px 10px', borderRadius: 20 })}>{inputData.productType}</span>
                 <span style={s({ fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#059669', padding: '3px 10px', borderRadius: 20 })}>{inputData.country}</span>
                 <span style={s({ fontSize: 10, fontWeight: 700, background: '#fef9c3', color: '#92400e', padding: '3px 10px', borderRadius: 20 })}>{selectedProduct.impulseScore} Impulse</span>
+                {credits.lastCallByok && credits.lastCallProvider && (
+                  <span style={s({ fontSize: 10, fontWeight: 700, background: 'rgba(5,150,105,0.08)', color: '#059669', padding: '3px 10px', borderRadius: 20, border: '1px solid rgba(5,150,105,0.2)' })}>
+                    🔑 Your {credits.lastCallProvider === 'anthropic' ? 'Claude' : credits.lastCallProvider === 'openai' ? 'GPT-4o' : 'Gemini'} key
+                  </span>
+                )}
               </div>
             </div>
             <div style={s({ display: 'flex', gap: 8 })}>
