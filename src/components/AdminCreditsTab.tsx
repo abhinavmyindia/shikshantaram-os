@@ -572,20 +572,295 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
         </div>
       )}
 
-      {/* Sub-tabs 2, 3, 4 — Part B placeholder */}
+      {/* ══════════════════════════════════════ */}
+      {/* SUB-TAB 2: PRICING EDITOR             */}
+      {/* ══════════════════════════════════════ */}
       {subTab === 'pricing' && (
-        <div style={s({ ...card, textAlign:'center', padding:48 })}>
-          <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:16, color:'#94a3b8' })}>💰 Pricing Editor — Coming in Part B</p>
+        <div style={s({ display:'flex', flexDirection:'column', gap:16 })}>
+
+          <div style={s({ ...card })}>
+            <div style={s({ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap', marginBottom:16 })}>
+              <div>
+                <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:15, color:'#0f172a', margin:'0 0 4px' })}>💰 Credit Pricing Editor</p>
+                <p style={s({ fontFamily:'DM Sans', fontSize:12, color:'#94a3b8', margin:0 })}>
+                  Changes take effect on the very next AI call. Every change is logged with your email and timestamp.
+                </p>
+              </div>
+              <div style={s({ display:'flex', alignItems:'center', gap:8 })}>
+                <span style={s({ fontFamily:'DM Sans', fontWeight:700, fontSize:11, color:'#64748b' })}>Reason:</span>
+                <input
+                  value={priceReason} onChange={e => setPriceReason(e.target.value)}
+                  placeholder="e.g. Market adjustment"
+                  style={s({ padding:'7px 12px', borderRadius:8, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:12, outline:'none', width:200 })}
+                />
+              </div>
+            </div>
+
+            {/* Pricing rows grouped by module */}
+            {Object.entries(
+              pricing.reduce((acc: any, p: any) => {
+                acc[p.tool_module] = acc[p.tool_module] || [];
+                acc[p.tool_module].push(p);
+                return acc;
+              }, {} as Record<string, any[]>)
+            ).map(([module, rows]: any) => (
+              <div key={module} style={s({ marginBottom:16 })}>
+                <p style={s({ fontFamily:'DM Sans', fontWeight:800, fontSize:12, color:'#7c3aed', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 8px' })}>
+                  {moduleNames[module] || module}
+                </p>
+                {rows.map((p: any) => {
+                  const key      = `${p.tool_module}:${p.call_type}`;
+                  const editVal  = editingPrice[key] ?? p.credits;
+                  const isSaving = savingPrice[key];
+                  const result   = priceResults[key];
+                  const changed  = editVal !== p.credits;
+
+                  return (
+                    <div key={key} style={s({ display:'flex', alignItems:'center', gap:12, padding:'8px 0', borderTop:'1px solid #f1f5f9', flexWrap:'wrap' })}>
+                      <span style={s({ fontFamily:'DM Sans', fontWeight:600, fontSize:13, color:'#374151', flex:1, minWidth:180 })}>
+                        {p.display_name}
+                      </span>
+                      <div style={s({ display:'flex', alignItems:'center', gap:8 })}>
+                        <span style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8' })}>
+                          Current: <strong>{p.credits}</strong>
+                        </span>
+                        <input
+                          type="number" value={editVal} min={1} max={500}
+                          onChange={e => setEditingPrice(prev => ({ ...prev, [key]: parseInt(e.target.value)||p.credits }))}
+                          style={s({ width:70, padding:'6px 10px', borderRadius:8, border:`1.5px solid ${changed?'#7c3aed':'#e2e8f0'}`, fontFamily:'DM Sans', fontSize:13, textAlign:'center', outline:'none', transition:'border-color 0.15s' })}
+                        />
+                        <span style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8' })}>credits</span>
+                        <button
+                          onClick={() => handleSavePrice(p.tool_module, p.call_type)}
+                          disabled={isSaving || !changed}
+                          style={s({
+                            padding:'6px 14px', borderRadius:8, border:'none', fontSize:12, cursor: !changed||isSaving ? 'not-allowed' : 'pointer',
+                            background: !changed||isSaving ? '#f1f5f9' : 'linear-gradient(135deg,#7c3aed,#a855f7)',
+                            color: !changed||isSaving ? '#94a3b8' : 'white',
+                            fontFamily:'DM Sans', fontWeight:700, transition:'all 0.15s',
+                          })}
+                        >
+                          {isSaving ? '...' : 'Save'}
+                        </button>
+                        {result && (
+                          <span style={s({ fontFamily:'DM Sans', fontSize:12, fontWeight:600, color: result.startsWith('✅') ? '#059669' : '#dc2626' })}>
+                            {result}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+
+          {/* Price change audit log */}
+          {priceChangeLog.length > 0 && (
+            <div style={s({ ...card })}>
+              <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#0f172a', margin:'0 0 12px' })}>📋 Recent Price Changes</p>
+              {priceChangeLog.map((log: any) => (
+                <div key={log.id} style={s({ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 0', borderTop:'1px solid #f1f5f9', gap:12, flexWrap:'wrap' })}>
+                  <div>
+                    <p style={s({ fontFamily:'DM Sans', fontWeight:600, fontSize:13, color:'#374151', margin:0 })}>
+                      {log.display_name || log.call_type}
+                      <span style={s({ color:'#94a3b8', fontWeight:400 })}> · {moduleNames[log.tool_module]||log.tool_module}</span>
+                    </p>
+                    <p style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', margin:'2px 0 0' })}>
+                      {log.changed_by_email} · {fmtRel(log.changed_at)}{log.reason ? ` · "${log.reason}"` : ''}
+                    </p>
+                  </div>
+                  <div style={s({ display:'flex', alignItems:'center', gap:6 })}>
+                    <span style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#dc2626' })}>{log.old_credits}</span>
+                    <span style={s({ color:'#94a3b8' })}>→</span>
+                    <span style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#059669' })}>{log.new_credits}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* ══════════════════════════════════════ */}
+      {/* SUB-TAB 3: GIFT CREDITS               */}
+      {/* ══════════════════════════════════════ */}
       {subTab === 'gift' && (
-        <div style={s({ ...card, textAlign:'center', padding:48 })}>
-          <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:16, color:'#94a3b8' })}>🎁 Gift Credits — Coming in Part B</p>
+        <div style={s({ display:'flex', flexDirection:'column', gap:16 })}>
+
+          {/* Single user gift */}
+          <div style={s({ ...card })}>
+            <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:15, color:'#0f172a', margin:'0 0 14px' })}>🎁 Gift Credits to a User</p>
+            <div style={s({ display:'grid', gridTemplateColumns:'2fr 1fr', gap:10, marginBottom:10 })}>
+              <div>
+                <label style={s({ display:'block', fontSize:11, fontWeight:700, color:'#64748b', marginBottom:4, fontFamily:'DM Sans' })}>User Email</label>
+                <input value={giftEmail} onChange={e => setGiftEmail(e.target.value)} placeholder="user@example.com"
+                  style={s({ width:'100%', padding:'10px 12px', borderRadius:10, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:13, outline:'none', boxSizing:'border-box' as const })}
+                />
+              </div>
+              <div>
+                <label style={s({ display:'block', fontSize:11, fontWeight:700, color:'#64748b', marginBottom:4, fontFamily:'DM Sans' })}>Credits</label>
+                <input type="number" value={giftAmount} onChange={e => setGiftAmount(e.target.value)} placeholder="100" min="1"
+                  style={s({ width:'100%', padding:'10px 12px', borderRadius:10, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:13, outline:'none', boxSizing:'border-box' as const })}
+                />
+              </div>
+            </div>
+
+            <div style={s({ marginBottom:10 })}>
+              <label style={s({ display:'block', fontSize:11, fontWeight:700, color:'#64748b', marginBottom:4, fontFamily:'DM Sans' })}>Reason (optional)</label>
+              <input value={giftReason} onChange={e => setGiftReason(e.target.value)} placeholder="e.g. Compensation for issue"
+                style={s({ width:'100%', padding:'10px 12px', borderRadius:10, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:13, outline:'none', boxSizing:'border-box' as const })}
+              />
+            </div>
+
+            <button onClick={handleGift} disabled={giftLoading || !giftEmail.trim() || !giftAmount}
+              style={s({ background:'linear-gradient(135deg,#7c3aed,#a855f7)', color:'white', border:'none', borderRadius:10, padding:'10px 24px', fontFamily:'DM Sans', fontWeight:800, fontSize:13, cursor: giftLoading?'not-allowed':'pointer', opacity: giftLoading?0.5:1 })}
+            >
+              {giftLoading ? '...' : '🎁 Gift'}
+            </button>
+            {giftResult && (
+              <div style={s({ marginTop:12, padding:'10px 14px', borderRadius:10, background: giftResult.success?'rgba(5,150,105,0.08)':'rgba(239,68,68,0.08)', border:`1px solid ${giftResult.success?'rgba(5,150,105,0.2)':'rgba(239,68,68,0.2)'}`, fontFamily:'DM Sans', fontSize:13, fontWeight:600, color: giftResult.success?'#059669':'#dc2626' })}>
+                {giftResult.message}
+              </div>
+            )}
+          </div>
+
+          {/* Bulk gift */}
+          <div style={s({ ...card })}>
+            <div style={s({ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginBottom: showBulkGift?14:0 })}>
+              <div>
+                <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:15, color:'#0f172a', margin:'0 0 4px' })}>📢 Bulk Gift — All Users</p>
+                <p style={s({ fontFamily:'DM Sans', fontSize:12, color:'#94a3b8', margin:0 })}>
+                  Gift credits to every active user at once. Use for launch promotions or platform compensations.
+                </p>
+              </div>
+              <button onClick={() => setShowBulkGift(!showBulkGift)}
+                style={s({ background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.3)', color:'#b45309', padding:'8px 16px', borderRadius:10, cursor:'pointer', fontFamily:'DM Sans', fontWeight:700, fontSize:12, flexShrink:0 })}
+              >
+                {showBulkGift ? 'Cancel' : 'Set Up Bulk Gift'}
+              </button>
+            </div>
+
+            {showBulkGift && (
+              <div style={s({ display:'flex', gap:10, alignItems:'flex-end', flexWrap:'wrap' })}>
+                <div style={s({ flex:1, minWidth:120 })}>
+                  <label style={s({ display:'block', fontSize:11, fontWeight:700, color:'#64748b', marginBottom:4, fontFamily:'DM Sans' })}>Credits per User</label>
+                  <input type="number" value={bulkAmount} onChange={e => setBulkAmount(e.target.value)} placeholder="50" min="1"
+                    style={s({ width:'100%', padding:'10px 12px', borderRadius:10, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:13, outline:'none', boxSizing:'border-box' as const })}
+                  />
+                </div>
+                <div style={s({ flex:2, minWidth:200 })}>
+                  <label style={s({ display:'block', fontSize:11, fontWeight:700, color:'#64748b', marginBottom:4, fontFamily:'DM Sans' })}>Reason</label>
+                  <input value={bulkReason} onChange={e => setBulkReason(e.target.value)} placeholder="e.g. Launch celebration bonus"
+                    style={s({ width:'100%', padding:'10px 12px', borderRadius:10, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:13, outline:'none', boxSizing:'border-box' as const })}
+                  />
+                </div>
+                <button onClick={handleBulkGift} disabled={bulkLoading || !bulkAmount}
+                  style={s({ background:'linear-gradient(135deg,#f59e0b,#ea580c)', color:'white', border:'none', borderRadius:10, padding:'10px 20px', fontFamily:'DM Sans', fontWeight:800, fontSize:13, cursor: bulkLoading?'not-allowed':'pointer', opacity: bulkLoading?0.5:1, whiteSpace:'nowrap' as const })}
+                >
+                  {bulkLoading ? 'Gifting...' : '🚀 Gift to All'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Gift history */}
+          <div style={s({ ...card })}>
+            <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#0f172a', margin:'0 0 12px' })}>📋 Gift History</p>
+            {giftHistory.length === 0
+              ? <p style={s({ fontFamily:'DM Sans', fontSize:13, color:'#94a3b8' })}>No gifts recorded yet.</p>
+              : giftHistory.map((tx: any) => (
+                <div key={tx.id} style={s({ display:'flex', alignItems:'center', gap:12, padding:'8px 0', borderTop:'1px solid #f1f5f9' })}>
+                  <div style={s({ width:32, height:32, borderRadius:8, background: tx.type==='promo'?'rgba(245,158,11,0.08)':'rgba(124,58,237,0.08)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 })}>
+                    {tx.type === 'promo' ? '📢' : '🎁'}
+                  </div>
+                  <div style={s({ flex:1 })}>
+                    <p style={s({ fontFamily:'DM Sans', fontWeight:600, fontSize:13, color:'#374151', margin:0 })}>
+                      {tx.user_email || tx.user_id || '—'}
+                    </p>
+                    <p style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', margin:'2px 0 0' })}>
+                      {tx.description} · {fmtRel(tx.created_at)}
+                    </p>
+                  </div>
+                  <span style={s({ fontFamily:'Sora', fontWeight:800, fontSize:15, color:'#059669' })}>+{tx.amount}</span>
+                </div>
+              ))
+            }
+          </div>
         </div>
       )}
+
+      {/* ══════════════════════════════════════ */}
+      {/* SUB-TAB 4: TRANSACTION LEDGER         */}
+      {/* ══════════════════════════════════════ */}
       {subTab === 'transactions' && (
-        <div style={s({ ...card, textAlign:'center', padding:48 })}>
-          <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:16, color:'#94a3b8' })}>📋 Transaction Ledger — Coming in Part B</p>
+        <div style={s({ display:'flex', flexDirection:'column', gap:16 })}>
+
+          {/* Filter + count row */}
+          <div style={s({ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' })}>
+            {([['all','All'],['topup','Top-ups'],['deduction','Deductions'],['gift','Gifts']] as const).map(([v,l]) => (
+              <button key={v} onClick={() => setTxFilter(v)} style={s({
+                padding:'6px 16px', borderRadius:50, border:'none', cursor:'pointer', fontSize:12,
+                background: txFilter===v ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f8fafc',
+                color: txFilter===v ? 'white' : '#64748b',
+                fontFamily:'DM Sans', fontWeight:700, transition:'all 0.15s',
+              })}>{l}</button>
+            ))}
+            <span style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', marginLeft:'auto' })}>
+              {transactions.length} records
+            </span>
+          </div>
+
+          <div style={s({ ...card, padding:0, overflow:'hidden' })}>
+            {txLoading ? (
+              <div style={s({ display:'flex', justifyContent:'center', padding:48 })}>
+                <div style={s({ width:28, height:28, border:'3px solid #e2e8f0', borderTopColor:'#7c3aed', borderRadius:'50%', animation:'spin 0.8s linear infinite' })} />
+              </div>
+            ) : transactions.length === 0 ? (
+              <p style={s({ fontFamily:'DM Sans', fontSize:13, color:'#94a3b8', textAlign:'center', padding:32 })}>No transactions found.</p>
+            ) : (
+              <>
+                {/* Header row */}
+                <div style={s({ display:'grid', gridTemplateColumns:'36px 2fr 3fr 1fr 1fr', gap:8, padding:'10px 16px', background:'#f8fafc' })}>
+                  {['','User','Description','Date','Amount'].map(h => (
+                    <span key={h} style={s({ fontFamily:'DM Sans', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase' as const, letterSpacing:'0.08em' })}>{h}</span>
+                  ))}
+                </div>
+
+                {transactions.map((tx: any) => (
+                  <div key={tx.id} style={s({ display:'grid', gridTemplateColumns:'36px 2fr 3fr 1fr 1fr', gap:8, padding:'8px 16px', borderTop:'1px solid #f8fafc', alignItems:'center' })}>
+                    {/* Type icon */}
+                    <div style={s({ width:28, height:28, borderRadius:8, background:'#f8fafc', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 })}>
+                      {tx.type==='topup'?'💳': tx.type==='deduction'?'⚡': tx.type==='shadow_deduction'?'👻':'🎁'}
+                    </div>
+
+                    {/* User email */}
+                    <span style={s({ fontFamily:'DM Sans', fontSize:12, color:'#374151', overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
+                      {tx.user_email || '—'}
+                    </span>
+
+                    {/* Description */}
+                    <span style={s({ fontFamily:'DM Sans', fontSize:12, color:'#64748b', overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
+                      {tx.description || tx.type}
+                    </span>
+
+                    {/* Date */}
+                    <span style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8' })}>
+                      {fmtRel(tx.created_at)}
+                    </span>
+
+                    {/* Amount + balance */}
+                    <div>
+                      <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:13, margin:0, color: tx.amount>0?'#059669':'#dc2626' })}>
+                        {tx.amount>0?'+':''}{tx.amount}
+                      </p>
+                      <p style={s({ fontFamily:'DM Sans', fontSize:10, color:'#94a3b8', margin:0 })}>bal:{tx.balance_after}</p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
