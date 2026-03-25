@@ -824,6 +824,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
                 🔑 Generated with your {credits.lastCallProvider === 'anthropic' ? 'Claude' : credits.lastCallProvider === 'openai' ? 'GPT-4o' : 'Gemini'} key · No credits used
               </div>
             )}
+          </div>
           <div style={s({ display: 'flex', gap: 8, alignItems: 'center' })}>
             {chosenType && <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(6,182,212,0.1)', color: '#0891b2', padding: '4px 12px', borderRadius: 50 })}>🔀 {chosenType.name}</span>}
             <button onClick={() => saveItem({ tool: 'funnel_builder', item_type: 'funnel_map', title: funnelData.funnelName, summary: funnelData.funnelTagline, full_data: { brief: funnelBrief, funnel: funnelData } })}
