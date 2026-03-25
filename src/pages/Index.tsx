@@ -904,6 +904,48 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
         <StatCard label="Time to Launch" value="72 hrs" iconBg="#fce7f3" iconColor="#be185d" icon="🚀" changePill="⚡ Fast track" changeColor="#be185d" delay={0.12} />
       </div>
 
+      {/* Recent Work Widget */}
+      {recentWork.length > 0 && (
+        <div style={{ marginBottom: 32, animation: 'fadeUp 0.4s ease 0.08s both' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div>
+              <h2 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: '#0f172a' }}>🕐 Recent Work</h2>
+              <p style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', marginTop: 2 }}>Your last 7 days — click any card to continue</p>
+            </div>
+            <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 50, padding: '4px 12px' }}>Auto-saved · expires in 7 days</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+            {recentWork.map(item => {
+              const meta = TOOL_META[item.tool] || TOOL_META.product_navigator;
+              const daysLeft = Math.ceil((new Date(item.expires_at).getTime() - Date.now()) / 86400000);
+              return (
+                <div key={item.id} onClick={() => onNavigate(meta.page)}
+                  style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)', borderRadius: 16, padding: 16, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', gap: 10 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(0,0,0,0.1)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.05)'; }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>{meta.icon}</span>
+                      <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: meta.color }}>{meta.label}</span>
+                    </div>
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' }}>{fmtRelative(item.created_at)}</span>
+                  </div>
+                  <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#0f172a', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                  {item.subtitle && <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.subtitle}</div>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 600, color: '#64748b', background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 50, padding: '2px 10px' }}>{CALL_TYPE_LABELS[item.call_type] || item.call_type}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {daysLeft <= 2 && <span style={{ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, color: '#b45309', background: 'rgba(245,158,11,0.1)', borderRadius: 50, padding: '2px 8px' }}>{daysLeft}d left</span>}
+                      <span style={{ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: meta.color }}>Continue →</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Tool Suite heading */}
       <div style={{ marginBottom: 16, animation: 'fadeUp 0.4s ease 0.1s both' }}>
         <h2 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a' }}>Your Tool Suite</h2>
