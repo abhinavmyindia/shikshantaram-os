@@ -251,7 +251,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
     setShowRestoreBanner(false);
   };
 
-
+  useEffect(() => {
     if (prefill?.sourceProduct) {
       setOfferBrief(prev => ({
         ...prev,
