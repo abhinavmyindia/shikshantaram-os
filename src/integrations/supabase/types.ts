@@ -279,6 +279,7 @@ export type Database = {
           description: string | null
           gifted_by: string | null
           id: string
+          idempotency_key: string | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
           tool_module: string | null
@@ -295,6 +296,7 @@ export type Database = {
           description?: string | null
           gifted_by?: string | null
           id?: string
+          idempotency_key?: string | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
           tool_module?: string | null
@@ -311,6 +313,7 @@ export type Database = {
           description?: string | null
           gifted_by?: string | null
           id?: string
+          idempotency_key?: string | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
           tool_module?: string | null
@@ -1134,7 +1137,45 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_byok_keys_safe: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          is_active: boolean | null
+          is_valid: boolean | null
+          key_hint: string | null
+          last_used_at: string | null
+          last_validated_at: string | null
+          provider: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_valid?: boolean | null
+          key_hint?: string | null
+          last_used_at?: string | null
+          last_validated_at?: string | null
+          provider?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_valid?: boolean | null
+          key_hint?: string | null
+          last_used_at?: string | null
+          last_validated_at?: string | null
+          provider?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_user_credits: {
@@ -1149,16 +1190,28 @@ export type Database = {
         }
         Returns: Json
       }
-      deduct_user_credits: {
-        Args: {
-          p_amount: number
-          p_call_type: string
-          p_description: string
-          p_tool_module: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
+      deduct_user_credits:
+        | {
+            Args: {
+              p_amount: number
+              p_call_type: string
+              p_description: string
+              p_tool_module: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_call_type: string
+              p_description: string
+              p_idempotency_key?: string
+              p_tool_module: string
+              p_user_id: string
+            }
+            Returns: Json
+          }
       get_my_admin_role: { Args: never; Returns: string }
       get_signup_count: { Args: never; Returns: number }
       has_admin_role: {

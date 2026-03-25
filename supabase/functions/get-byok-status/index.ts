@@ -19,8 +19,9 @@ Deno.serve(async (req) => {
     if (!userId) throw new Error('userId required');
 
     // Explicitly exclude encrypted_key and iv — NEVER return these
+    // Use safe view — encrypted_key and iv are physically absent
     const { data: keys } = await supabase
-      .from('user_byok_keys')
+      .from('user_byok_keys_safe')
       .select('provider, key_hint, is_active, is_valid, last_validated_at, last_used_at, created_at')
       .eq('user_id', userId);
 

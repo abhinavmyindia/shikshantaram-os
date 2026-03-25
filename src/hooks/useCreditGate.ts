@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkCredits, deductCredits, getBalance, CreditCheck } from '@/utils/creditGate';
 
@@ -12,6 +12,9 @@ export function useCreditGate() {
   const [lastCallByok, setLastCallByok] = useState(false);
   const [lastCallProvider, setLastCallProvider] = useState<string | null>(null);
 
+  // Idempotency: one key per gateAction call, reused through confirm flow
+  const currentIdemKeyRef = useRef<string>('');
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
@@ -21,6 +24,16 @@ export function useCreditGate() {
     });
   }, []);
 
+  /** Generate a fresh idempotency key for a new action */
+  const generateIdemKey = useCallback(() => {
+    const key = crypto.randomUUID();
+    currentIdemKeyRef.current = key;
+    return key;
+  }, []);
+
+  /** Get the current idempotency key (for passing to deductAfterSuccess) */
+  const getIdemKey = useCallback(() => currentIdemKeyRef.current, []);
+
   /** Gate an AI call: checks credits, shows confirm/topup if enforced, or proceeds directly in shadow mode */
   const gateAction = useCallback(async (
     toolModule: string,
@@ -28,6 +41,9 @@ export function useCreditGate() {
     executeAction: () => void
   ) => {
     if (!currentUser) { executeAction(); return; }
+
+    // Generate fresh idempotency key for this action
+    generateIdemKey();
 
     const check = await checkCredits(currentUser.id, toolModule, callType);
 
@@ -49,15 +65,23 @@ export function useCreditGate() {
     setCreditCheck(check);
     setPendingAction(() => executeAction);
     setShowCreditConfirm(true);
-  }, [currentUser]);
+  }, [currentUser, generateIdemKey]);
 
   /** Call after a successful AI generation to deduct (skip if BYOK) */
-  const deductAfterSuccess = useCallback(async (toolModule: string, callType: string, wasByok?: boolean, provider?: string) => {
+  const deductAfterSuccess = useCallback(async (
+    toolModule: string,
+    callType: string,
+    wasByok?: boolean,
+    provider?: string,
+    idempotencyKey?: string
+  ) => {
     setLastCallByok(!!wasByok);
     setLastCallProvider(provider || null);
     if (!currentUser) return;
     if (wasByok) return; // BYOK — no credits deducted
-    const result = await deductCredits(currentUser.id, toolModule, callType);
+    // Use provided key, or the one from gateAction, or generate a new one
+    const idemKey = idempotencyKey || currentIdemKeyRef.current || crypto.randomUUID();
+    const result = await deductCredits(currentUser.id, toolModule, callType, undefined, wasByok, idemKey);
     if (result.newBalance !== undefined) {
       setUserBalance(result.newBalance);
     } else {
@@ -91,5 +115,7 @@ export function useCreditGate() {
     cancelConfirm,
     lastCallByok,
     lastCallProvider,
+    generateIdemKey,
+    getIdemKey,
   };
 }
