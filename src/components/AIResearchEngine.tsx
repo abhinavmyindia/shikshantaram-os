@@ -26,6 +26,7 @@ interface ProductIdea {
   ideaConnection?: string;
   sourceMode?: 'niche' | 'raw';
   originalIdea?: string;
+  whyUnique?: string;
 }
 
 interface IdeaAnalysis {

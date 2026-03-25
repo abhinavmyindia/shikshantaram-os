@@ -897,7 +897,9 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
-      return new Response(JSON.stringify({ result: parsed, byok: false }), {
+      const responseBody: any = { result: parsed, byok: false };
+      if (diversityMeta) responseBody._diversity = diversityMeta;
+      return new Response(JSON.stringify(responseBody), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (parseErr: any) {
