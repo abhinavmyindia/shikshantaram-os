@@ -135,7 +135,7 @@ export default function ProfilePage({
   const [sessions, setSessions] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'profile' | 'activity' | 'security' | 'credits' | 'settings'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'activity' | 'security' | 'credits' | 'settings' | 'apikeys'>('profile');
 
   // Tab 1 — Profile
   const [editName, setEditName] = useState('');
@@ -165,6 +165,7 @@ export default function ProfilePage({
 
   // Tab 4 — Credits
   const [showTopUp, setShowTopUp] = useState(false);
+  const [byokLogs7d, setByokLogs7d] = useState<any[]>([]);
 
   // Tab 5 — Settings
   const [notifNewTools, setNotifNewTools] = useState(true);
@@ -177,6 +178,23 @@ export default function ProfilePage({
   const [deleteInput, setDeleteInput] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deletionRequested, setDeletionRequested] = useState(false);
+
+  // Tab 6 — API Keys (BYOK)
+  const [byokStatus, setByokStatus] = useState<any[]>([]);
+  const [byokPreferred, setByokPreferred] = useState<string | null>(null);
+  const [byokLoading, setByokLoading] = useState(true);
+  const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
+  const [savingKey, setSavingKey] = useState<Record<string, boolean>>({});
+  const [saveResults, setSaveResults] = useState<Record<string, { success: boolean; message: string } | null>>({});
+  const [deletingKey, setDeletingKey] = useState<Record<string, boolean>>({});
+  const [togglingPref, setTogglingPref] = useState(false);
+  const [showKeyInput, setShowKeyInput] = useState<Record<string, boolean>>({});
+
+  const PROVIDERS = [
+    { id: 'anthropic', name: 'Claude (Anthropic)', icon: '🔮', description: 'Claude Sonnet — same AI as our platform, your own billing', keyFormat: 'Starts with sk-ant-', docsUrl: 'https://console.anthropic.com/account/keys', models: ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'], color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.2)' },
+    { id: 'openai', name: 'GPT-4o (OpenAI)', icon: '⚡', description: 'OpenAI GPT-4o — great for structured outputs and coding tasks', keyFormat: 'Starts with sk-', docsUrl: 'https://platform.openai.com/api-keys', models: ['gpt-4o', 'gpt-4o-mini'], color: '#059669', bg: 'rgba(5,150,105,0.08)', border: 'rgba(5,150,105,0.2)' },
+    { id: 'gemini', name: 'Gemini (Google)', icon: '✨', description: 'Google Gemini 1.5 Pro — excellent for long context and research', keyFormat: 'Starts with AIza', docsUrl: 'https://aistudio.google.com/app/apikey', models: ['gemini-1.5-pro', 'gemini-1.5-flash'], color: '#0284c7', bg: 'rgba(2,132,199,0.08)', border: 'rgba(2,132,199,0.2)' },
+  ];
 
   /* ───────── Data Loading ───────── */
   useEffect(() => {
@@ -405,7 +423,7 @@ export default function ProfilePage({
         </div>
       </div>
 
-      {/* ─── 5-TAB NAV ─── */}
+      {/* ─── 6-TAB NAV ─── */}
       <div style={{ display: 'flex', gap: 4, background: '#f8fafc', borderRadius: 14, padding: 4, marginBottom: 20 }}>
         {([
           { id: 'profile' as const, icon: '👤', label: 'Profile' },
@@ -413,6 +431,7 @@ export default function ProfilePage({
           { id: 'security' as const, icon: '🔒', label: 'Security' },
           { id: 'credits' as const, icon: '⚡', label: 'Credits' },
           { id: 'settings' as const, icon: '⚙️', label: 'Settings' },
+          { id: 'apikeys' as const, icon: '🔑', label: 'API Keys' },
         ]).map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
             flex: 1, padding: '9px 4px', borderRadius: 10, border: 'none', cursor: 'pointer',
