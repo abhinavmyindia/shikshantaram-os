@@ -820,6 +820,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
               <div onClick={() => setOfferStep('output')} style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: '#f59e0b', cursor: 'pointer', marginTop: 12, textAlign: 'right' })}>View Full Output →</div>
             </div>
           </div>
+          </div>
         </div>
       )}
 
