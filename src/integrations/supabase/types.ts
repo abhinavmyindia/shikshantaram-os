@@ -823,7 +823,9 @@ export type Database = {
           linkedin: string | null
           linkedin_url: string | null
           notes: string | null
+          notif_credits: boolean | null
           notif_new_tools: boolean | null
+          notif_security: boolean | null
           notif_tips: boolean | null
           payment_amount: number | null
           payment_status: string
@@ -856,7 +858,9 @@ export type Database = {
           linkedin?: string | null
           linkedin_url?: string | null
           notes?: string | null
+          notif_credits?: boolean | null
           notif_new_tools?: boolean | null
+          notif_security?: boolean | null
           notif_tips?: boolean | null
           payment_amount?: number | null
           payment_status?: string
@@ -889,7 +893,9 @@ export type Database = {
           linkedin?: string | null
           linkedin_url?: string | null
           notes?: string | null
+          notif_credits?: boolean | null
           notif_new_tools?: boolean | null
+          notif_security?: boolean | null
           notif_tips?: boolean | null
           payment_amount?: number | null
           payment_status?: string
