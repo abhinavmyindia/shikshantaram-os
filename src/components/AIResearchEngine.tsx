@@ -1960,9 +1960,9 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
                 style={s({ background: isSaved('product_navigator', 'deep_research', selectedProduct.productName) ? 'linear-gradient(135deg,#ea580c,#f59e0b)' : 'none', border: isSaved('product_navigator', 'deep_research', selectedProduct.productName) ? 'none' : '1px solid #e2e8f0', borderRadius: 50, padding: '7px 18px', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: isSaved('product_navigator', 'deep_research', selectedProduct.productName) ? 'white' : '#64748b', cursor: 'pointer', opacity: isSaving('product_navigator', 'deep_research', selectedProduct.productName) ? 0.5 : 1, transition: 'all 0.2s' })}>
                 {isSaved('product_navigator', 'deep_research', selectedProduct.productName) ? '🔖 Saved' : '🔖 Save Report'}
               </button>
-              <button onClick={() => exportDeepResearchPDF(researchReport, selectedProduct, inputData.niche, inputData.country, credits.currentUser?.email || 'User')}
+              <button onClick={() => exportDeepResearchPDF(researchReport, selectedProduct, inputData.niche || '', inputData.country || '', credits.currentUser?.email || 'User')}
                 style={s({ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 50, border: 'none', background: 'linear-gradient(135deg,#0284c7,#0891b2)', color: 'white', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, boxShadow: '0 2px 8px rgba(2,132,199,0.25)' })}>
-                ⬇ Export PDF
+                Export PDF
               </button>
             </div>
           </div>
