@@ -3,27 +3,63 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import TopUpModal from '@/components/TopUpModal';
 
-/* ───────── Avatar Gradients ───────── */
-const AVATAR_GRADIENTS = [
-  { id: 'purple',  gradient: 'linear-gradient(135deg,#7c3aed,#a855f7)', label: 'Purple'  },
-  { id: 'indigo',  gradient: 'linear-gradient(135deg,#4f46e5,#7c3aed)', label: 'Indigo'  },
-  { id: 'blue',    gradient: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', label: 'Blue'    },
-  { id: 'cyan',    gradient: 'linear-gradient(135deg,#0284c7,#06b6d4)', label: 'Cyan'    },
-  { id: 'teal',    gradient: 'linear-gradient(135deg,#0d9488,#14b8a6)', label: 'Teal'    },
-  { id: 'green',   gradient: 'linear-gradient(135deg,#15803d,#22c55e)', label: 'Green'   },
-  { id: 'lime',    gradient: 'linear-gradient(135deg,#4d7c0f,#84cc16)', label: 'Lime'    },
-  { id: 'amber',   gradient: 'linear-gradient(135deg,#b45309,#f59e0b)', label: 'Amber'   },
-  { id: 'orange',  gradient: 'linear-gradient(135deg,#c2410c,#f97316)', label: 'Orange'  },
-  { id: 'red',     gradient: 'linear-gradient(135deg,#b91c1c,#ef4444)', label: 'Red'     },
-  { id: 'pink',    gradient: 'linear-gradient(135deg,#be185d,#ec4899)', label: 'Pink'    },
-  { id: 'rose',    gradient: 'linear-gradient(135deg,#9f1239,#f43f5e)', label: 'Rose'    },
-  { id: 'violet',  gradient: 'linear-gradient(135deg,#6d28d9,#8b5cf6)', label: 'Violet'  },
-  { id: 'fuchsia', gradient: 'linear-gradient(135deg,#a21caf,#d946ef)', label: 'Fuchsia' },
-  { id: 'dark',    gradient: 'linear-gradient(135deg,#0f172a,#334155)', label: 'Dark'    },
-  { id: 'sunset',  gradient: 'linear-gradient(135deg,#dc2626,#ea580c,#f59e0b)', label: 'Sunset' },
+/* ───────── Avatar Colors ───────── */
+const AVATAR_COLORS = [
+  { id: 'purple',  color: '#7c3aed', label: 'Purple'  },
+  { id: 'indigo',  color: '#4f46e5', label: 'Indigo'  },
+  { id: 'blue',    color: '#2563eb', label: 'Blue'    },
+  { id: 'cyan',    color: '#0891b2', label: 'Cyan'    },
+  { id: 'teal',    color: '#0d9488', label: 'Teal'    },
+  { id: 'green',   color: '#16a34a', label: 'Green'   },
+  { id: 'lime',    color: '#65a30d', label: 'Lime'    },
+  { id: 'amber',   color: '#d97706', label: 'Amber'   },
+  { id: 'orange',  color: '#ea580c', label: 'Orange'  },
+  { id: 'red',     color: '#dc2626', label: 'Red'     },
+  { id: 'pink',    color: '#db2777', label: 'Pink'    },
+  { id: 'rose',    color: '#e11d48', label: 'Rose'    },
+  { id: 'violet',  color: '#7c3aed', label: 'Violet'  },
+  { id: 'fuchsia', color: '#a21caf', label: 'Fuchsia' },
+  { id: 'dark',    color: '#1e293b', label: 'Dark'    },
+  { id: 'slate',   color: '#475569', label: 'Slate'   },
 ];
 
-export { AVATAR_GRADIENTS };
+export { AVATAR_COLORS };
+
+/* ───────── Social Icons (SVG) ───────── */
+const SocialIcon = ({ platform }: { platform: string }) => {
+  const icons: Record<string, JSX.Element> = {
+    instagram: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="2" width="20" height="20" rx="5" />
+        <circle cx="12" cy="12" r="5" />
+        <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+    twitter: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    ),
+    linkedin: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452z" />
+      </svg>
+    ),
+    youtube: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+        <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="white" />
+      </svg>
+    ),
+    website: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+      </svg>
+    ),
+  };
+  return icons[platform] || null;
+};
 
 /* ───────── Helpers ───────── */
 const tierMeta: Record<string, { label: string; color: string; bg: string }> = {
@@ -68,6 +104,19 @@ const cardStyle: CSSProperties = {
   boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
 };
 
+const labelStyle: CSSProperties = {
+  fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11,
+  color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em',
+  display: 'block', marginBottom: 6,
+};
+
+const inputStyle: CSSProperties = {
+  width: '100%', padding: '11px 14px', borderRadius: 12,
+  border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif',
+  fontSize: 14, color: '#0f172a', outline: 'none', boxSizing: 'border-box',
+  transition: 'border-color 0.15s',
+};
+
 /* ───────── Component ───────── */
 export default function ProfilePage({
   user,
@@ -97,8 +146,8 @@ export default function ProfilePage({
   const [editLinkedin, setEditLinkedin] = useState('');
   const [editYoutube, setEditYoutube] = useState('');
   const [editWebsite, setEditWebsite] = useState('');
-  const [selectedGradient, setSelectedGradient] = useState(AVATAR_GRADIENTS[0]);
-  const [hoveredGradient, setHoveredGradient] = useState<typeof AVATAR_GRADIENTS[0] | null>(null);
+  const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0]);
+  const [hoveredColor, setHoveredColor] = useState<typeof AVATAR_COLORS[0] | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
 
@@ -120,6 +169,8 @@ export default function ProfilePage({
   // Tab 5 — Settings
   const [notifNewTools, setNotifNewTools] = useState(true);
   const [notifTips, setNotifTips] = useState(true);
+  const [notifCredits, setNotifCredits] = useState(true);
+  const [notifSecurity, setNotifSecurity] = useState(true);
   const [savingNotif, setSavingNotif] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteReason, setDeleteReason] = useState('');
@@ -143,9 +194,11 @@ export default function ProfilePage({
         setEditWebsite((p as any).website_url || '');
         setNotifNewTools((p as any).notif_new_tools ?? true);
         setNotifTips((p as any).notif_tips ?? true);
+        setNotifCredits((p as any).notif_credits ?? true);
+        setNotifSecurity((p as any).notif_security ?? true);
         setDeletionRequested((p as any).deletion_requested || false);
-        const grad = AVATAR_GRADIENTS.find(g => g.id === (p as any).avatar_color) || AVATAR_GRADIENTS[0];
-        setSelectedGradient(grad);
+        const col = AVATAR_COLORS.find(c => c.id === (p as any).avatar_color) || AVATAR_COLORS[0];
+        setSelectedColor(col);
       }
 
       const { data: cr } = await supabase.from('user_credits').select('*').eq('user_id', user.id).single();
@@ -163,8 +216,8 @@ export default function ProfilePage({
 
       const [{ data: sessions7d }, { data: aiLogs7d }, { data: toolUsage }] = await Promise.all([
         supabase.from('user_sessions').select('duration_seconds, session_start').eq('user_id', user.id).gte('session_start', sevenDaysAgo),
-        supabase.from('ai_usage_logs').select('module, total_tokens, created_at').eq('user_id', user.id).gte('created_at', sevenDaysAgo),
-        supabase.from('tool_usage').select('tool_id, time_spent_secs').eq('user_id', user.id).gte('created_at', new Date(Date.now() - 30 * 86400000).toISOString()),
+        supabase.from('ai_usage_logs').select('module, created_at').eq('user_id', user.id).gte('created_at', sevenDaysAgo),
+        supabase.from('tool_usage').select('tool_id').eq('user_id', user.id).gte('created_at', new Date(Date.now() - 30 * 86400000).toISOString()),
       ]);
 
       const days = Array.from({ length: 7 }, (_, i) => {
@@ -175,9 +228,8 @@ export default function ProfilePage({
       days.forEach(d => { dailyMinutes[d] = 0; });
       (sessions7d || []).forEach((s: any) => {
         const day = s.session_start?.split('T')[0];
-        if (day && dailyMinutes[day] !== undefined) {
+        if (day && dailyMinutes[day] !== undefined)
           dailyMinutes[day] += Math.round((s.duration_seconds || 0) / 60);
-        }
       });
 
       const totalSecs7d = (sessions7d || []).reduce((s: number, x: any) => s + (x.duration_seconds || 0), 0);
@@ -192,17 +244,9 @@ export default function ProfilePage({
       const toolCounts: Record<string, number> = {};
       (toolUsage || []).forEach((t: any) => { toolCounts[t.tool_id] = (toolCounts[t.tool_id] || 0) + 1; });
       const topTool = Object.entries(toolCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+      const daysSince = Math.floor((Date.now() - new Date((p as any)?.created_at || user.created_at).getTime()) / 86400000);
 
-      const memberSince = (p as any)?.created_at || user.created_at;
-      const daysSince = Math.floor((Date.now() - new Date(memberSince).getTime()) / 86400000);
-
-      setActivityData({
-        totalSecs7d, todaySecs, aiCalls7d, creditsSpent7d,
-        topTool, dailyMinutes, days,
-        sessionCount7d: (sessions7d || []).length,
-        daysSince,
-      });
-
+      setActivityData({ totalSecs7d, todaySecs, aiCalls7d, creditsSpent7d, topTool, dailyMinutes, days, sessionCount7d: (sessions7d || []).length, daysSince });
       setLoading(false);
     };
     load();
@@ -216,18 +260,23 @@ export default function ProfilePage({
       full_name: editName.trim(),
       bio: editBio.trim(),
       phone: editPhone.trim(),
-      avatar_color: selectedGradient.id,
+      instagram_url: editInsta.trim(),
+      twitter_url: editTwitter.trim(),
+      linkedin_url: editLinkedin.trim(),
+      youtube_url: editYoutube.trim(),
+      website_url: editWebsite.trim(),
+      avatar_color: selectedColor.id,
     } as any).eq('id', user.id);
     setSavingProfile(false);
     setProfileSaved(true);
-    setProfileData((prev: any) => ({ ...prev, full_name: editName, avatar_color: selectedGradient.id }));
+    setProfileData((prev: any) => ({ ...prev, full_name: editName, avatar_color: selectedColor.id }));
     await onProfileUpdate();
     setTimeout(() => setProfileSaved(false), 3000);
   };
 
-  const handleGradientChange = (grad: typeof AVATAR_GRADIENTS[0]) => {
-    setSelectedGradient(grad);
-    window.dispatchEvent(new CustomEvent('avatarColorChanged', { detail: { gradient: grad.gradient, id: grad.id } }));
+  const handleColorChange = (col: typeof AVATAR_COLORS[0]) => {
+    setSelectedColor(col);
+    window.dispatchEvent(new CustomEvent('avatarColorChanged', { detail: { color: col.color, id: col.id } }));
   };
 
   const handlePasswordChange = async () => {
@@ -269,11 +318,8 @@ export default function ProfilePage({
     if (deleteInput !== 'DELETE') return;
     setDeleteLoading(true);
     await supabase.from('deletion_requests').insert({
-      user_id: user.id,
-      user_email: user.email!,
-      user_name: editName,
-      reason: deleteReason || 'No reason provided',
-      status: 'pending',
+      user_id: user.id, user_email: user.email!, user_name: editName,
+      reason: deleteReason || 'No reason provided', status: 'pending',
     } as any);
     await supabase.from('user_profiles').update({ deletion_requested: true, deletion_requested_at: new Date().toISOString() } as any).eq('id', user.id);
     setDeletionRequested(true);
@@ -283,7 +329,7 @@ export default function ProfilePage({
 
   /* ───────── Derived ───────── */
   const tier = tierMeta[profileData?.access_tier || profile?.access_tier || 'basic'];
-  const displayGradient = hoveredGradient?.gradient || selectedGradient.gradient;
+  const displayColor = hoveredColor?.color || selectedColor.color;
 
   /* ───────── Loading ───────── */
   if (loading) return (
@@ -314,10 +360,10 @@ export default function ProfilePage({
       }}>
         <div style={{
           width: 64, height: 64, borderRadius: 18,
-          background: displayGradient,
+          background: displayColor,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-          transition: 'background 0.3s',
+          flexShrink: 0, boxShadow: `0 4px 16px ${displayColor}44`,
+          transition: 'background 0.2s, box-shadow 0.2s',
         }}>
           <span style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 24, color: 'white' }}>
             {(editName || user?.email || 'U')[0].toUpperCase()}
@@ -389,50 +435,50 @@ export default function ProfilePage({
       {activeTab === 'profile' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Avatar gradient picker */}
+          {/* Avatar color picker — compact dots */}
           <div style={cardStyle}>
-            <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 14px' }}>
-              Avatar Style
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 10 }}>
-              {AVATAR_GRADIENTS.map(grad => (
-                <button key={grad.id} onClick={() => handleGradientChange(grad)}
-                  onMouseEnter={() => setHoveredGradient(grad)}
-                  onMouseLeave={() => setHoveredGradient(null)}
-                  title={grad.label}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <label style={labelStyle as any}>Avatar Color</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: selectedColor.color, boxShadow: `0 2px 6px ${selectedColor.color}44` }} />
+                <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12, color: '#64748b' }}>{selectedColor.label}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {AVATAR_COLORS.map(col => (
+                <button key={col.id} onClick={() => handleColorChange(col)}
+                  onMouseEnter={() => setHoveredColor(col)}
+                  onMouseLeave={() => setHoveredColor(null)}
+                  title={col.label}
                   style={{
-                    width: '100%', aspectRatio: '1', borderRadius: 12,
-                    background: grad.gradient, border: 'none', cursor: 'pointer',
-                    outline: selectedGradient.id === grad.id ? '3px solid #7c3aed' : '2px solid transparent',
+                    width: 28, height: 28, borderRadius: '50%',
+                    background: col.color, border: 'none', cursor: 'pointer',
+                    outline: selectedColor.id === col.id ? `3px solid ${col.color}` : '2px solid transparent',
                     outlineOffset: 2,
-                    transform: selectedGradient.id === grad.id || hoveredGradient?.id === grad.id ? 'scale(1.12)' : 'scale(1)',
+                    transform: selectedColor.id === col.id ? 'scale(1.2)' : 'scale(1)',
                     transition: 'all 0.15s',
-                    boxShadow: selectedGradient.id === grad.id ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
+                    flexShrink: 0,
                   }}
                 />
               ))}
             </div>
             <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#94a3b8', margin: '10px 0 0' }}>
-              Hover to preview in your avatar above · Click to select · Save to make permanent
+              Hover to preview · Click to select · Save to apply
             </p>
           </div>
 
           {/* Name + Bio */}
           <div style={cardStyle}>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
-                Full Name
-              </label>
+              <label style={labelStyle as any}>Full Name</label>
               <input type="text" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Your full name"
-                style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#0f172a', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
+                style={inputStyle}
                 onFocus={e => e.target.style.borderColor = '#7c3aed'} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
             </div>
             <div>
-              <label style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>
-                Bio (visible on your community profile)
-              </label>
+              <label style={labelStyle as any}>Bio (visible on community profile)</label>
               <textarea value={editBio} onChange={e => setEditBio(e.target.value.slice(0, 160))} placeholder="Tell the community about yourself and what you're building..." rows={3}
-                style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#0f172a', outline: 'none', boxSizing: 'border-box', resize: 'vertical', transition: 'border-color 0.15s', lineHeight: 1.6 }}
+                style={{ ...inputStyle, resize: 'vertical' as any, lineHeight: 1.6, minHeight: 80 }}
                 onFocus={e => e.target.style.borderColor = '#7c3aed'} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
               <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#94a3b8', margin: '4px 0 0', textAlign: 'right' }}>{editBio.length}/160</p>
             </div>
@@ -441,37 +487,45 @@ export default function ProfilePage({
           {/* Contact */}
           <div style={cardStyle}>
             <div style={{ marginBottom: 14 }}>
-              <label style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>Email Address</label>
+              <label style={labelStyle as any}>Email Address</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <input type="email" value={user?.email || ''} disabled
-                  style={{ flex: 1, padding: '11px 14px', borderRadius: 12, border: '1.5px solid #f1f5f9', fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#94a3b8', background: '#f8fafc', cursor: 'not-allowed', boxSizing: 'border-box' }} />
+                  style={{ ...inputStyle, border: '1.5px solid #f1f5f9', color: '#94a3b8', background: '#f8fafc', cursor: 'not-allowed' }} />
                 <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap', flexShrink: 0 }}>🔒 Contact support</span>
               </div>
             </div>
             <div>
-              <label style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 6 }}>Phone Number</label>
+              <label style={labelStyle as any}>Phone Number</label>
               <input type="tel" value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="+91 98765 43210"
-                style={{ width: '100%', padding: '11px 14px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#0f172a', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
+                style={inputStyle}
                 onFocus={e => e.target.style.borderColor = '#7c3aed'} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
             </div>
           </div>
 
-          {/* Social Links */}
+          {/* Social Links — SVG icons */}
           <div style={cardStyle}>
             <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 14px' }}>
               Social Links <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: 11, textTransform: 'none' }}>— shown on your community profile</span>
             </p>
             {[
-              { label: 'Instagram', icon: '📸', value: editInsta, setter: setEditInsta, placeholder: 'https://instagram.com/yourhandle' },
-              { label: 'Twitter / X', icon: '🐦', value: editTwitter, setter: setEditTwitter, placeholder: 'https://twitter.com/yourhandle' },
-              { label: 'LinkedIn', icon: '💼', value: editLinkedin, setter: setEditLinkedin, placeholder: 'https://linkedin.com/in/yourname' },
-              { label: 'YouTube', icon: '▶️', value: editYoutube, setter: setEditYoutube, placeholder: 'https://youtube.com/@yourchannel' },
-              { label: 'Website', icon: '🌐', value: editWebsite, setter: setEditWebsite, placeholder: 'https://yourwebsite.com' },
+              { platform: 'instagram', label: 'Instagram', value: editInsta, setter: setEditInsta, placeholder: 'instagram.com/yourhandle' },
+              { platform: 'twitter', label: 'Twitter / X', value: editTwitter, setter: setEditTwitter, placeholder: 'twitter.com/yourhandle' },
+              { platform: 'linkedin', label: 'LinkedIn', value: editLinkedin, setter: setEditLinkedin, placeholder: 'linkedin.com/in/yourname' },
+              { platform: 'youtube', label: 'YouTube', value: editYoutube, setter: setEditYoutube, placeholder: 'youtube.com/@yourchannel' },
+              { platform: 'website', label: 'Website', value: editWebsite, setter: setEditWebsite, placeholder: 'yourwebsite.com' },
             ].map((field, i) => (
-              <div key={field.label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < 4 ? 10 : 0 }}>
-                <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{field.icon}</span>
-                <input type="url" value={field.value} onChange={e => field.setter(e.target.value)} placeholder={field.placeholder}
-                  style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
+              <div key={field.platform} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i < 4 ? 10 : 0 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                  background: '#f8fafc', border: '1.5px solid #f1f5f9',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#64748b', transition: 'border-color 0.15s',
+                }}>
+                  <SocialIcon platform={field.platform} />
+                </div>
+                <input type="url" value={field.value} onChange={e => field.setter(e.target.value)}
+                  placeholder={field.placeholder}
+                  style={{ ...inputStyle, flex: 1, width: 'auto', padding: '10px 12px', borderRadius: 10, fontSize: 13 }}
                   onFocus={e => e.target.style.borderColor = '#7c3aed'} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
               </div>
             ))}
@@ -504,10 +558,10 @@ export default function ProfilePage({
           {/* Quick stats grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
             {[
-              { icon: '⏱️', label: 'Today', value: fmtTime(activityData.todaySecs), sub: 'time on platform' },
-              { icon: '📅', label: 'Last 7 Days', value: fmtTime(activityData.totalSecs7d), sub: 'total session time' },
-              { icon: '🤖', label: 'AI Calls (7d)', value: activityData.aiCalls7d, sub: 'generations made' },
-              { icon: '⚡', label: 'Credits Used (7d)', value: activityData.creditsSpent7d, sub: 'credits spent' },
+              { icon: '⏱️', label: 'Today', value: fmtTime(activityData.todaySecs), sub: 'on platform' },
+              { icon: '📅', label: 'Last 7 Days', value: fmtTime(activityData.totalSecs7d), sub: 'total time' },
+              { icon: '🤖', label: 'AI Calls (7d)', value: activityData.aiCalls7d, sub: 'generations' },
+              { icon: '⚡', label: 'Credits Used (7d)', value: activityData.creditsSpent7d, sub: 'spent' },
             ].map(stat => (
               <div key={stat.label} style={{ ...cardStyle, textAlign: 'center', padding: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
@@ -523,7 +577,7 @@ export default function ProfilePage({
           {/* 7-day bar chart */}
           <div style={{ ...cardStyle, padding: 24 }}>
             <h3 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 16, color: '#0f172a', margin: '0 0 4px' }}>📈 Daily Usage — Last 7 Days</h3>
-            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#64748b', margin: '0 0 20px' }}>Minutes spent on platform each day</p>
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#64748b', margin: '0 0 20px' }}>Minutes per day</p>
             {(() => {
               const maxMins = Math.max(...Object.values(activityData.dailyMinutes as Record<string, number>), 1);
               return (
@@ -577,8 +631,8 @@ export default function ProfilePage({
               </p>
             </div>
             <div style={{ ...cardStyle, padding: 16 }}>
-              <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px' }}>Total Credits Used</p>
-              <p style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 14, color: '#0f172a', margin: 0 }}>{credits?.lifetime_spent ?? 0} credits</p>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 6px' }}>Lifetime Credits Used</p>
+              <p style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 14, color: '#0f172a', margin: 0 }}>{credits?.lifetime_spent ?? 0}</p>
             </div>
           </div>
         </div>
