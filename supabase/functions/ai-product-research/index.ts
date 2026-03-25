@@ -7,6 +7,144 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// ─── DIVERSITY SYSTEM ────────────────────────────────────────
+// 5 layers of controlled randomness so identical niche searches
+// produce genuinely unique ideas for every user.
+
+const AUDIENCE_SEGMENTS = [
+  'complete beginners who have never tried this before and feel overwhelmed',
+  'people who tried and failed once and are ready to try again with a smarter approach',
+  'mid-level practitioners stuck at a plateau who need the next breakthrough',
+  'advanced users who want to systematize and scale what they already know',
+  'busy professionals with limited time (under 30 min/day) who need fast wins',
+  'people in tier-2 and tier-3 Indian cities with limited access to mentors or networks',
+  'women who face unique social barriers and need culturally-aware solutions',
+  'young Indians aged 18-25 who are digitally native but financially inexperienced',
+];
+
+const PAIN_ANCHORS = [
+  'information overload — too much advice, no clear starting point',
+  "inconsistent results — things work sometimes but they can't figure out why",
+  'fear of judgment, failure, or looking stupid in front of peers or family',
+  'lack of accountability and community — doing everything alone with no support',
+  "wasting money on things that don't work and not trusting new solutions",
+  'knowing what to do but completely failing at execution and follow-through',
+  'not being taken seriously by others because they lack credentials or proof',
+  "imposter syndrome — feeling like they don't deserve success or aren't ready",
+];
+
+const DELIVERY_FORMATS = [
+  'done-for-you templates, swipe files, and copy-paste systems (zero thinking required)',
+  'step-by-step 7-day or 30-day challenge with daily micro-actions',
+  'toolkit or resource vault with 10+ plug-and-play components',
+  'community + accountability group with live weekly check-ins',
+  'video mini-course under 2 hours that delivers one transformative skill',
+  'AI-powered tool or calculator that gives personalised output instantly',
+  'WhatsApp or Telegram-based drip programme delivered over 21 days',
+  'physical or printable workbook with fill-in-the-blank exercises',
+];
+
+const CREATIVE_CONSTRAINTS = [
+  'At least 6 ideas must be executable by a solo creator in under 2 weeks with no team.',
+  'At least 5 ideas must use WhatsApp, Telegram, or Instagram DMs as the primary delivery channel.',
+  'At least 4 ideas must target a painful transition moment (new job, new city, new relationship, new baby, layoff).',
+  'At least 5 ideas must be priced under Rs.999 to capture impulse buyers first.',
+  'At least 4 ideas must solve a problem that causes embarrassment or social shame.',
+  'At least 5 ideas must leverage a current 2025 trend (AI tools, short-form video, remote work, gig economy).',
+  'At least 4 ideas must be hyper-local — targeting a specific Indian state, city type, or cultural context.',
+  'At least 5 ideas must have a visible, measurable outcome the buyer can show others within 30 days.',
+];
+
+const MARKET_TIMING_SIGNALS = [
+  'Post-layoff anxiety and job market uncertainty in India is at peak levels right now.',
+  'AI tool adoption among Indian professionals has exploded — people want to adapt or be left behind.',
+  "Side hustle culture is mainstream — everyone wants a second income stream but most don't know where to start.",
+  'Vernacular content is booming — Hindi, Tamil, Telugu audiences are underserved by English-only products.',
+  'Mental health awareness has gone mainstream — emotional and psychological products now have mass appeal.',
+  'Short-form video has made micro-celebrity possible for anyone — personal brand products are in high demand.',
+];
+
+const EXPERT_PERSONAS = [
+  'You are Rahul, a 34-year-old Mumbai-based digital entrepreneur who built a Rs.2 crore/year info-product business from a 1BHK in Andheri. You think in terms of mass market appeal, WhatsApp virality, and products that solve problems middle-class India is too embarrassed to Google. You always ask: "Would a bank employee in Pune buy this at 11pm after seeing a Reel?" Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Priya, a 29-year-old Bangalore product strategist who left a Flipkart PM role to build digital products for working women. You identify underserved female buyer segments and products that address the unique pressures Indian women face — career, family expectations, financial independence, and social judgment. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Vikram, a 41-year-old Chennai-based educator-turned-entrepreneur who built 6 online courses across engineering, upskilling, and career switching. You think in frameworks, systems, and structured learning. Your products always have a clear before/after transformation and measurable milestones. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Meera, a 32-year-old Delhi-based growth consultant who specialises in finding "blue ocean" product opportunities — gaps that everyone overlooks because they seem too niche or too weird. You love contrarian ideas that go against conventional wisdom and typically capture buyers who are fed up with mainstream solutions. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Arjun, a 27-year-old Pune-based Gen-Z founder who understands digital natives, meme culture, and the psychology of Indian 20-somethings navigating career pressure, relationship confusion, and identity crises. You create products that are brutally honest, relatable, and unapologetically Indian. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Sunita, a 38-year-old Jaipur-based entrepreneur who builds products specifically for tier-2 and tier-3 India — people with high ambitions, limited English proficiency, and zero access to the Bangalore startup ecosystem. You understand the real India, not the India tech bros imagine. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Karan, a 35-year-old Hyderabad-based performance marketer who has sold over 10,000 digital products across 15 niches. You think entirely in buyer psychology — what triggers shame, fear, desire, and urgency. Every product idea you generate has a crystal clear emotional hook and an obvious impulse trigger. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Deepa, a 43-year-old Mumbai-based veteran of the Indian self-improvement industry who has seen every trend come and go. You identify ideas with long-term evergreen demand — products people will still need in 5 years — and you always spot the exact sub-audience that is underserved within a popular niche. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+];
+
+const ADJACENT_NICHES: Record<string, string[]> = {
+  'freelancing': ['personal branding', 'B2B sales', 'productivity systems'],
+  'entrepreneurship': ['personal finance', 'leadership', 'sales psychology'],
+  'digital marketing': ['copywriting', 'personal branding', 'ecommerce'],
+  'sales': ['communication skills', 'negotiation', 'psychology'],
+  'leadership': ['team management', 'communication', 'executive presence'],
+  'career growth': ['personal branding', 'communication skills', 'negotiation'],
+  'job search': ['resume writing', 'networking', 'interview skills'],
+  'productivity': ['time management', 'mental health', 'deep work'],
+  'ecommerce': ['supply chain', 'digital marketing', 'customer psychology'],
+  'investing': ['personal finance', 'risk management', 'business analysis'],
+  'stock market': ['personal finance', 'trading psychology', 'financial planning'],
+  'real estate': ['personal finance', 'negotiation', 'investing'],
+  'content creation': ['personal branding', 'digital marketing', 'storytelling'],
+  'youtube': ['storytelling', 'personal branding', 'digital marketing'],
+  'instagram': ['personal branding', 'visual design', 'content creation'],
+  'copywriting': ['psychology', 'sales', 'storytelling'],
+  'public speaking': ['confidence building', 'communication', 'leadership'],
+  'coaching': ['psychology', 'communication', 'personal development'],
+  'consulting': ['B2B sales', 'positioning', 'thought leadership'],
+  'personal finance': ['psychology', 'behaviour change', 'investing'],
+  'fitness': ['nutrition', 'mental health', 'habit formation'],
+  'weight loss': ['nutrition', 'psychology', 'habit formation'],
+  'nutrition': ['fitness', 'mental health', 'wellness'],
+  'mental health': ['mindfulness', 'relationships', 'productivity'],
+  'mindfulness': ['mental health', 'spirituality', 'stress management'],
+  'relationships': ['communication', 'psychology', 'personal development'],
+  'dating': ['confidence building', 'communication', 'psychology'],
+  'marriage': ['relationships', 'communication', 'personal finance'],
+  'parenting': ['education', 'child psychology', 'relationships'],
+  'spirituality': ['mindfulness', 'mental health', 'personal development'],
+  'confidence': ['public speaking', 'communication', 'mental health'],
+  'habits': ['productivity', 'psychology', 'personal development'],
+  'sleep': ['mental health', 'fitness', 'productivity'],
+  'english speaking': ['communication skills', 'career growth', 'public speaking'],
+  'communication': ['public speaking', 'relationships', 'career growth'],
+  'writing': ['storytelling', 'content creation', 'copywriting'],
+  'design': ['content creation', 'branding', 'ecommerce'],
+  'coding': ['freelancing', 'career growth', 'productivity'],
+  'data science': ['career growth', 'investing', 'entrepreneurship'],
+  'ai tools': ['productivity', 'freelancing', 'digital marketing'],
+  'photography': ['content creation', 'personal branding', 'ecommerce'],
+  'music': ['content creation', 'personal branding', 'teaching'],
+  'teaching': ['communication', 'coaching', 'content creation'],
+  'travel': ['personal finance', 'content creation', 'freelancing'],
+  'food': ['ecommerce', 'content creation', 'entrepreneurship'],
+  'fashion': ['personal branding', 'ecommerce', 'content creation'],
+  'home decor': ['ecommerce', 'design', 'entrepreneurship'],
+  'pet care': ['wellness', 'ecommerce', 'content creation'],
+  'weddings': ['personal finance', 'relationships', 'ecommerce'],
+  'pregnancy': ['parenting', 'health', 'mental health'],
+  'women empowerment': ['confidence', 'career growth', 'personal finance'],
+};
+
+const pick = <T,>(arr: T[], n = 1): T[] => {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n);
+};
+const pickOne = <T,>(arr: T[]): T => pick(arr, 1)[0];
+
+const getAdjacentNiches = (niche: string): string[] => {
+  const normalised = niche.toLowerCase().trim();
+  if (ADJACENT_NICHES[normalised]) return pick(ADJACENT_NICHES[normalised], 2);
+  const partialMatch = Object.keys(ADJACENT_NICHES).find(
+    key => normalised.includes(key) || key.includes(normalised)
+  );
+  if (partialMatch) return pick(ADJACENT_NICHES[partialMatch], 2);
+  return pick(['psychology', 'personal development', 'productivity', 'digital marketing', 'communication'], 2);
+};
+
 // ─── PRICING for Lovable AI Gateway models (per 1M tokens) ───
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'google/gemini-3-flash-preview':  { input: 0.10, output: 0.40 },
@@ -56,39 +194,77 @@ async function logAiUsage(
 
 // ─── PROMPTS ─────────────────────────────────────────────────
 
-function buildGenerateIdeasPrompt(niche: string, country: string, productType: string): string {
-  return `You are an expert digital product researcher and market analyst.
+function buildGenerateIdeasPrompt(niche: string, country: string, productType: string): { prompt: string; system: string; diversity: any } {
+  // Layer 2: Semantic diversity anchors
+  const audienceAngle = pickOne(AUDIENCE_SEGMENTS);
+  const painAnchor = pickOne(PAIN_ANCHORS);
+  const deliveryFormat = pickOne(DELIVERY_FORMATS);
 
-A creator wants to build a digital product with these parameters:
-- NICHE: ${niche}
-- TARGET COUNTRY: ${country}
-- PRODUCT FORMAT: ${productType}
+  // Layer 3: Creative constraint seed
+  const creativeConstraint = pickOne(CREATIVE_CONSTRAINTS);
+  const timingSignal = pickOne(MARKET_TIMING_SIGNALS);
 
-Your task: Generate exactly 30 unique, highly specific, market-validated digital product ideas.
+  // Layer 4: Expert persona
+  const persona = pickOne(EXPERT_PERSONAS);
 
-For EACH of the 30 ideas, provide:
-1. productName: A specific, compelling product name (not generic)
-2. tagline: One punchy sentence describing who it's for and what it does
-3. targetAudience: The exact type of person who would buy this (be very specific)
-4. priceRange: Realistic price range for ${country} market (local currency)
-5. buildTime: How long to create (e.g. "1 day", "3 days", "1 week")
-6. marketSize: Brief market size indicator ("Massive", "Large", "Medium", "Niche")
-7. demandScore: 1-10 score for current market demand
-8. competitionLevel: "Low", "Medium", or "High"
-9. impulseScore: "High", "Medium", or "Low" — how likely buyers purchase on impulse
-10. primaryPain: The single biggest pain point this product solves (1 sentence, very specific)
-11. searchKeyword: The top keyword people search to find solutions like this
+  // Layer 5: Cross-niche pollination
+  const adjacentNiches = getAdjacentNiches(niche);
+  const crossNicheLine = `You MUST include at least 3 ideas that borrow proven frameworks from these adjacent markets and apply them to ${niche}: ${adjacentNiches.join(' and ')}. These cross-pollinated ideas are often the most innovative and least saturated.`;
 
-CRITICAL REQUIREMENTS:
-- All ideas must be SPECIFIC to ${country} market context, culture, and buying power
-- Use local pricing that makes sense (e.g. ₹499 for India, $47 for US)
-- Reference country-specific platforms, behaviors, and pain points
-- Do NOT generate generic ideas — every idea must feel tailor-made
-- Ideas should span different sub-niches within ${niche}
-- Vary the demand scores and impulse scores — not everything should be 9/10
-- Make the target audiences extremely specific
+  const prompt = `Generate exactly 30 unique digital product ideas for the following:
 
-Return ONLY a valid JSON array of exactly 30 objects. No preamble, no markdown, no explanation.`;
+Niche: ${niche}
+Target Country/Market: ${country}
+Product Type: ${productType}
+
+--- YOUR MANDATORY FOCUS FOR THIS BATCH ---
+Target Audience Angle: Focus specifically on ${audienceAngle}
+Core Pain to Address: Centre your ideas around the pain of ${painAnchor}
+Preferred Delivery Format: Bias toward products structured as ${deliveryFormat}
+
+--- MARKET CONTEXT ---
+${timingSignal}
+
+--- CREATIVE CONSTRAINTS (MANDATORY) ---
+${creativeConstraint}
+${crossNicheLine}
+
+--- ORIGINALITY REQUIREMENT ---
+These 30 ideas must be DISTINCTLY different from the obvious, saturated, and generic products already flooding this niche.
+Avoid the top-10 most common ideas that anyone would think of immediately.
+Push deeper — target overlooked sub-segments, underserved pain points, unconventional formats.
+
+Return ONLY a JSON array of exactly 30 objects. Each object must have:
+{
+  "productName": "specific, compelling product name — not generic",
+  "tagline": "one punchy benefit-driven line under 12 words",
+  "primaryPain": "the exact pain this solves in 8 words max",
+  "targetAudience": "specific buyer avatar in 10 words",
+  "demandScore": <number 1-10>,
+  "competitionLevel": "Low" | "Medium" | "High",
+  "buildTime": "X-Y weeks" or "X-Y days",
+  "impulseScore": "High" | "Medium" | "Low",
+  "priceRange": "local currency price range",
+  "searchKeyword": "most likely search term buyer types",
+  "marketSize": "Massive" | "Large" | "Medium" | "Niche",
+  "whyUnique": "one sentence — what makes this idea different from the obvious alternatives"
+}
+
+Make each product highly specific to ${country} market realities and ${niche} niche.
+Vary demand scores, competition levels, and impulse scores realistically.
+Mix quick wins (high impulse, low competition) with premium plays.`;
+
+  return {
+    prompt,
+    system: persona,
+    diversity: {
+      audienceAngle,
+      painAnchor,
+      deliveryFormat,
+      adjacentNiches,
+      persona: persona.split(',')[0].replace('You are ', ''),
+    },
+  };
 }
 
 function buildAnalyzeIdeaPrompt(ideaText: string, country: string): string {
@@ -495,7 +671,7 @@ interface AIResult {
   finishReason: string | null;
 }
 
-async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<AIResult> {
+async function callLovableAI(prompt: string, model: string, maxTokens: number, opts?: { system?: string; temperature?: number }): Promise<AIResult> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -506,13 +682,20 @@ async function callLovableAI(prompt: string, model: string, maxTokens: number): 
       await new Promise(r => setTimeout(r, delay));
     }
 
+    const messages: any[] = [];
+    if (opts?.system) messages.push({ role: "system", content: opts.system });
+    messages.push({ role: "user", content: prompt });
+
+    const reqBody: any = { model, messages, max_tokens: maxTokens };
+    if (opts?.temperature !== undefined) reqBody.temperature = opts.temperature;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: maxTokens }),
+      body: JSON.stringify(reqBody),
     });
 
     if (response.status === 429) { await response.text(); continue; }
@@ -570,14 +753,21 @@ serve(async (req) => {
     const byok = byokUserId ? await resolveAIKey(byokUserId) : { useByok: false as const };
 
     let prompt: string;
+    let systemPrompt: string | undefined;
+    let temperature: number | undefined;
     let model: string;
     let maxTokens: number;
     let callType: string;
     let deepResearchContext: { product: any; inputData: any } | null = null;
+    let diversityMeta: any = null;
 
     if (action === "generate-ideas") {
       const { niche, country, productType } = body;
-      prompt = buildGenerateIdeasPrompt(niche, country, productType);
+      const built = buildGenerateIdeasPrompt(niche, country, productType);
+      prompt = built.prompt;
+      systemPrompt = built.system;
+      temperature = 1.0; // Layer 1: force away from default safe answers
+      diversityMeta = built.diversity;
       model = "google/gemini-3-flash-preview";
       maxTokens = 24000;
       callType = "generate_30_ideas";
@@ -605,9 +795,15 @@ serve(async (req) => {
       };
       const dirInstruction = directionInstructions[direction] || directionInstructions['different-angle'];
       const rawContext = rawIdea ? `\nORIGINAL RAW IDEA: "${rawIdea}"\nAll new ideas must stay relevant to this original concept.\n` : '';
-      prompt = `You are an expert digital product researcher.
 
-Generate exactly ${moreCount} NEW digital product ideas. These must be COMPLETELY DIFFERENT from the ideas already generated.
+      // Apply diversity layers to generate-more as well
+      const audienceAngle = pickOne(AUDIENCE_SEGMENTS);
+      const painAnchor = pickOne(PAIN_ANCHORS);
+      const adjacentNiches = getAdjacentNiches(niche);
+      systemPrompt = pickOne(EXPERT_PERSONAS);
+      temperature = 1.0;
+
+      prompt = `Generate exactly ${moreCount} NEW digital product ideas. These must be COMPLETELY DIFFERENT from the ideas already generated.
 
 RESEARCH CONTEXT:
 - Niche: ${niche}
@@ -615,6 +811,11 @@ RESEARCH CONTEXT:
 - Product Type: ${productType}
 - Direction Focus: ${dirInstruction}
 ${rawContext}
+--- DIVERSITY FOCUS FOR THIS BATCH ---
+Target Audience: Focus on ${audienceAngle}
+Pain Anchor: Centre around ${painAnchor}
+Cross-niche inspiration: Borrow frameworks from ${adjacentNiches.join(' and ')}
+
 ALREADY GENERATED — DO NOT REPEAT THESE:
 ${(existingNames || []).map((n: string, i: number) => `${i + 1}. ${n}`).join('\n')}
 
@@ -626,7 +827,7 @@ STRICT RULES:
 5. Every idea must feel genuinely fresh compared to what was already generated
 
 For EACH idea return the EXACT same JSON structure:
-{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":"High","primaryPain":"...","searchKeyword":"..."}
+{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":"High","primaryPain":"...","searchKeyword":"...","whyUnique":"..."}
 
 Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No markdown.`;
       model = "google/gemini-3-flash-preview";
@@ -681,7 +882,7 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
     }
 
     // ─── PLATFORM PATH (unchanged) ───────────────────────────────────────────
-    let aiResult = await callLovableAI(prompt, model, maxTokens);
+    let aiResult = await callLovableAI(prompt, model, maxTokens, { system: systemPrompt, temperature });
 
     // If ANY action was truncated, retry with conciseness instruction
     if (aiResult.finishReason === 'length') {
@@ -696,7 +897,9 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
-      return new Response(JSON.stringify({ result: parsed, byok: false }), {
+      const responseBody: any = { result: parsed, byok: false };
+      if (diversityMeta) responseBody._diversity = diversityMeta;
+      return new Response(JSON.stringify(responseBody), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (parseErr: any) {
