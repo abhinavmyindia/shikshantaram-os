@@ -532,6 +532,8 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   const [researchReport, setResearchReport] = useState<ResearchReport | null>(null);
   const [error, setError] = useState('');
   const [countryOpen, setCountryOpen] = useState(false);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [recentWorkData, setRecentWorkData] = useState<any>(null);
   const [filter, setFilter] = useState('All');
   const [sortBy, setSortBy] = useState('demand');
 
