@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
+import { autoSaveWork, loadRecentWork } from '@/utils/recentWork';
+import RestoreBanner from '@/components/RestoreBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
