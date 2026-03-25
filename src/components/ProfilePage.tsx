@@ -349,7 +349,62 @@ export default function ProfilePage({
     setDeleteLoading(false);
   };
 
-  /* ───────── Derived ───────── */
+  /* ───────── BYOK Handlers ───────── */
+  const loadByokStatus = async () => {
+    if (!user) return;
+    setByokLoading(true);
+    try {
+      const { data } = await supabase.functions.invoke('get-byok-status', { body: { userId: user.id } });
+      setByokStatus(data?.status || []);
+      setByokPreferred(data?.preferredProvider || null);
+    } catch (_) {}
+    setByokLoading(false);
+  };
+
+  useEffect(() => { if (activeTab === 'apikeys') loadByokStatus(); }, [activeTab, user]);
+
+  const handleSaveKey = async (provider: string) => {
+    const rawKey = keyInputs[provider]?.trim();
+    if (!rawKey) return;
+    setSavingKey(prev => ({ ...prev, [provider]: true }));
+    setSaveResults(prev => ({ ...prev, [provider]: null }));
+    try {
+      const { data } = await supabase.functions.invoke('save-byok-key', { body: { userId: user.id, provider, rawKey } });
+      if (data?.success) {
+        setSaveResults(prev => ({ ...prev, [provider]: { success: true, message: `✅ ${data.message}` } }));
+        setKeyInputs(prev => ({ ...prev, [provider]: '' }));
+        setShowKeyInput(prev => ({ ...prev, [provider]: false }));
+        await loadByokStatus();
+      } else {
+        setSaveResults(prev => ({ ...prev, [provider]: { success: false, message: `❌ ${data?.error || 'Failed to save key'}` } }));
+      }
+    } catch (err: any) {
+      setSaveResults(prev => ({ ...prev, [provider]: { success: false, message: `❌ ${err.message}` } }));
+    }
+    setSavingKey(prev => ({ ...prev, [provider]: false }));
+    setTimeout(() => setSaveResults(prev => ({ ...prev, [provider]: null })), 5000);
+  };
+
+  const handleDeleteKey = async (provider: string) => {
+    if (!confirm(`Remove your ${provider} API key? You'll fall back to platform credits.`)) return;
+    setDeletingKey(prev => ({ ...prev, [provider]: true }));
+    try {
+      await supabase.functions.invoke('delete-byok-key', { body: { userId: user.id, provider } });
+      if (byokPreferred === provider) setByokPreferred(null);
+      await loadByokStatus();
+    } catch (_) {}
+    setDeletingKey(prev => ({ ...prev, [provider]: false }));
+  };
+
+  const handleSetPreferred = async (provider: string | null) => {
+    setTogglingPref(true);
+    try {
+      const { data } = await supabase.functions.invoke('update-byok-preference', { body: { userId: user.id, provider } });
+      if (data?.success) setByokPreferred(data.preferredProvider);
+    } catch (_) {}
+    setTogglingPref(false);
+  };
+
   const tier = tierMeta[profileData?.access_tier || profile?.access_tier || 'basic'];
   const displayColor = hoveredColor?.color || selectedColor.color;
 
