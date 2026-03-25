@@ -256,13 +256,13 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     setError(null);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
-        body: { action: 'generate-funnel', brief: funnelBrief, funnelType: { name: chosenType!.name, stepCount: chosenType!.stepCount } }
+        body: { action: 'generate-funnel', brief: funnelBrief, funnelType: { name: chosenType!.name, stepCount: chosenType!.stepCount }, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setFunnelData(data.result);
       setFunnelStep('visualizer');
-      credits.deductAfterSuccess('funnel_builder', 'generate_funnel_architecture');
+      credits.deductAfterSuccess('funnel_builder', 'generate_funnel_architecture', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Could not generate funnel. Please try again.');
       setFunnelStep('brief');
@@ -273,12 +273,12 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     setGeneratingCopy(step.stepId);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
-        body: { action: 'generate-step-copy', step, brief: funnelBrief }
+        body: { action: 'generate-step-copy', step, brief: funnelBrief, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setStepCopy(prev => ({ ...prev, [step.stepId]: data.result }));
-      credits.deductAfterSuccess('funnel_builder', 'generate_step_copy');
+      credits.deductAfterSuccess('funnel_builder', 'generate_step_copy', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Could not generate copy.');
     } finally {
@@ -291,12 +291,12 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     setError(null);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
-        body: { action: 'generate-emails', brief: funnelBrief, funnelData }
+        body: { action: 'generate-emails', brief: funnelBrief, funnelData, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setEmailSequence(data.result);
-      credits.deductAfterSuccess('funnel_builder', 'generate_email_sequence');
+      credits.deductAfterSuccess('funnel_builder', 'generate_email_sequence', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Could not generate emails.');
     } finally {

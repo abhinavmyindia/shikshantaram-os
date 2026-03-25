@@ -281,13 +281,13 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
     setOfferStep('generating');
     try {
       const { data, error: fnError } = await invokeWithRetry('offer-creation', {
-        body: { action: 'generate-structures', brief: offerBrief },
+        body: { action: 'generate-structures', brief: offerBrief, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
       setOfferStructures(data.result);
       setOfferStep('structures');
-      credits.deductAfterSuccess('offer_creation', 'generate_offer_structures');
+      credits.deductAfterSuccess('offer_creation', 'generate_offer_structures', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Could not generate structures. Please try again.');
       setOfferStep('brief');
@@ -301,14 +301,14 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
     const chosen = offerStructures?.find(s => s.structureId === selectedStructure);
     try {
       const { data, error: fnError } = await invokeWithRetry('offer-creation', {
-        body: { action: 'build-offer', brief: offerBrief, chosenStructure: chosen },
+        body: { action: 'build-offer', brief: offerBrief, chosenStructure: chosen, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
       setOfferData(data.result);
       setOfferScore(data.result.offerScore?.total || 0);
       setOfferStep('builder');
-      credits.deductAfterSuccess('offer_creation', 'build_full_offer');
+      credits.deductAfterSuccess('offer_creation', 'build_full_offer', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Could not build offer. Please try again.');
       setOfferStep('structures');
