@@ -1158,6 +1158,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   if (aiStep === 'input') {
     return (
       <div style={s({ maxWidth: 680, margin: '0 auto', animation: 'fadeUp 0.4s ease' })}>
+        {showRestoreBanner && recentWorkData && (
+          <RestoreBanner
+            title={recentWorkData.title}
+            createdAt={recentWorkData.createdAt}
+            onRestore={handleRestore}
+            onDismiss={() => setShowRestoreBanner(false)}
+          />
+        )}
         {/* Hero */}
         <div style={s({ textAlign: 'center', marginBottom: 32 })}>
           <div style={s({ display: 'inline-flex', gap: 6, alignItems: 'center', background: ideaMode === 'raw' ? 'rgba(124,58,237,0.08)' : 'rgba(234,88,12,0.08)', border: `1px solid ${ideaMode === 'raw' ? 'rgba(124,58,237,0.2)' : 'rgba(234,88,12,0.2)'}`, borderRadius: 50, padding: '5px 16px', marginBottom: 12 })}>
