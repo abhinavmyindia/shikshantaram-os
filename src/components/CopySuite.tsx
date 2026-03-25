@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
 import { useCreditGate } from '@/hooks/useCreditGate';
+import { exportCopyPDF } from '@/utils/exportCopy';
 
 /* ───────── Types ───────── */
 interface BaseBrief {
@@ -546,6 +547,15 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
                 {savingInProgress ? '...' : saved ? '🔖 Saved ✓' : '🔖 Save Copy'}
               </button>
               <button onClick={handleRewrite} style={outlineBtn()}>🔄 Rewrite</button>
+              <button onClick={() => exportCopyPDF(
+                { sections },
+                score,
+                { copyType: selectedType?.name, productName: brief.productName, tone, targetAudience: brief.audience },
+                credits.currentUser?.email || 'User'
+              )}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 50, border: 'none', background: 'linear-gradient(135deg,#0284c7,#0891b2)', color: 'white', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, boxShadow: '0 2px 8px rgba(2,132,199,0.25)' }}>
+                ⬇ Export PDF
+              </button>
             </div>
           </div>
 
