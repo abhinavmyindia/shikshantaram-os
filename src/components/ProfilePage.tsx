@@ -943,6 +943,27 @@ export default function ProfilePage({
               ))
             }
           </div>
+
+
+          {/* BYOK section in Credits tab */}
+          {byokLogs7d && byokLogs7d.length > 0 && (
+            <div style={cardStyle}>
+              <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'15px', color:'#0f172a', margin:'0 0 4px' }}>🔑 Your Key Usage (7 days)</h3>
+              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:'0 0 14px' }}>
+                These calls used your own API key — no platform credits deducted.
+              </p>
+              <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
+                <div style={{ flex:1, minWidth:'120px', background:'rgba(5,150,105,0.06)', border:'1px solid rgba(5,150,105,0.15)', borderRadius:'12px', padding:'14px', textAlign:'center' }}>
+                  <p style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'28px', color:'#059669', margin:'0 0 4px' }}>{byokLogs7d.length}</p>
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#64748b', margin:0 }}>BYOK calls made</p>
+                </div>
+                <div style={{ flex:1, minWidth:'120px', background:'rgba(124,58,237,0.06)', border:'1px solid rgba(124,58,237,0.12)', borderRadius:'12px', padding:'14px', textAlign:'center' }}>
+                  <p style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'28px', color:'#7c3aed', margin:'0 0 4px' }}>~{byokLogs7d.length * 8}</p>
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#64748b', margin:0 }}>credits saved</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
