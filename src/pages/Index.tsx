@@ -1506,8 +1506,8 @@ const Index = () => {
     supabase.from('user_profiles').select('avatar_color').eq('id', user.id).single()
       .then(({ data }) => {
         if ((data as any)?.avatar_color) {
-          const grad = AVATAR_GRADIENTS.find((g: any) => g.id === (data as any).avatar_color);
-          setAvatarColor(grad?.gradient || 'linear-gradient(135deg,#7c3aed,#a855f7)');
+          const col = AVATAR_COLORS.find((c: any) => c.id === (data as any).avatar_color);
+          setAvatarColor(col?.color || '#7c3aed');
         }
       });
   }, [user]);
