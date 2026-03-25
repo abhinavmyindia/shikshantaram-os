@@ -582,6 +582,38 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     }
   }, []);
 
+  // Check for recent work on mount
+  useEffect(() => {
+    const checkRecent = async () => {
+      if (!credits.currentUser?.id) return;
+      const recent = await loadRecentWork(credits.currentUser.id, 'product_navigator', 'deep_research');
+      if (recent?.outputData && Object.keys(recent.outputData).length > 0) {
+        setRecentWorkData(recent);
+        setShowRestoreBanner(true);
+      }
+    };
+    checkRecent();
+  }, [credits.currentUser?.id]);
+
+  const handleRestore = () => {
+    if (!recentWorkData) return;
+    if (recentWorkData.outputData?.report) {
+      setResearchReport(recentWorkData.outputData.report);
+      setSelectedProduct(recentWorkData.inputData?.selectedProduct || null);
+      setInputData(recentWorkData.inputData || { niche: '', country: '', productType: '' });
+      setAiStep('report');
+      const initialStatus: Record<string, 'loading' | 'done' | 'error'> = {};
+      REPORT_SECTIONS.forEach(sec => { initialStatus[sec] = recentWorkData.outputData.report[sec] ? 'done' : 'error'; });
+      setSectionStatus(initialStatus);
+    } else if (recentWorkData.outputData?.ideas) {
+      setProductIdeas(recentWorkData.outputData.ideas);
+      setInputData(recentWorkData.inputData || { niche: '', country: '', productType: '' });
+      setIdeaBatches([{ batchId: 1, count: recentWorkData.outputData.ideas.length, label: 'Restored', ideas: recentWorkData.outputData.ideas }]);
+      setAiStep('results');
+    }
+    setShowRestoreBanner(false);
+  };
+
   const allFilled = inputData.niche && inputData.country && inputData.productType;
   const rawValid = rawIdeaData.ideaText.length >= 20 && rawIdeaData.country;
 
