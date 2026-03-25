@@ -228,8 +228,12 @@ export default function ProfilePage({
       const { data: tx } = await supabase.from('credit_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20);
       setTransactions(tx || []);
 
-      // Activity stats
+      // Activity stats + BYOK logs
       const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+      // Fetch BYOK usage for credits tab
+      const { data: byokLogs } = await supabase.from('byok_usage_logs').select('provider, created_at').eq('user_id', user.id).gte('created_at', sevenDaysAgo);
+      setByokLogs7d(byokLogs || []);
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
       const [{ data: sessions7d }, { data: aiLogs7d }, { data: toolUsage }] = await Promise.all([
