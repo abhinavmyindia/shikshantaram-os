@@ -15,9 +15,8 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { userId, toolModule, callType, aiUsageLogId } = await req.json();
+    const { userId, toolModule, callType, aiUsageLogId, idempotencyKey } = await req.json();
 
-    // Get pricing
     const { data: pricing } = await supabase
       .from('credit_pricing')
       .select('credits, display_name')
@@ -58,7 +57,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (isExempt) {
-      // Exempt users: log the call but never touch their balance
       await supabase.from('credit_transactions').insert({
         user_id: userId,
         type: 'shadow_deduction',
@@ -74,16 +72,15 @@ Deno.serve(async (req) => {
     }
 
     if (isShadow) {
-      // Shadow mode: deduct virtually for tracking, mark as shadow_deduction
       const { data } = await supabase.rpc('deduct_user_credits', {
         p_user_id: userId,
         p_amount: pricing.credits,
         p_description: `[SHADOW] ${pricing.display_name}`,
         p_tool_module: toolModule,
         p_call_type: callType,
+        p_idempotency_key: idempotencyKey ? `shadow_${idempotencyKey}` : null,
       });
 
-      // Update the transaction type to shadow_deduction
       if (data?.success) {
         await supabase
           .from('credit_transactions')
@@ -108,13 +105,14 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Normal enforcement — standard deduction
+    // Normal enforcement — standard deduction with idempotency
     const { data } = await supabase.rpc('deduct_user_credits', {
       p_user_id: userId,
       p_amount: pricing.credits,
       p_description: pricing.display_name,
       p_tool_module: toolModule,
       p_call_type: callType,
+      p_idempotency_key: idempotencyKey || null,
     });
 
     if (aiUsageLogId && data?.success) {
