@@ -626,6 +626,45 @@ export type Database = {
         }
         Relationships: []
       }
+      recent_work: {
+        Row: {
+          call_type: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          input_data: Json | null
+          output_data: Json | null
+          subtitle: string | null
+          title: string
+          tool: string
+          user_id: string
+        }
+        Insert: {
+          call_type: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          input_data?: Json | null
+          output_data?: Json | null
+          subtitle?: string | null
+          title: string
+          tool: string
+          user_id: string
+        }
+        Update: {
+          call_type?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          input_data?: Json | null
+          output_data?: Json | null
+          subtitle?: string | null
+          title?: string
+          tool?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_items: {
         Row: {
           created_at: string | null
@@ -1212,6 +1251,7 @@ export type Database = {
             }
             Returns: Json
           }
+      delete_expired_recent_work: { Args: never; Returns: undefined }
       get_my_admin_role: { Args: never; Returns: string }
       get_signup_count: { Args: never; Returns: number }
       has_admin_role: {
