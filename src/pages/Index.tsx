@@ -12,7 +12,7 @@ import { productCategories, ProductCategory } from '@/data/products';
 import { useAuth } from '@/hooks/useAuth';
 import { useTracking } from '@/hooks/useTracking';
 import BetaFeedback from '@/components/BetaFeedback';
-import ProfilePage from '@/components/ProfilePage';
+import ProfilePage, { AVATAR_GRADIENTS } from '@/components/ProfilePage';
 import { supabase } from '@/integrations/supabase/client';
 import { trackPageView } from '@/utils/activityTracker';
 
@@ -1491,7 +1491,7 @@ const Index = () => {
   const [usageMsg, setUsageMsg] = useState<typeof USAGE_MESSAGES[0] | null>(null);
   const [sessionCostUsd, setSessionCostUsd] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
-  const [avatarColor, setAvatarColor] = useState('#7c3aed');
+  const [avatarColor, setAvatarColor] = useState('linear-gradient(135deg,#7c3aed,#a855f7)');
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
   const usagePopupShown = useRef(false);
@@ -1504,12 +1504,17 @@ const Index = () => {
   useEffect(() => {
     if (!user) return;
     supabase.from('user_profiles').select('avatar_color').eq('id', user.id).single()
-      .then(({ data }) => { if ((data as any)?.avatar_color) setAvatarColor((data as any).avatar_color); });
+      .then(({ data }) => {
+        if ((data as any)?.avatar_color) {
+          const grad = AVATAR_GRADIENTS.find((g: any) => g.id === (data as any).avatar_color);
+          setAvatarColor(grad?.gradient || 'linear-gradient(135deg,#7c3aed,#a855f7)');
+        }
+      });
   }, [user]);
 
   // Listen for live avatar color changes from profile page
   useEffect(() => {
-    const handler = (e: any) => setAvatarColor(e.detail.color);
+    const handler = (e: any) => setAvatarColor(e.detail.gradient || e.detail.color || 'linear-gradient(135deg,#7c3aed,#a855f7)');
     window.addEventListener('avatarColorChanged', handler);
     return () => window.removeEventListener('avatarColorChanged', handler);
   }, []);
