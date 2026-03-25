@@ -848,11 +848,43 @@ function getGreeting() {
 function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string }) {
   const [greeting, setGreeting] = useState(getGreeting());
   const [popupCard, setPopupCard] = useState<typeof TOOL_CARDS[0] | null>(null);
+  const [recentWork, setRecentWork] = useState<any[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     const interval = setInterval(() => setGreeting(getGreeting()), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    import('@/utils/recentWork').then(({ loadAllRecentWork }) => {
+      loadAllRecentWork(user.id).then(setRecentWork);
+    });
+  }, [user?.id]);
+
+  const TOOL_META: Record<string, { label: string; icon: string; color: string; page: PageId }> = {
+    product_navigator: { label: 'Product Navigator', icon: '🧭', color: '#7c3aed', page: 'product' },
+    niche_clarity: { label: 'Niche Clarity', icon: '🎯', color: '#0284c7', page: 'niche' },
+    offer_creation: { label: 'Offer Creation', icon: '🎁', color: '#059669', page: 'offer' },
+    funnel_builder: { label: 'Funnel Builder', icon: '🔀', color: '#ea580c', page: 'funnel' },
+    copy_suite: { label: 'Copy Suite', icon: '✍️', color: '#db2777', page: 'copy_suite' },
+  };
+
+  const CALL_TYPE_LABELS: Record<string, string> = {
+    deep_research: '🔬 Deep Research',
+    generate_ideas: '💡 30 Product Ideas',
+    full_offer: '🎁 Full Offer',
+    funnel_map: '🔀 Funnel Map',
+    copy_output: '✍️ Copy Suite',
+  };
+
+  const fmtRelative = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return `${Math.floor(diff / 86400000)}d ago`;
+  };
 
   let lockedIdx = 0;
 
