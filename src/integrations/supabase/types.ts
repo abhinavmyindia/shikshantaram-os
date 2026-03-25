@@ -275,6 +275,45 @@ export type Database = {
         }
         Relationships: []
       }
+      deletion_requests: {
+        Row: {
+          admin_notes: string | null
+          id: string
+          reason: string | null
+          requested_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          user_email: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          id?: string
+          reason?: string | null
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          user_email: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          id?: string
+          reason?: string | null
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          user_email?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       error_logs: {
         Row: {
           additional_data: Json | null
@@ -779,8 +818,10 @@ export type Database = {
           full_name: string
           id: string
           instagram: string | null
+          instagram_url: string | null
           is_beta_user: boolean | null
           linkedin: string | null
+          linkedin_url: string | null
           notes: string | null
           notif_new_tools: boolean | null
           notif_tips: boolean | null
@@ -788,9 +829,12 @@ export type Database = {
           payment_status: string
           phone: string | null
           twitter: string | null
+          twitter_url: string | null
           updated_at: string | null
           username: string | null
           website: string | null
+          website_url: string | null
+          youtube_url: string | null
         }
         Insert: {
           access_tier?: string
@@ -807,8 +851,10 @@ export type Database = {
           full_name?: string
           id: string
           instagram?: string | null
+          instagram_url?: string | null
           is_beta_user?: boolean | null
           linkedin?: string | null
+          linkedin_url?: string | null
           notes?: string | null
           notif_new_tools?: boolean | null
           notif_tips?: boolean | null
@@ -816,9 +862,12 @@ export type Database = {
           payment_status?: string
           phone?: string | null
           twitter?: string | null
+          twitter_url?: string | null
           updated_at?: string | null
           username?: string | null
           website?: string | null
+          website_url?: string | null
+          youtube_url?: string | null
         }
         Update: {
           access_tier?: string
@@ -835,8 +884,10 @@ export type Database = {
           full_name?: string
           id?: string
           instagram?: string | null
+          instagram_url?: string | null
           is_beta_user?: boolean | null
           linkedin?: string | null
+          linkedin_url?: string | null
           notes?: string | null
           notif_new_tools?: boolean | null
           notif_tips?: boolean | null
@@ -844,9 +895,12 @@ export type Database = {
           payment_status?: string
           phone?: string | null
           twitter?: string | null
+          twitter_url?: string | null
           updated_at?: string | null
           username?: string | null
           website?: string | null
+          website_url?: string | null
+          youtube_url?: string | null
         }
         Relationships: []
       }
