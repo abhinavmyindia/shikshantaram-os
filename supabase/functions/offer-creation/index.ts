@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveAIKey, callWithBYOK, logByokUsage } from '../_shared/byok.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -218,6 +219,10 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // BYOK resolution
+    const byokUserId = body.userId || userInfo.userId;
+    const byok = byokUserId ? await resolveAIKey(byokUserId) : { useByok: false as const };
+
     let prompt: string;
     let model: string;
     let maxTokens: number;
@@ -237,7 +242,25 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    console.log(`Offer Creation: action=${action}, model=${model}`);
+    console.log(`Offer Creation: action=${action}, model=${model}, byok=${byok.useByok}`);
+
+    // ─── BYOK PATH ───────────────────────────────────────────────────────────
+    if (byok.useByok) {
+      try {
+        const byokResult = await callWithBYOK({
+          provider: byok.provider as any, apiKey: byok.apiKey, model: byok.model,
+          userMessage: prompt, maxTokens,
+        });
+        await logByokUsage(byokUserId!, body.userEmail || userInfo.userEmail, byok.provider, byok.model,
+          'offer_creation', callType, byokResult.inputTokens, byokResult.outputTokens, true);
+        try {
+          const parsed = parseJsonResponse(byokResult.text);
+          return new Response(JSON.stringify({ result: parsed, byok: true, provider: byok.provider }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch { console.warn('BYOK parse failed, falling back to platform'); }
+      } catch (byokErr) { console.warn('BYOK call failed, falling back:', byokErr); }
+    }
+
+    // ─── PLATFORM PATH (unchanged) ───────────────────────────────────────────
     const aiResult = await callLovableAI(prompt, model, maxTokens);
 
     // Log usage (fire-and-forget)
@@ -245,7 +268,7 @@ serve(async (req) => {
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
-      return new Response(JSON.stringify({ result: parsed }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ result: parsed, byok: false }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     } catch (parseErr) {
       console.error('Parse error:', parseErr);
       return new Response(
