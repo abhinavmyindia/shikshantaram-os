@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
+import { autoSaveWork, loadRecentWork } from '@/utils/recentWork';
+import RestoreBanner from '@/components/RestoreBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
@@ -224,6 +226,30 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
   const [error, setError] = useState('');
   const [outputTab, setOutputTab] = useState<'page' | 'dm' | 'social' | 'email'>('page');
   const platformRef = useRef<HTMLDivElement>(null);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [recentWorkData, setRecentWorkData] = useState<any>(null);
+
+  // Check for recent work on mount
+  useEffect(() => {
+    const checkRecent = async () => {
+      if (!credits.currentUser?.id) return;
+      const recent = await loadRecentWork(credits.currentUser.id, 'offer_creation', 'full_offer');
+      if (recent?.outputData?.offerData) {
+        setRecentWorkData(recent);
+        setShowRestoreBanner(true);
+      }
+    };
+    checkRecent();
+  }, [credits.currentUser?.id]);
+
+  const handleRestoreOffer = () => {
+    if (!recentWorkData) return;
+    setOfferData(recentWorkData.outputData.offerData);
+    setOfferScore(recentWorkData.outputData.offerScore || 0);
+    setOfferBrief(recentWorkData.inputData?.offerBrief || offerBrief);
+    setOfferStep('builder');
+    setShowRestoreBanner(false);
+  };
 
   useEffect(() => {
     if (prefill?.sourceProduct) {
@@ -309,6 +335,18 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       setOfferScore(data.result.offerScore?.total || 0);
       setOfferStep('builder');
       credits.deductAfterSuccess('offer_creation', 'build_full_offer', data?.byok, data?.provider);
+      // Auto-save (fire and forget)
+      if (credits.currentUser?.id) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'offer_creation',
+          callType: 'full_offer',
+          title: data.result?.offerHeadline || 'Full Offer',
+          subtitle: data.result?.oneLinerPitch?.slice(0, 70),
+          inputData: { offerBrief, chosenStructure: chosen },
+          outputData: { offerData: data.result, offerScore: data.result?.offerScore?.total || 0 },
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Could not build offer. Please try again.');
       setOfferStep('structures');
@@ -403,6 +441,9 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       {/* ═══ STEP 1 — BRIEF ═══ */}
       {offerStep === 'brief' && (
         <div style={s({ maxWidth: 680, margin: '0 auto', animation: 'fadeUp 0.4s ease' })}>
+          {showRestoreBanner && recentWorkData && (
+            <RestoreBanner title={recentWorkData.title} createdAt={recentWorkData.createdAt} onRestore={handleRestoreOffer} onDismiss={() => setShowRestoreBanner(false)} />
+          )}
           <div style={s({ textAlign: 'center', marginBottom: 28 })}>
             <span style={s({ fontSize: 10, fontWeight: 800, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', padding: '3px 10px', borderRadius: 50 })}>Step 1 of 4</span>
             <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 28, color: '#0f172a', marginTop: 10 })}>Tell us about your product</h2>

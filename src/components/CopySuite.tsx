@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, CSSProperties } from 'react';
+import { autoSaveWork, loadRecentWork } from '@/utils/recentWork';
+import RestoreBanner from '@/components/RestoreBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
@@ -161,6 +163,32 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
 
   const mainRef = useRef<HTMLDivElement>(null);
 
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [recentWorkData, setRecentWorkData] = useState<any>(null);
+
+  // Check for recent work on mount
+  useEffect(() => {
+    const checkRecent = async () => {
+      if (!credits.currentUser?.id) return;
+      const recent = await loadRecentWork(credits.currentUser.id, 'copy_suite', 'copy_output');
+      if (recent?.outputData?.sections) {
+        setRecentWorkData(recent);
+        setShowRestoreBanner(true);
+      }
+    };
+    checkRecent();
+  }, [credits.currentUser?.id]);
+
+  const handleRestoreCopy = () => {
+    if (!recentWorkData) return;
+    setSections(recentWorkData.outputData.sections);
+    setScore(recentWorkData.outputData.score || null);
+    setBrief(recentWorkData.inputData || brief);
+    setTone(recentWorkData.inputData?.tone || 'conversational');
+    setStep('output');
+    setShowRestoreBanner(false);
+  };
+
   // Loading step animation
   useEffect(() => {
     if (!loading) return;
@@ -224,6 +252,18 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
       setScore(data.score || null);
       setStep('output');
       credits.deductAfterSuccess('copywriting_suite', 'generate_copy', data?.byok, data?.provider);
+      // Auto-save (fire and forget)
+      if (credits.currentUser?.id) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'copy_suite',
+          callType: 'copy_output',
+          title: `${selectedType.name} — ${brief.productName || 'Product'}`,
+          subtitle: `${tone}`,
+          inputData: { ...brief, copyType: selectedType.name, tone },
+          outputData: { sections: safeSections, score: data.score },
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {
@@ -300,39 +340,43 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
 
       {/* ── STATE 1: SELECT ── */}
       {step === 'select' && (
-        <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14, marginTop: 24 })}>
-          {COPY_TYPES.map((type, i) => {
-            const isHovered = hoveredType === type.id;
-            return (
-              <div key={type.id}
-                onClick={() => handleSelectType(type)}
-                onMouseEnter={() => setHoveredType(type.id)}
-                onMouseLeave={() => setHoveredType(null)}
-                style={s({
-                  background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20,
-                  padding: 22, cursor: 'pointer',
-                  border: '1.5px solid rgba(255,255,255,0.9)',
-                  boxShadow: isHovered ? '0 12px 32px rgba(0,0,0,0.1)' : '0 4px 16px rgba(0,0,0,0.05)',
-                  transform: isHovered ? 'translateY(-4px)' : 'none',
-                  transition: 'all 0.22s cubic-bezier(0.34,1.56,0.64,1)',
-                  animation: `fadeUp 0.4s ease ${i * 0.06}s both`,
-                })}>
-                <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' })}>
-                  <div style={s({ width: 44, height: 44, borderRadius: 14, background: type.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 })}>
-                    {type.icon}
+        <div>
+          {showRestoreBanner && recentWorkData && (
+            <RestoreBanner title={recentWorkData.title} createdAt={recentWorkData.createdAt} onRestore={handleRestoreCopy} onDismiss={() => setShowRestoreBanner(false)} />
+          )}
+          <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14, marginTop: 24 })}>
+            {COPY_TYPES.map((type, i) => {
+              const isHovered = hoveredType === type.id;
+              return (
+                <div key={type.id}
+                  onClick={() => handleSelectType(type)}
+                  onMouseEnter={() => setHoveredType(type.id)}
+                  onMouseLeave={() => setHoveredType(null)}
+                  style={s({
+                    background: isHovered ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.85)',
+                    backdropFilter: 'blur(16px)', borderRadius: 18, padding: '20px 18px',
+                    border: `1.5px solid ${isHovered ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.9)'}`,
+                    boxShadow: isHovered ? '0 8px 32px rgba(99,102,241,0.12)' : '0 4px 16px rgba(0,0,0,0.04)',
+                    cursor: 'pointer', transition: 'all 0.2s', transform: isHovered ? 'translateY(-3px)' : 'none',
+                    animation: `fadeUp 0.4s ease ${0.05 * i}s both`,
+                  })}>
+                  <div style={s({ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 })}>
+                    <div style={s({ width: 36, height: 36, borderRadius: 10, background: type.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 })}>{type.icon}</div>
+                    <div>
+                      <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' })}>{type.name}</div>
+                      <div style={s({ fontFamily: 'DM Sans', fontSize: 10.5, color: '#94a3b8' })}>{type.time}</div>
+                    </div>
                   </div>
-                  <span style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8', background: '#f8fafc', borderRadius: 50, padding: '3px 10px' })}>{type.time}</span>
+                  <p style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginBottom: 12 })}>{type.description}</p>
+                  <div style={s({ display: 'flex', flexWrap: 'wrap', gap: 4 })}>
+                    {type.whatYouGet.map(item => (
+                      <span key={item} style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 600, color: '#6366f1', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: 50, padding: '3px 10px' })}>{item}</span>
+                    ))}
+                  </div>
                 </div>
-                <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginTop: 12 })}>{type.name}</div>
-                <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 4, lineHeight: 1.6 })}>{type.description}</div>
-                <div style={s({ marginTop: 10 })}>
-                  {type.whatYouGet.map(item => (
-                    <div key={item} style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', lineHeight: 1.8 })}>· {item}</div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 

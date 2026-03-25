@@ -1,4 +1,6 @@
 import { useState, useEffect, CSSProperties } from 'react';
+import { autoSaveWork, loadRecentWork } from '@/utils/recentWork';
+import RestoreBanner from '@/components/RestoreBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
@@ -531,6 +533,8 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   const [researchReport, setResearchReport] = useState<ResearchReport | null>(null);
   const [error, setError] = useState('');
   const [countryOpen, setCountryOpen] = useState(false);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [recentWorkData, setRecentWorkData] = useState<any>(null);
   const [filter, setFilter] = useState('All');
   const [sortBy, setSortBy] = useState('demand');
 
@@ -579,6 +583,38 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     }
   }, []);
 
+  // Check for recent work on mount
+  useEffect(() => {
+    const checkRecent = async () => {
+      if (!credits.currentUser?.id) return;
+      const recent = await loadRecentWork(credits.currentUser.id, 'product_navigator', 'deep_research');
+      if (recent?.outputData && Object.keys(recent.outputData).length > 0) {
+        setRecentWorkData(recent);
+        setShowRestoreBanner(true);
+      }
+    };
+    checkRecent();
+  }, [credits.currentUser?.id]);
+
+  const handleRestore = () => {
+    if (!recentWorkData) return;
+    if (recentWorkData.outputData?.report) {
+      setResearchReport(recentWorkData.outputData.report);
+      setSelectedProduct(recentWorkData.inputData?.selectedProduct || null);
+      setInputData(recentWorkData.inputData || { niche: '', country: '', productType: '' });
+      setAiStep('report');
+      const initialStatus: Record<string, 'loading' | 'done' | 'error'> = {};
+      REPORT_SECTIONS.forEach(sec => { initialStatus[sec] = recentWorkData.outputData.report[sec] ? 'done' : 'error'; });
+      setSectionStatus(initialStatus);
+    } else if (recentWorkData.outputData?.ideas) {
+      setProductIdeas(recentWorkData.outputData.ideas);
+      setInputData(recentWorkData.inputData || { niche: '', country: '', productType: '' });
+      setIdeaBatches([{ batchId: 1, count: recentWorkData.outputData.ideas.length, label: 'Restored', ideas: recentWorkData.outputData.ideas }]);
+      setAiStep('results');
+    }
+    setShowRestoreBanner(false);
+  };
+
   const allFilled = inputData.niche && inputData.country && inputData.productType;
   const rawValid = rawIdeaData.ideaText.length >= 20 && rawIdeaData.country;
 
@@ -617,6 +653,18 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
       setAiStep('results');
       credits.deductAfterSuccess('product_navigator', 'generate_30_ideas', data?.byok, data?.provider);
+      // Auto-save (fire and forget)
+      if (credits.currentUser?.id) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'product_navigator',
+          callType: 'generate_ideas',
+          title: `30 Ideas — ${inputData.niche}`,
+          subtitle: `${inputData.country} · ${inputData.productType}`,
+          inputData: { niche: inputData.niche, country: inputData.country, productType: inputData.productType },
+          outputData: { ideas },
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setAiStep('input');
@@ -718,6 +766,18 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setSectionStatus(finalStatus);
       setAiStep('report');
       credits.deductAfterSuccess('product_navigator', 'deep_research_report', data?.byok, data?.provider);
+      // Auto-save deep research (fire and forget)
+      if (credits.currentUser?.id && product) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'product_navigator',
+          callType: 'deep_research',
+          title: product.productName || 'Deep Research',
+          subtitle: `${inputData.niche} · ${inputData.country}`,
+          inputData: { niche: inputData.niche, country: inputData.country, productType: inputData.productType, selectedProduct: product },
+          outputData: { report },
+        });
+      }
     } catch (err: any) {
       // Mark all sections as error
       const errorStatus: Record<string, 'loading' | 'done' | 'error'> = {};
@@ -1098,6 +1158,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   if (aiStep === 'input') {
     return (
       <div style={s({ maxWidth: 680, margin: '0 auto', animation: 'fadeUp 0.4s ease' })}>
+        {showRestoreBanner && recentWorkData && (
+          <RestoreBanner
+            title={recentWorkData.title}
+            createdAt={recentWorkData.createdAt}
+            onRestore={handleRestore}
+            onDismiss={() => setShowRestoreBanner(false)}
+          />
+        )}
         {/* Hero */}
         <div style={s({ textAlign: 'center', marginBottom: 32 })}>
           <div style={s({ display: 'inline-flex', gap: 6, alignItems: 'center', background: ideaMode === 'raw' ? 'rgba(124,58,237,0.08)' : 'rgba(234,88,12,0.08)', border: `1px solid ${ideaMode === 'raw' ? 'rgba(124,58,237,0.2)' : 'rgba(234,88,12,0.2)'}`, borderRadius: 50, padding: '5px 16px', marginBottom: 12 })}>

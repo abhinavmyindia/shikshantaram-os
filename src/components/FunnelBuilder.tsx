@@ -1,4 +1,6 @@
 import { useState, useEffect, CSSProperties } from 'react';
+import { autoSaveWork, loadRecentWork } from '@/utils/recentWork';
+import RestoreBanner from '@/components/RestoreBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
@@ -213,6 +215,31 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   const [showPrefillBanner, setShowPrefillBanner] = useState(false);
   const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
   const [editedFields, setEditedFields] = useState<Set<string>>(new Set());
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [recentWorkData, setRecentWorkData] = useState<any>(null);
+
+  // Check for recent work on mount
+  useEffect(() => {
+    const checkRecent = async () => {
+      if (!credits.currentUser?.id) return;
+      const recent = await loadRecentWork(credits.currentUser.id, 'funnel_builder', 'funnel_map');
+      if (recent?.outputData?.funnelData) {
+        setRecentWorkData(recent);
+        setShowRestoreBanner(true);
+      }
+    };
+    checkRecent();
+  }, [credits.currentUser?.id]);
+
+  const handleRestoreFunnel = () => {
+    if (!recentWorkData) return;
+    setFunnelData(recentWorkData.outputData.funnelData);
+    setStepCopy(recentWorkData.outputData.stepCopy || {});
+    setEmailSequence(recentWorkData.outputData.emailSequence || null);
+    setFunnelBrief(recentWorkData.inputData?.funnelBrief || funnelBrief);
+    setFunnelStep('visualizer');
+    setShowRestoreBanner(false);
+  };
 
   // Consume prefill on mount
   useEffect(() => {
@@ -263,6 +290,18 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       setFunnelData(data.result);
       setFunnelStep('visualizer');
       credits.deductAfterSuccess('funnel_builder', 'generate_funnel_architecture', data?.byok, data?.provider);
+      // Auto-save (fire and forget)
+      if (credits.currentUser?.id) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'funnel_builder',
+          callType: 'funnel_map',
+          title: data.result?.funnelName || 'Funnel Map',
+          subtitle: data.result?.funnelTagline?.slice(0, 70),
+          inputData: { funnelBrief, funnelType },
+          outputData: { funnelData: data.result },
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Could not generate funnel. Please try again.');
       setFunnelStep('brief');
@@ -375,6 +414,9 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   if (funnelStep === 'brief') {
     return (
       <div style={s({ animation: 'fadeUp 0.4s ease' })}>
+        {showRestoreBanner && recentWorkData && (
+          <RestoreBanner title={recentWorkData.title} createdAt={recentWorkData.createdAt} onRestore={handleRestoreFunnel} onDismiss={() => setShowRestoreBanner(false)} />
+        )}
         {/* Header */}
         <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 })}>
           <div>
