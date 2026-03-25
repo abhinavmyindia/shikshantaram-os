@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getBalance } from '@/utils/creditGate';
 
-const CreditBalance = ({ userId, onTopUp }: { userId: string; onTopUp: () => void }) => {
+const CreditBalance = ({ userId, onTopUp, byokActive }: { userId: string; onTopUp: () => void; byokActive?: boolean }) => {
   const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
@@ -18,6 +18,17 @@ const CreditBalance = ({ userId, onTopUp }: { userId: string; onTopUp: () => voi
 
     return () => { supabase.removeChannel(channel); };
   }, [userId]);
+
+  if (byokActive) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.15)', borderRadius: 50, padding: '5px 12px' }}>
+          <span style={{ fontSize: 14 }}>🔑</span>
+          <span style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 12, color: '#059669' }}>Your Key Active</span>
+        </div>
+      </div>
+    );
+  }
 
   const isLow = balance !== null && balance < 20;
   const isEmpty = balance !== null && balance < 5;

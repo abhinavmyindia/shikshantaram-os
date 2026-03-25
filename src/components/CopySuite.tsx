@@ -482,12 +482,17 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
         <div style={s({ animation: 'fadeUp 0.35s ease' })}>
           {/* Output header */}
           <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 10 })}>
-            <div style={s({ display: 'flex', alignItems: 'center', gap: 10 })}>
+            <div style={s({ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' })}>
               <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 50, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' })}>
                 <span>{selectedType.icon}</span>
                 <span style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#6366f1' })}>{selectedType.name}</span>
               </div>
               <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 22, color: '#0f172a' })}>Copy Ready</span>
+              {(credits as any).lastCallByok && (
+                <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#059669' })}>
+                  🔑 Generated with your {(credits as any).lastCallProvider === 'anthropic' ? 'Claude' : (credits as any).lastCallProvider === 'openai' ? 'GPT-4o' : 'Gemini'} key · No credits used
+                </div>
+              )}
             </div>
             <div style={s({ display: 'flex', gap: 10 })}>
               <button onClick={copyAll} style={outlineBtn()}>
