@@ -1718,7 +1718,10 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
                             </span>
                           </div>
                           <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', lineHeight: 1.3, marginBottom: 4 })}>{idea.productName}</div>
-                          <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginBottom: 12 })}>{idea.tagline}</div>
+                          <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginBottom: idea.whyUnique ? 4 : 12 })}>{idea.tagline}</div>
+                          {idea.whyUnique && (
+                            <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', fontStyle: 'italic', lineHeight: 1.5, marginBottom: 12 })}>{idea.whyUnique}</div>
+                          )}
                           <div style={s({ background: 'rgba(234,88,12,0.05)', borderLeft: '3px solid #ea580c', borderRadius: '0 8px 8px 0', padding: '8px 12px', marginBottom: 12 })}>
                             <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>😤 {idea.primaryPain}</span>
                           </div>
@@ -1765,7 +1768,10 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
                     </span>
                   </div>
                   <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', lineHeight: 1.3, marginBottom: 4 })}>{idea.productName}</div>
-                  <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginBottom: 12 })}>{idea.tagline}</div>
+                  <div style={s({ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b', lineHeight: 1.6, marginBottom: idea.whyUnique ? 4 : 12 })}>{idea.tagline}</div>
+                  {idea.whyUnique && (
+                    <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', fontStyle: 'italic', lineHeight: 1.5, marginBottom: 12 })}>{idea.whyUnique}</div>
+                  )}
                   <div style={s({ background: 'rgba(234,88,12,0.05)', borderLeft: '3px solid #ea580c', borderRadius: '0 8px 8px 0', padding: '8px 12px', marginBottom: 12 })}>
                     <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>😤 {idea.primaryPain}</span>
                   </div>
