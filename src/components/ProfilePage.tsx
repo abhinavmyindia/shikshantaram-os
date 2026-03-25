@@ -1037,7 +1037,171 @@ export default function ProfilePage({
         </div>
       )}
 
-      {/* ─── DELETE CONFIRMATION MODAL ─── */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* TAB 6 — API KEYS (BYOK)                                       */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'apikeys' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+
+          {/* Header explanation */}
+          <div style={{ ...cardStyle, padding:'20px', background:'rgba(124,58,237,0.04)', border:'1px solid rgba(124,58,237,0.15)' }}>
+            <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'16px', color:'#0f172a', margin:'0 0 8px' }}>
+              🔑 Bring Your Own API Key
+            </h3>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#64748b', lineHeight:1.7, margin:'0 0 12px' }}>
+              Connect your own AI provider key to use Shikshantaram OS at no credit cost.
+              Your key is encrypted with AES-256 and stored securely — we can never see or export it.
+            </p>
+            <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+              {['🔒 Encrypted at rest with AES-256-GCM', '🚫 Never logged or returned to frontend', '⚡ Credits not deducted when your key is active', '🔄 Switch back to platform credits anytime'].map(point => (
+                <span key={point} style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#374151', background:'rgba(124,58,237,0.06)', border:'1px solid rgba(124,58,237,0.12)', borderRadius:'50px', padding:'4px 12px' }}>
+                  {point}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Active mode indicator */}
+          <div style={{ ...cardStyle, padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', flexWrap:'wrap' }}>
+            <div>
+              <p style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'11px', color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 4px' }}>Current AI Mode</p>
+              <p style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'15px', color:'#0f172a', margin:0 }}>
+                {byokPreferred ? `🔑 Using ${PROVIDERS.find(p => p.id === byokPreferred)?.name || byokPreferred}` : '⚡ Using Platform Credits'}
+              </p>
+            </div>
+            {byokPreferred && (
+              <button onClick={() => handleSetPreferred(null)} disabled={togglingPref} style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.2)', color:'#b45309', padding:'8px 16px', borderRadius:'10px', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px' }}>
+                Switch to Platform Credits
+              </button>
+            )}
+          </div>
+
+          {/* Provider cards */}
+          {byokLoading ? (
+            <div style={{ display:'flex', justifyContent:'center', padding:'32px' }}>
+              <div style={{ width:'28px', height:'28px', border:'3px solid #e2e8f0', borderTopColor:'#7c3aed', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+            </div>
+          ) : (
+            PROVIDERS.map(provider => {
+              const status = byokStatus.find((s: any) => s.provider === provider.id);
+              const connected = status?.connected && status?.isValid;
+              const isPreferred = byokPreferred === provider.id;
+              const isSavingProv = savingKey[provider.id];
+              const isDeleting = deletingKey[provider.id];
+              const result = saveResults[provider.id];
+              const showInput = showKeyInput[provider.id];
+
+              return (
+                <div key={provider.id} style={{
+                  ...cardStyle,
+                  border: isPreferred ? `2px solid ${provider.color}` : connected ? `1px solid ${provider.border}` : '1px solid rgba(255,255,255,0.95)',
+                }}>
+                  {/* Provider header */}
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'12px', marginBottom:'14px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'12px', flex:1 }}>
+                      <div style={{ width:'44px', height:'44px', borderRadius:'12px', background:provider.bg, border:`1px solid ${provider.border}`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'22px', flexShrink:0 }}>
+                        {provider.icon}
+                      </div>
+                      <div>
+                        <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
+                          <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'15px', color:'#0f172a', margin:0 }}>{provider.name}</h3>
+                          {isPreferred && <span style={{ background:provider.bg, color:provider.color, padding:'2px 10px', borderRadius:'50px', fontFamily:'DM Sans,sans-serif', fontWeight:800, fontSize:'10px', textTransform:'uppercase', letterSpacing:'0.06em' }}>Active</span>}
+                          {connected && !isPreferred && <span style={{ background:'rgba(5,150,105,0.08)', color:'#059669', padding:'2px 10px', borderRadius:'50px', fontFamily:'DM Sans,sans-serif', fontWeight:800, fontSize:'10px' }}>Connected</span>}
+                        </div>
+                        <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#64748b', margin:'2px 0 0' }}>{provider.description}</p>
+                      </div>
+                    </div>
+                    <div style={{ width:'10px', height:'10px', borderRadius:'50%', flexShrink:0, marginTop:'4px', background: connected ? '#10b981' : '#e2e8f0', boxShadow: connected ? '0 0 0 3px rgba(16,185,129,0.2)' : 'none' }} />
+                  </div>
+
+                  {/* Connected state */}
+                  {connected && (
+                    <div style={{ background:'#f8fafc', borderRadius:'10px', padding:'10px 14px', marginBottom:'12px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
+                      <div>
+                        <span style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px', color:'#374151' }}>
+                          Key ending in <code style={{ background:'#e2e8f0', padding:'1px 6px', borderRadius:'4px', fontSize:'12px', fontFamily:'monospace' }}>{status.keyHint}</code>
+                        </span>
+                        {status.lastUsed && <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:'2px 0 0' }}>Last used: {new Date(status.lastUsed).toLocaleDateString('en-IN', { day:'numeric', month:'short' })}</p>}
+                      </div>
+                      <div style={{ display:'flex', gap:'6px' }}>
+                        {!isPreferred && (
+                          <button onClick={() => handleSetPreferred(provider.id)} disabled={togglingPref} style={{ background:provider.bg, border:`1px solid ${provider.border}`, color:provider.color, padding:'6px 14px', borderRadius:'8px', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px', whiteSpace:'nowrap' }}>
+                            {togglingPref ? '...' : 'Use This Key'}
+                          </button>
+                        )}
+                        <button onClick={() => handleDeleteKey(provider.id)} disabled={isDeleting} style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.15)', color:'#dc2626', padding:'6px 12px', borderRadius:'8px', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px' }}>
+                          {isDeleting ? '...' : 'Remove'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add key section */}
+                  {!connected && (
+                    <>
+                      {!showInput ? (
+                        <button onClick={() => setShowKeyInput(prev => ({ ...prev, [provider.id]: true }))} style={{ width:'100%', padding:'11px', borderRadius:'12px', border:`1.5px dashed ${provider.border}`, background:provider.bg, color:provider.color, cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
+                          <span style={{ fontSize:'16px' }}>+</span> Connect {provider.name}
+                        </button>
+                      ) : (
+                        <div>
+                          <label style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'11px', color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em', display:'block', marginBottom:'6px' }}>
+                            Your API Key — <span style={{ fontWeight:400, color:'#94a3b8' }}>{provider.keyFormat}</span>
+                          </label>
+                          <div style={{ display:'flex', gap:'8px', marginBottom:'8px' }}>
+                            <input type="password" value={keyInputs[provider.id] || ''} onChange={e => setKeyInputs(prev => ({ ...prev, [provider.id]: e.target.value }))} placeholder={`Paste your ${provider.id} API key here`}
+                              style={{ flex:1, padding:'11px 14px', borderRadius:'12px', border:'1.5px solid #e2e8f0', fontFamily:'monospace', fontSize:'13px', outline:'none', boxSizing:'border-box' as const }}
+                              onFocus={e => e.target.style.borderColor = provider.color} onBlur={e => e.target.style.borderColor='#e2e8f0'} />
+                            <button onClick={() => handleSaveKey(provider.id)} disabled={isSavingProv || !keyInputs[provider.id]?.trim()}
+                              style={{ padding:'11px 18px', borderRadius:'12px', border:'none', background: isSavingProv || !keyInputs[provider.id]?.trim() ? 'rgba(124,58,237,0.3)' : `linear-gradient(135deg,${provider.color},${provider.color}cc)`, color:'white', cursor: isSavingProv ? 'not-allowed' : 'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'13px', whiteSpace:'nowrap', flexShrink:0 }}>
+                              {isSavingProv ? (
+                                <span style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                                  <span style={{ width:'14px', height:'14px', border:'2px solid white', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />
+                                  Testing...
+                                </span>
+                              ) : '🔐 Test & Save'}
+                            </button>
+                          </div>
+                          <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:'0 0 6px' }}>
+                            Key is validated with a test call, then encrypted before storage. Never stored in plain text.
+                          </p>
+                          <a href={provider.docsUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:provider.color, fontWeight:600 }}>
+                            Get your {provider.name} API key →
+                          </a>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Save result message */}
+                  {result && (
+                    <div style={{ marginTop:'10px', padding:'10px 14px', borderRadius:'10px', background: result.success ? 'rgba(5,150,105,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${result.success ? 'rgba(5,150,105,0.2)' : 'rgba(239,68,68,0.2)'}`, fontFamily:'DM Sans,sans-serif', fontSize:'13px', fontWeight:600, color: result.success ? '#059669' : '#dc2626' }}>
+                      {result.message}
+                    </div>
+                  )}
+
+                  {/* Models available */}
+                  <div style={{ marginTop:'12px', display:'flex', gap:'6px', flexWrap:'wrap', alignItems:'center' }}>
+                    <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8' }}>Models:</span>
+                    {provider.models.map(m => (
+                      <span key={m} style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#374151', background:'#f8fafc', border:'1px solid #f1f5f9', borderRadius:'50px', padding:'2px 10px' }}>{m}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* Note about credits */}
+          <div style={{ ...cardStyle, padding:'16px 20px', background:'rgba(245,158,11,0.04)', border:'1px solid rgba(245,158,11,0.15)' }}>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#b45309', margin:0, lineHeight:1.6 }}>
+              <strong>Note:</strong> When your own key is active, AI calls use your provider account directly.
+              You will be billed by the provider (Anthropic/OpenAI/Google) — not by Shikshantaram OS.
+              Platform credits are only used when no BYOK key is set or when you switch back to platform mode.
+            </p>
+          </div>
+        </div>
+      )}
       {showDeleteConfirm && (
         <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
           <div style={{ background:'white', borderRadius:'24px', padding:'36px 32px', maxWidth:'400px', width:'100%', boxShadow:'0 24px 80px rgba(0,0,0,0.2)' }}>
