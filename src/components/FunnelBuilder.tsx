@@ -874,6 +874,10 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
               style={s({ background: isSaved('funnel_builder', 'funnel_map', funnelData.funnelName) ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : 'none', border: isSaved('funnel_builder', 'funnel_map', funnelData.funnelName) ? 'none' : '1px solid #e2e8f0', borderRadius: 50, padding: '5px 14px', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: isSaved('funnel_builder', 'funnel_map', funnelData.funnelName) ? 'white' : '#64748b', cursor: 'pointer', opacity: isSaving('funnel_builder', 'funnel_map', funnelData.funnelName) ? 0.5 : 1, transition: 'all 0.2s' })}>
               {isSaved('funnel_builder', 'funnel_map', funnelData.funnelName) ? '🔖 Saved' : '🔖 Save Funnel'}
             </button>
+            <button onClick={() => exportFunnelPDF(funnelData, stepCopy, emailSequence, credits.currentUser?.email || 'User')}
+              style={s({ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 14px', borderRadius: 50, border: 'none', background: 'linear-gradient(135deg,#0284c7,#0891b2)', color: 'white', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, boxShadow: '0 2px 8px rgba(2,132,199,0.25)' })}>
+              ⬇ Export PDF
+            </button>
             <span onClick={() => setFunnelStep('brief')} style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#64748b', cursor: 'pointer', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '5px 12px', borderRadius: 8 })}>← Edit Brief</span>
             <button onClick={() => setFunnelStep('emails')} style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: 'white', background: 'linear-gradient(135deg,#06b6d4,#3b82f6)', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' })}>📧 Email Sequence</button>
           </div>
