@@ -1506,8 +1506,7 @@ const Index = () => {
     supabase.from('user_profiles').select('avatar_color').eq('id', user.id).single()
       .then(({ data }) => {
         if ((data as any)?.avatar_color) {
-          const { AVATAR_GRADIENTS } = require('@/components/ProfilePage');
-          const grad = AVATAR_GRADIENTS?.find((g: any) => g.id === (data as any).avatar_color);
+          const grad = AVATAR_GRADIENTS.find((g: any) => g.id === (data as any).avatar_color);
           setAvatarColor(grad?.gradient || 'linear-gradient(135deg,#7c3aed,#a855f7)');
         }
       });
