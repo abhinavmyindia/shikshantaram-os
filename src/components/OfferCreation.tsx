@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
 import { useCreditGate } from '@/hooks/useCreditGate';
+import { exportOfferPDF } from '@/utils/exportOffer';
 
 /* ───────── Types ───────── */
 interface OfferBrief {
@@ -879,6 +880,10 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
               <button onClick={() => saveItem({ tool: 'offer_creation', item_type: 'offer_output', title: offerData.offerHeadline, summary: offerData.oneLinerPitch, full_data: { brief: offerBrief, offer: offerData } })}
                 style={s({ background: isSaved('offer_creation', 'offer_output', offerData.offerHeadline) ? 'linear-gradient(135deg,#f59e0b,#ef4444)' : 'none', border: isSaved('offer_creation', 'offer_output', offerData.offerHeadline) ? 'none' : '1px solid #e2e8f0', borderRadius: 50, padding: '6px 14px', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: isSaved('offer_creation', 'offer_output', offerData.offerHeadline) ? 'white' : '#64748b', cursor: 'pointer', opacity: isSaving('offer_creation', 'offer_output', offerData.offerHeadline) ? 0.5 : 1, transition: 'all 0.2s' })}>
                 {isSaved('offer_creation', 'offer_output', offerData.offerHeadline) ? '🔖 Saved' : '🔖 Save Offer'}
+              </button>
+              <button onClick={() => exportOfferPDF(offerData, offerBrief, credits.currentUser?.email || 'User')}
+                style={s({ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 50, border: 'none', background: 'linear-gradient(135deg,#0284c7,#0891b2)', color: 'white', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, boxShadow: '0 2px 8px rgba(2,132,199,0.25)' })}>
+                ⬇ Export PDF
               </button>
               <div style={s({ background: getScoreGradient(offerScore), borderRadius: 50, padding: '6px 14px' })}>
                 <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: 'white' })}>⚡ {offerScore}/100</span>
