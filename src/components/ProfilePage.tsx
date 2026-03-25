@@ -638,26 +638,337 @@ export default function ProfilePage({
         </div>
       )}
 
-      {/* Tab 3, 4, 5 + modals come in Part B */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* TAB 3 — SECURITY                                              */}
+      {/* ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'security' && (
-        <div style={{ ...cardStyle, textAlign: 'center', padding: 40 }}>
-          <p style={{ fontSize: 32, marginBottom: 12 }}>🔒</p>
-          <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#64748b' }}>Security tab coming in Part B</p>
-        </div>
-      )}
-      {activeTab === 'credits' && (
-        <div style={{ ...cardStyle, textAlign: 'center', padding: 40 }}>
-          <p style={{ fontSize: 32, marginBottom: 12 }}>⚡</p>
-          <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#64748b' }}>Credits tab coming in Part B</p>
-        </div>
-      )}
-      {activeTab === 'settings' && (
-        <div style={{ ...cardStyle, textAlign: 'center', padding: 40 }}>
-          <p style={{ fontSize: 32, marginBottom: 12 }}>⚙️</p>
-          <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#64748b' }}>Settings tab coming in Part B</p>
+        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+
+          {/* Change password card */}
+          <div style={cardStyle}>
+            <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 4px' }}>🔒 Change Password</h3>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:'0 0 20px', lineHeight:1.6 }}>
+              Enter your current password first to verify your identity.
+            </p>
+
+            {[
+              { label:'Current Password',     value:currentPw,  setter:setCurrentPw,  show:showCurrentPw, toggle:()=>setShowCurrentPw((p: boolean)=>!p) },
+              { label:'New Password',         value:newPw,      setter:setNewPw,      show:showNewPw,     toggle:()=>setShowNewPw((p: boolean)=>!p)     },
+              { label:'Confirm New Password', value:confirmPw,  setter:setConfirmPw,  show:showConfirmPw, toggle:()=>setShowConfirmPw((p: boolean)=>!p) },
+            ].map((f, i) => (
+              <div key={f.label} style={{ marginBottom: i < 2 ? '14px' : '0' }}>
+                <label style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'11px', color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em', display:'block', marginBottom:'6px' }}>
+                  {f.label}
+                </label>
+                <div style={{ position:'relative' }}>
+                  <input
+                    type={f.show ? 'text' : 'password'}
+                    value={f.value}
+                    onChange={e => f.setter(e.target.value)}
+                    placeholder="••••••••"
+                    style={{ width:'100%', padding:'11px 44px 11px 14px', borderRadius:'12px', border:'1.5px solid #e2e8f0', fontFamily:'DM Sans,sans-serif', fontSize:'14px', outline:'none', boxSizing:'border-box', transition:'border-color 0.15s' }}
+                    onFocus={e => e.target.style.borderColor='#7c3aed'}
+                    onBlur={e => e.target.style.borderColor='#e2e8f0'}
+                  />
+                  <button onClick={f.toggle} style={{ position:'absolute', right:'12px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:'16px', padding:'4px' }}>
+                    {f.show ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Password strength bar */}
+            {newPw.length > 0 && (
+              <div style={{ marginTop:'10px' }}>
+                <div style={{ display:'flex', gap:'4px', marginBottom:'4px' }}>
+                  {[1,2,3,4].map(i => (
+                    <div key={i} style={{
+                      flex:1, height:'3px', borderRadius:'50px', transition:'background 0.2s',
+                      background: newPw.length >= i*2 ? (i<=1?'#dc2626':i<=2?'#f59e0b':i<=3?'#3b82f6':'#059669') : '#f1f5f9',
+                    }} />
+                  ))}
+                </div>
+                <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:0 }}>
+                  {newPw.length<4 ? 'Too short' : newPw.length<6 ? 'Weak' : newPw.length<8 ? 'Fair' : 'Strong ✓'}
+                </p>
+              </div>
+            )}
+
+            {pwError   && <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'10px', padding:'10px 14px', marginTop:'14px', fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#dc2626', fontWeight:600 }}>❌ {pwError}</div>}
+            {pwSuccess && <div style={{ background:'rgba(5,150,105,0.08)', border:'1px solid rgba(5,150,105,0.2)', borderRadius:'10px', padding:'10px 14px', marginTop:'14px', fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#059669', fontWeight:600 }}>✅ Password updated! Use your new password next time you log in.</div>}
+
+            <button onClick={handlePasswordChange} disabled={pwLoading} style={{
+              width:'100%', padding:'13px', borderRadius:'12px', border:'none', marginTop:'18px',
+              background: pwLoading ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg,#7c3aed,#a855f7)',
+              color:'white', cursor: pwLoading ? 'not-allowed' : 'pointer',
+              fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'14px',
+              display:'flex', alignItems:'center', justifyContent:'center', gap:'8px',
+            }}>
+              {pwLoading
+                ? <><span style={{ width:'15px', height:'15px', border:'2px solid white', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite', display:'inline-block' }} />Verifying & Updating...</>
+                : '🔒 Update Password'}
+            </button>
+          </div>
+
+          {/* Login sessions card */}
+          <div style={cardStyle}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'16px', gap:'12px', flexWrap:'wrap' }}>
+              <div>
+                <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 4px' }}>📱 Login Sessions</h3>
+                <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:0 }}>
+                  {sessions.filter((s: any) => s.is_active).length} active · {sessions.length} recent logins
+                </p>
+              </div>
+              {sessions.filter((s: any) => s.is_active).length > 1 && (
+                <button onClick={logoutOtherSessions} disabled={logoutLoading} style={{
+                  background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)',
+                  color:'#dc2626', padding:'8px 16px', borderRadius:'10px',
+                  cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px', flexShrink:0,
+                }}>
+                  {logoutLoading ? 'Logging out...' : '🚪 Log Out Other Devices'}
+                </button>
+              )}
+            </div>
+
+            {sessions.length === 0
+              ? <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#94a3b8', textAlign:'center', padding:'16px 0' }}>No session history yet.</p>
+              : sessions.map((s: any, i: number) => (
+                <div key={s.id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 0', borderBottom: i < sessions.length-1 ? '1px solid #f8fafc' : 'none' }}>
+                  <div style={{ width:'36px', height:'36px', borderRadius:'10px', flexShrink:0, background: s.is_active ? 'rgba(5,150,105,0.1)' : '#f8fafc', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px' }}>
+                    {deviceIcon(s.device_type)}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'2px', flexWrap:'wrap' }}>
+                      <span style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'13px', color:'#0f172a' }}>
+                        {s.browser || 'Browser'} on {s.os || 'Unknown'}
+                      </span>
+                      {s.is_active && (
+                        <span style={{ background:'rgba(5,150,105,0.1)', color:'#059669', padding:'1px 8px', borderRadius:'50px', fontFamily:'DM Sans,sans-serif', fontWeight:800, fontSize:'9px', textTransform:'uppercase', letterSpacing:'0.06em' }}>
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:0 }}>
+                      {[s.ip_city, s.ip_state].filter(Boolean).join(', ') || 'Unknown location'} · {fmtRelative(s.created_at)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
         </div>
       )}
 
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* TAB 4 — CREDITS                                               */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'credits' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+
+          {/* Balance hero */}
+          <div style={{ background:'linear-gradient(135deg,#7c3aed,#a855f7)', borderRadius:'16px', padding:'24px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'16px', boxShadow:'0 8px 32px rgba(124,58,237,0.25)' }}>
+            <div>
+              <p style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'11px', color:'rgba(255,255,255,0.7)', textTransform:'uppercase', letterSpacing:'0.1em', margin:'0 0 4px' }}>Current Balance</p>
+              <div style={{ display:'flex', alignItems:'baseline', gap:'8px' }}>
+                <span style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'52px', color:'white', lineHeight:1 }}>{credits?.balance ?? 0}</span>
+                <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'16px', color:'rgba(255,255,255,0.8)' }}>credits</span>
+              </div>
+              {(credits?.lifetime_spent ?? 0) > 0 && (
+                <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'rgba(255,255,255,0.6)', margin:'6px 0 0' }}>
+                  Lifetime used: {credits.lifetime_spent} credits
+                </p>
+              )}
+            </div>
+            <button onClick={() => setShowTopUp(true)} style={{ background:'white', color:'#7c3aed', border:'none', borderRadius:'12px', padding:'13px 24px', cursor:'pointer', fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'14px', boxShadow:'0 4px 16px rgba(0,0,0,0.15)', flexShrink:0 }}>
+              ⚡ Add Credits
+            </button>
+          </div>
+
+          {/* Pack breakdown */}
+          <div style={cardStyle}>
+            <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'15px', color:'#0f172a', margin:'0 0 4px' }}>💡 What Can You Do With Credits?</h3>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:'0 0 16px' }}>
+              Each credit = ₹1 worth of AI research. Here's what every top-up pack gets you:
+            </p>
+
+            {[
+              { label:'Starter',  amount:500,  total:500,  bonus:0    },
+              { label:'Growth',   amount:1000, total:1100, bonus:100  },
+              { label:'Pro',      amount:2000, total:2400, bonus:400  },
+              { label:'Power',    amount:5000, total:6500, bonus:1500 },
+            ].map((pack, i, arr) => (
+              <div key={pack.label} style={{ paddingBottom:'14px', marginBottom: i<arr.length-1 ? '14px' : '0', borderBottom: i<arr.length-1 ? '1px solid #f8fafc' : 'none' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px' }}>
+                  <div>
+                    <span style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'14px', color:'#0f172a' }}>{pack.label}</span>
+                    <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', marginLeft:'8px' }}>₹{pack.amount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style={{ textAlign:'right' }}>
+                    <span style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'14px', color:'#7c3aed' }}>{pack.total.toLocaleString('en-IN')} credits</span>
+                    {pack.bonus > 0 && <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#059669', marginLeft:'6px', fontWeight:700 }}>+{pack.bonus} bonus</span>}
+                  </div>
+                </div>
+                <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
+                  {[
+                    { icon:'🔬', label:`${Math.floor(pack.total/15)} deep researches`     },
+                    { icon:'💡', label:`${Math.floor(pack.total/5)} idea sets`             },
+                    { icon:'🎁', label:`${Math.floor(pack.total/12)} full offers`          },
+                    { icon:'✍️', label:`${Math.floor(pack.total/8)} copy generations`     },
+                  ].map(item => (
+                    <span key={item.label} style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#374151', background:'#f8fafc', border:'1px solid #f1f5f9', borderRadius:'50px', padding:'3px 10px' }}>
+                      {item.icon} {item.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <button onClick={() => setShowTopUp(true)} style={{
+              width:'100%', padding:'13px', borderRadius:'12px', border:'none', marginTop:'4px',
+              background:'linear-gradient(135deg,#7c3aed,#a855f7)', color:'white', cursor:'pointer',
+              fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'14px',
+              boxShadow:'0 4px 16px rgba(124,58,237,0.25)',
+            }}>
+              ⚡ Top Up Now
+            </button>
+          </div>
+
+          {/* Transaction history */}
+          <div style={cardStyle}>
+            <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'15px', color:'#0f172a', margin:'0 0 16px' }}>📋 Transaction History</h3>
+            {transactions.length === 0
+              ? <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#94a3b8', textAlign:'center', padding:'16px 0' }}>No transactions yet.</p>
+              : transactions.map((tx: any, i: number) => (
+                <div key={tx.id} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 0', borderBottom: i<transactions.length-1 ? '1px solid #f8fafc' : 'none' }}>
+                  <div style={{
+                    width:'36px', height:'36px', borderRadius:'10px', flexShrink:0,
+                    display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px',
+                    background: tx.type==='topup' ? 'rgba(5,150,105,0.1)' : tx.type==='gift'||tx.type==='promo' ? 'rgba(6,182,212,0.1)' : 'rgba(124,58,237,0.08)',
+                  }}>
+                    {tx.type==='topup' ? '💳' : tx.type==='gift'||tx.type==='promo' ? '🎁' : tx.type==='shadow_deduction' ? '👻' : '⚡'}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'13px', color:'#0f172a', margin:'0 0 2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {tx.description || tx.type}
+                    </p>
+                    <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:0 }}>
+                      {fmtRelative(tx.created_at)}
+                    </p>
+                  </div>
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <p style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'14px', margin:'0 0 2px', color: tx.amount>0 ? '#059669' : '#7c3aed' }}>
+                      {tx.amount>0?'+':''}{tx.amount}
+                    </p>
+                    <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'10px', color:'#94a3b8', margin:0 }}>bal: {tx.balance_after}</p>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* TAB 5 — SETTINGS                                              */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'settings' && (
+        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+
+          {/* Notification preferences */}
+          <div style={cardStyle}>
+            <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 4px' }}>🔔 Notifications</h3>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:'0 0 18px' }}>
+              Choose what emails you receive from Shikshantaram OS.
+            </p>
+
+            {[
+              { key:'newTools',  label:'New tools & features',    sub:'Get notified when we launch new modules or major upgrades',    value:notifNewTools,  setter:setNotifNewTools,  dbKey:'notif_new_tools'  },
+              { key:'tips',      label:'Product tips & tutorials',sub:'Weekly tips to help you get more from Shikshantaram OS',        value:notifTips,      setter:setNotifTips,      dbKey:'notif_tips'       },
+              { key:'credits',   label:'Low credits alert',       sub:'Email when your balance drops below 20 credits',               value:notifCredits,   setter:setNotifCredits,   dbKey:'notif_credits'    },
+              { key:'security',  label:'New login detected',      sub:'Alert when a new device or location logs into your account',   value:notifSecurity,  setter:setNotifSecurity,  dbKey:'notif_security'   },
+            ].map((item, i, arr) => (
+              <div key={item.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', padding:'13px 0', borderBottom: i<arr.length-1 ? '1px solid #f8fafc' : 'none' }}>
+                <div style={{ flex:1 }}>
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'14px', color:'#0f172a', margin:'0 0 2px' }}>{item.label}</p>
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#94a3b8', margin:0 }}>{item.sub}</p>
+                </div>
+                <div
+                  onClick={() => {
+                    const newVal = !item.value;
+                    item.setter(newVal);
+                    setTimeout(() => saveNotifications({ [item.dbKey]: newVal }), 200);
+                  }}
+                  style={{
+                    width:'44px', height:'24px', borderRadius:'50px', flexShrink:0, cursor:'pointer',
+                    background: item.value ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#e2e8f0',
+                    position:'relative', transition:'background 0.2s',
+                  }}
+                >
+                  <div style={{
+                    position:'absolute', top:'3px', left: item.value ? '23px' : '3px',
+                    width:'18px', height:'18px', borderRadius:'50%', background:'white',
+                    boxShadow:'0 1px 4px rgba(0,0,0,0.2)', transition:'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            ))}
+
+            {savingNotif && (
+              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:'8px 0 0', textAlign:'right' }}>Saving...</p>
+            )}
+          </div>
+
+          {/* Danger zone */}
+          <div style={{ background:'rgba(239,68,68,0.03)', borderRadius:'16px', padding:'22px', border:'1px solid rgba(239,68,68,0.12)' }}>
+            <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'16px', color:'#dc2626', margin:'0 0 4px' }}>⚠️ Danger Zone</h3>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:'0 0 16px', lineHeight:1.6 }}>
+              Requesting deletion notifies our team. We review within 48 hours and will confirm by email. Your data is preserved as a deleted account record.
+            </p>
+
+            {deletionRequested ? (
+              <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:'12px', padding:'14px', fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#b45309', fontWeight:600 }}>
+                ⏳ Deletion request submitted. Our team will review and confirm within 48 hours.
+              </div>
+            ) : (
+              <button onClick={() => setShowDeleteConfirm(true)} style={{ background:'rgba(239,68,68,0.08)', border:'1.5px solid rgba(239,68,68,0.2)', color:'#dc2626', padding:'11px 20px', borderRadius:'12px', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'13px' }}>
+                🗑️ Request Account Deletion
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── DELETE CONFIRMATION MODAL ─── */}
+      {showDeleteConfirm && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
+          <div style={{ background:'white', borderRadius:'24px', padding:'36px 32px', maxWidth:'400px', width:'100%', boxShadow:'0 24px 80px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize:'48px', textAlign:'center', marginBottom:'16px' }}>⚠️</div>
+            <h2 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'20px', color:'#0f172a', textAlign:'center', marginBottom:'10px' }}>Request Account Deletion?</h2>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#64748b', textAlign:'center', lineHeight:1.7, marginBottom:'16px' }}>
+              All your saved work, credits, and data will be permanently removed after admin review.
+            </p>
+            <div style={{ marginBottom:'14px' }}>
+              <label style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'11px', color:'#374151', textTransform:'uppercase', letterSpacing:'0.08em', display:'block', marginBottom:'6px' }}>
+                Reason (optional)
+              </label>
+              <textarea value={deleteReason} onChange={e => setDeleteReason(e.target.value)} placeholder="Why are you leaving? Helps us improve." rows={2}
+                style={{ width:'100%', padding:'10px 12px', borderRadius:'10px', border:'1.5px solid #e2e8f0', fontFamily:'DM Sans,sans-serif', fontSize:'13px', outline:'none', boxSizing:'border-box', resize:'none' }} />
+            </div>
+            <input type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder='Type "DELETE" to confirm'
+              style={{ width:'100%', padding:'11px 14px', borderRadius:'12px', border:`1.5px solid ${deleteInput==='DELETE' ? '#dc2626' : '#e2e8f0'}`, fontFamily:'DM Sans,sans-serif', fontSize:'14px', outline:'none', boxSizing:'border-box', marginBottom:'16px', textAlign:'center', fontWeight:700 }} />
+            <div style={{ display:'flex', gap:'10px' }}>
+              <button onClick={() => { setShowDeleteConfirm(false); setDeleteInput(''); setDeleteReason(''); }} style={{ flex:1, padding:'12px', borderRadius:'12px', border:'1.5px solid #e2e8f0', background:'transparent', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'14px', color:'#64748b' }}>
+                Cancel
+              </button>
+              <button onClick={requestDeletion} disabled={deleteInput !== 'DELETE' || deleteLoading} style={{ flex:2, padding:'12px', borderRadius:'12px', border:'none', background: deleteInput==='DELETE' ? '#dc2626' : 'rgba(239,68,68,0.3)', color:'white', cursor: deleteInput==='DELETE' ? 'pointer' : 'not-allowed', fontFamily:'DM Sans,sans-serif', fontWeight:800, fontSize:'14px' }}>
+                {deleteLoading ? 'Submitting...' : 'Submit Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TopUp modal */}
       {showTopUp && (
         <TopUpModal
           userId={user.id}
