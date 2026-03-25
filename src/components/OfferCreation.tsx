@@ -311,6 +311,18 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       setOfferScore(data.result.offerScore?.total || 0);
       setOfferStep('builder');
       credits.deductAfterSuccess('offer_creation', 'build_full_offer', data?.byok, data?.provider);
+      // Auto-save (fire and forget)
+      if (credits.currentUser?.id) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'offer_creation',
+          callType: 'full_offer',
+          title: data.result?.offerHeadline || 'Full Offer',
+          subtitle: data.result?.oneLinerPitch?.slice(0, 70),
+          inputData: { offerBrief, chosenStructure: chosen },
+          outputData: { offerData: data.result, offerScore: data.result?.offerScore?.total || 0 },
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Could not build offer. Please try again.');
       setOfferStep('structures');
