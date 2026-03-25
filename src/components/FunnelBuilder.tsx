@@ -265,6 +265,18 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
       setFunnelData(data.result);
       setFunnelStep('visualizer');
       credits.deductAfterSuccess('funnel_builder', 'generate_funnel_architecture', data?.byok, data?.provider);
+      // Auto-save (fire and forget)
+      if (credits.currentUser?.id) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'funnel_builder',
+          callType: 'funnel_map',
+          title: data.result?.funnelName || 'Funnel Map',
+          subtitle: data.result?.funnelTagline?.slice(0, 70),
+          inputData: { funnelBrief, funnelType },
+          outputData: { funnelData: data.result },
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Could not generate funnel. Please try again.');
       setFunnelStep('brief');

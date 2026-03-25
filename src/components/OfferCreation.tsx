@@ -226,8 +226,32 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
   const [error, setError] = useState('');
   const [outputTab, setOutputTab] = useState<'page' | 'dm' | 'social' | 'email'>('page');
   const platformRef = useRef<HTMLDivElement>(null);
+  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
+  const [recentWorkData, setRecentWorkData] = useState<any>(null);
 
+  // Check for recent work on mount
   useEffect(() => {
+    const checkRecent = async () => {
+      if (!credits.currentUser?.id) return;
+      const recent = await loadRecentWork(credits.currentUser.id, 'offer_creation', 'full_offer');
+      if (recent?.outputData?.offerData) {
+        setRecentWorkData(recent);
+        setShowRestoreBanner(true);
+      }
+    };
+    checkRecent();
+  }, [credits.currentUser?.id]);
+
+  const handleRestoreOffer = () => {
+    if (!recentWorkData) return;
+    setOfferData(recentWorkData.outputData.offerData);
+    setOfferScore(recentWorkData.outputData.offerScore || 0);
+    setOfferBrief(recentWorkData.inputData?.offerBrief || offerBrief);
+    setOfferStep('builder');
+    setShowRestoreBanner(false);
+  };
+
+
     if (prefill?.sourceProduct) {
       setOfferBrief(prev => ({
         ...prev,

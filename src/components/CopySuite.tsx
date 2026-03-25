@@ -226,6 +226,18 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
       setScore(data.score || null);
       setStep('output');
       credits.deductAfterSuccess('copywriting_suite', 'generate_copy', data?.byok, data?.provider);
+      // Auto-save (fire and forget)
+      if (credits.currentUser?.id) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'copy_suite',
+          callType: 'copy_output',
+          title: `${selectedType.name} — ${brief.productName || 'Product'}`,
+          subtitle: `${tone}`,
+          inputData: { ...brief, copyType: selectedType.name, tone },
+          outputData: { sections: safeSections, score: data.score },
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {
