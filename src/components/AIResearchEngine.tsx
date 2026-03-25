@@ -1,4 +1,5 @@
 import { useState, useEffect, CSSProperties } from 'react';
+import { autoSaveWork, loadRecentWork } from '@/utils/recentWork';
 import { supabase } from '@/integrations/supabase/client';
 import { invokeWithRetry } from '@/utils/retryFetch';
 import { useSaveItem } from '@/hooks/useSaveItem';
@@ -617,6 +618,18 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
       setAiStep('results');
       credits.deductAfterSuccess('product_navigator', 'generate_30_ideas', data?.byok, data?.provider);
+      // Auto-save (fire and forget)
+      if (credits.currentUser?.id) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'product_navigator',
+          callType: 'generate_ideas',
+          title: `30 Ideas — ${inputData.niche}`,
+          subtitle: `${inputData.country} · ${inputData.productType}`,
+          inputData: { niche: inputData.niche, country: inputData.country, productType: inputData.productType },
+          outputData: { ideas },
+        });
+      }
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setAiStep('input');
@@ -718,6 +731,18 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setSectionStatus(finalStatus);
       setAiStep('report');
       credits.deductAfterSuccess('product_navigator', 'deep_research_report', data?.byok, data?.provider);
+      // Auto-save deep research (fire and forget)
+      if (credits.currentUser?.id && product) {
+        autoSaveWork({
+          userId: credits.currentUser.id,
+          tool: 'product_navigator',
+          callType: 'deep_research',
+          title: product.productName || 'Deep Research',
+          subtitle: `${inputData.niche} · ${inputData.country}`,
+          inputData: { niche: inputData.niche, country: inputData.country, productType: inputData.productType, selectedProduct: product },
+          outputData: { report },
+        });
+      }
     } catch (err: any) {
       // Mark all sections as error
       const errorStatus: Record<string, 'loading' | 'done' | 'error'> = {};
