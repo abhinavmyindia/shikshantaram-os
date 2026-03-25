@@ -1169,6 +1169,12 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [deleting, setDeleting] = useState(false);
   const [deletionReqs, setDeletionReqs] = useState<any[]>([]);
   const [showDeletionQueue, setShowDeletionQueue] = useState(false);
+  const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from('user_byok_keys').select('user_id, provider').eq('is_active', true).eq('is_valid', true)
+      .then(({ data }) => setByokKeys(data || []));
+  }, [users]);
 
   const fetchDeletionRequests = async () => {
     const { data } = await supabase
@@ -1313,7 +1319,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
-              {['Avatar', 'Name', 'Email', 'Tier', 'Joined', 'Actions'].map(h => (
+              {['Avatar', 'Name', 'Email', 'Tier', 'BYOK', 'Joined', 'Actions'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
               ))}
             </tr>
@@ -1333,6 +1339,16 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
                   </td>
+                  <td style={{ padding: '10px 16px' }}>
+                    {(() => {
+                      const providers = byokKeys.filter(k => k.user_id === u.id).map(k => k.provider);
+                      return providers.length > 0 ? (
+                        <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#059669', background: 'rgba(5,150,105,0.08)', padding: '2px 8px', borderRadius: 50 }}>
+                          🔑 {providers.join(', ')}
+                        </span>
+                      ) : <span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span>;
+                    })()}
+                  </td>
                   <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(u.created_at)}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -1345,7 +1361,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
             )}
           </tbody>
         </table>
