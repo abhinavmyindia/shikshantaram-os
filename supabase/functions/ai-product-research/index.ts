@@ -671,7 +671,7 @@ interface AIResult {
   finishReason: string | null;
 }
 
-async function callLovableAI(prompt: string, model: string, maxTokens: number): Promise<AIResult> {
+async function callLovableAI(prompt: string, model: string, maxTokens: number, opts?: { system?: string; temperature?: number }): Promise<AIResult> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -682,13 +682,20 @@ async function callLovableAI(prompt: string, model: string, maxTokens: number): 
       await new Promise(r => setTimeout(r, delay));
     }
 
+    const messages: any[] = [];
+    if (opts?.system) messages.push({ role: "system", content: opts.system });
+    messages.push({ role: "user", content: prompt });
+
+    const reqBody: any = { model, messages, max_tokens: maxTokens };
+    if (opts?.temperature !== undefined) reqBody.temperature = opts.temperature;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: maxTokens }),
+      body: JSON.stringify(reqBody),
     });
 
     if (response.status === 429) { await response.text(); continue; }
@@ -746,14 +753,21 @@ serve(async (req) => {
     const byok = byokUserId ? await resolveAIKey(byokUserId) : { useByok: false as const };
 
     let prompt: string;
+    let systemPrompt: string | undefined;
+    let temperature: number | undefined;
     let model: string;
     let maxTokens: number;
     let callType: string;
     let deepResearchContext: { product: any; inputData: any } | null = null;
+    let diversityMeta: any = null;
 
     if (action === "generate-ideas") {
       const { niche, country, productType } = body;
-      prompt = buildGenerateIdeasPrompt(niche, country, productType);
+      const built = buildGenerateIdeasPrompt(niche, country, productType);
+      prompt = built.prompt;
+      systemPrompt = built.system;
+      temperature = 1.0; // Layer 1: force away from default safe answers
+      diversityMeta = built.diversity;
       model = "google/gemini-3-flash-preview";
       maxTokens = 24000;
       callType = "generate_30_ideas";
@@ -781,9 +795,15 @@ serve(async (req) => {
       };
       const dirInstruction = directionInstructions[direction] || directionInstructions['different-angle'];
       const rawContext = rawIdea ? `\nORIGINAL RAW IDEA: "${rawIdea}"\nAll new ideas must stay relevant to this original concept.\n` : '';
-      prompt = `You are an expert digital product researcher.
 
-Generate exactly ${moreCount} NEW digital product ideas. These must be COMPLETELY DIFFERENT from the ideas already generated.
+      // Apply diversity layers to generate-more as well
+      const audienceAngle = pickOne(AUDIENCE_SEGMENTS);
+      const painAnchor = pickOne(PAIN_ANCHORS);
+      const adjacentNiches = getAdjacentNiches(niche);
+      systemPrompt = pickOne(EXPERT_PERSONAS);
+      temperature = 1.0;
+
+      prompt = `Generate exactly ${moreCount} NEW digital product ideas. These must be COMPLETELY DIFFERENT from the ideas already generated.
 
 RESEARCH CONTEXT:
 - Niche: ${niche}
@@ -791,6 +811,11 @@ RESEARCH CONTEXT:
 - Product Type: ${productType}
 - Direction Focus: ${dirInstruction}
 ${rawContext}
+--- DIVERSITY FOCUS FOR THIS BATCH ---
+Target Audience: Focus on ${audienceAngle}
+Pain Anchor: Centre around ${painAnchor}
+Cross-niche inspiration: Borrow frameworks from ${adjacentNiches.join(' and ')}
+
 ALREADY GENERATED — DO NOT REPEAT THESE:
 ${(existingNames || []).map((n: string, i: number) => `${i + 1}. ${n}`).join('\n')}
 
@@ -802,7 +827,7 @@ STRICT RULES:
 5. Every idea must feel genuinely fresh compared to what was already generated
 
 For EACH idea return the EXACT same JSON structure:
-{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":"High","primaryPain":"...","searchKeyword":"..."}
+{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":"High","primaryPain":"...","searchKeyword":"...","whyUnique":"..."}
 
 Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No markdown.`;
       model = "google/gemini-3-flash-preview";
@@ -857,7 +882,7 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
     }
 
     // ─── PLATFORM PATH (unchanged) ───────────────────────────────────────────
-    let aiResult = await callLovableAI(prompt, model, maxTokens);
+    let aiResult = await callLovableAI(prompt, model, maxTokens, { system: systemPrompt, temperature });
 
     // If ANY action was truncated, retry with conciseness instruction
     if (aiResult.finishReason === 'length') {
