@@ -81,277 +81,511 @@ const ShadowModeControl = ({ onToggle }: { onToggle: () => void }) => {
   );
 };
 
-/* ─── Shadow Insights ─────────────────────────────────────────────────────── */
-const ShadowInsights = () => {
-  const [insights, setInsights] = useState<any>(null);
-  const [globalMode, setGlobalMode] = useState('shadow');
-
-  useEffect(() => {
-    const fetch = async () => {
-      const { data: gs } = await supabase.from('global_settings').select('value').eq('key', 'credits_enforcement_mode').single();
-      const mode = gs?.value || 'shadow';
-      setGlobalMode(mode);
-      if (mode !== 'shadow') return;
-
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const [lowRes, shadowRes] = await Promise.all([
-        supabase.from('user_credits').select('user_id, balance').lt('balance', 20).order('balance', { ascending: true }).limit(10),
-        supabase.from('credit_transactions').select('amount, tool_module, user_id').eq('type', 'shadow_deduction').gte('created_at', weekAgo),
-      ]);
-
-      const shadowTx = shadowRes.data || [];
-      const totalShadow = shadowTx.reduce((s: number, t: any) => s + Math.abs(t.amount), 0);
-      const uniqueUsers = new Set(shadowTx.map((t: any) => t.user_id)).size;
-      setInsights({
-        wouldBeEmpty: lowRes.data || [],
-        totalShadowCredits: totalShadow,
-        avgPerUser: uniqueUsers > 0 ? Math.round(totalShadow / uniqueUsers) : 0,
-      });
-    };
-    fetch();
-  }, []);
-
-  if (globalMode !== 'shadow' || !insights) return null;
-
-  return (
-    <div style={s({ background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(234,88,12,0.05))', borderRadius: 16, border: '1px solid rgba(245,158,11,0.2)', padding: 20, marginBottom: 24 })}>
-      <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: '#b45309', marginBottom: 16 })}>
-        👻 Shadow Mode Insights — What Would Happen If You Enforced Today
-      </div>
-      <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 })}>
-        {[
-          { value: insights.wouldBeEmpty?.length || 0, label: 'users would be blocked (bal < 20)' },
-          { value: insights.totalShadowCredits?.toLocaleString('en-IN'), label: 'credits consumed this week' },
-          { value: insights.avgPerUser, label: 'avg credits/user/week' },
-        ].map(stat => (
-          <div key={stat.label} style={s({ textAlign: 'center' })}>
-            <div style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 24, color: '#b45309' })}>{stat.value}</div>
-            <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#92400e' })}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
-      {insights.wouldBeEmpty?.length > 0 && (
-        <div style={s({ marginTop: 12, padding: '10px 14px', background: 'rgba(245,158,11,0.08)', borderRadius: 10 })}>
-          <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 6 })}>Users who would need to top up:</div>
-          <div style={s({ display: 'flex', flexWrap: 'wrap', gap: 6 })}>
-            {insights.wouldBeEmpty.map((u: any) => (
-              <span key={u.user_id} style={s({ fontFamily: 'DM Sans', fontSize: 11, padding: '2px 8px', borderRadius: 50, background: 'rgba(245,158,11,0.15)', color: '#92400e' })}>
-                {u.user_id?.slice(0, 8)}… ({u.balance} left)
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 /* ─── Main Admin Credits Tab ──────────────────────────────────────────────── */
 export default function AdminCreditsTab({ showToast }: { showToast: (msg: string, type?: string) => void }) {
-  const [allCredits, setAllCredits] = useState<any[]>([]);
-  const [recentTx, setRecentTx] = useState<any[]>([]);
-  const [revenue, setRevenue] = useState(0);
+  // Sub-tab
+  const [subTab, setSubTab] = useState<'revenue'|'pricing'|'gift'|'transactions'>('revenue');
+
+  // Revenue
+  const [revenueData, setRevenueData] = useState<any>(null);
+  const [revenueRange, setRevenueRange] = useState<'7d'|'30d'|'all'>('30d');
+  const [usdRate, setUsdRate] = useState(84);
+  const [revenueLoading, setRevenueLoading] = useState(true);
+
+  // Pricing editor
+  const [pricing, setPricing] = useState<any[]>([]);
+  const [editingPrice, setEditingPrice] = useState<Record<string, number>>({});
+  const [savingPrice, setSavingPrice] = useState<Record<string, boolean>>({});
+  const [priceResults, setPriceResults] = useState<Record<string, string>>({});
+  const [priceChangeLog, setPriceChangeLog] = useState<any[]>([]);
+  const [priceReason, setPriceReason] = useState('');
+
+  // Gift credits
   const [giftEmail, setGiftEmail] = useState('');
   const [giftAmount, setGiftAmount] = useState('');
   const [giftReason, setGiftReason] = useState('');
   const [giftLoading, setGiftLoading] = useState(false);
-  const [giftResult, setGiftResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'balances' | 'transactions'>('balances');
-  const [userProfiles, setUserProfiles] = useState<any>({});
+  const [giftResult, setGiftResult] = useState<{success:boolean;message:string}|null>(null);
+  const [giftHistory, setGiftHistory] = useState<any[]>([]);
+  const [showBulkGift, setShowBulkGift] = useState(false);
+  const [bulkAmount, setBulkAmount] = useState('');
+  const [bulkReason, setBulkReason] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
 
-  const loadData = async () => {
-    const [creditsRes, txRes, ordersRes, profilesRes] = await Promise.all([
-      supabase.from('user_credits').select('*').order('balance', { ascending: false }),
-      supabase.from('credit_transactions').select('*').order('created_at', { ascending: false }).limit(50),
-      supabase.from('razorpay_orders').select('amount_inr').eq('status', 'paid'),
-      supabase.from('user_profiles').select('id, full_name, credits_enforcement'),
-    ]);
-    setAllCredits(creditsRes.data || []);
-    setRecentTx(txRes.data || []);
-    setRevenue((ordersRes.data || []).reduce((sum: number, o: any) => sum + o.amount_inr, 0));
-    const pMap: any = {};
-    (profilesRes.data || []).forEach((p: any) => { pMap[p.id] = p; });
-    setUserProfiles(pMap);
+  // Transactions
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [txFilter, setTxFilter] = useState<'all'|'topup'|'deduction'|'gift'>('all');
+  const [txLoading, setTxLoading] = useState(false);
+
+  useEffect(() => { loadAll(); }, []);
+  useEffect(() => { if (subTab === 'revenue') loadRevenue(); }, [revenueRange]);
+  useEffect(() => { loadTransactions(); }, [txFilter]);
+
+  /* ─── Data loaders ────────────────────────────────────────────────────── */
+  const loadAll = async () => {
+    await Promise.all([loadRevenue(), loadPricing(), loadGiftHistory(), loadTransactions()]);
   };
 
-  useEffect(() => { loadData(); }, []);
+  const loadRevenue = async () => {
+    setRevenueLoading(true);
+    try {
+      const now = new Date();
+      const since = {
+        '7d':  new Date(now.getTime() - 7  * 86400000).toISOString(),
+        '30d': new Date(now.getTime() - 30 * 86400000).toISOString(),
+        'all': new Date('2024-01-01').toISOString(),
+      }[revenueRange];
+
+      const { data: rateSetting } = await supabase
+        .from('global_settings').select('value').eq('key','usd_inr_rate').single();
+      const rate = parseFloat(rateSetting?.value || '84');
+      setUsdRate(rate);
+
+      const { data: orders } = await supabase
+        .from('razorpay_orders')
+        .select('amount_inr,credits_to_add,bonus_credits,paid_at,user_id,user_email')
+        .eq('status','paid').gte('paid_at', since)
+        .order('paid_at', { ascending: false });
+
+      const totalRevenue      = (orders||[]).reduce((sum: number, o: any) => sum + o.amount_inr, 0);
+      const totalPaidCredits  = (orders||[]).reduce((sum: number, o: any) => sum + o.credits_to_add, 0);
+      const totalBonusCredits = (orders||[]).reduce((sum: number, o: any) => sum + (o.bonus_credits||0), 0);
+
+      const byPack: Record<string, {count:number;revenue:number}> = {};
+      (orders||[]).forEach((o: any) => {
+        const key = `₹${o.amount_inr.toLocaleString('en-IN')}`;
+        byPack[key] = byPack[key] || { count:0, revenue:0 };
+        byPack[key].count++;
+        byPack[key].revenue += o.amount_inr;
+      });
+
+      const days = Array.from({ length: 30 }, (_, i) => {
+        const d = new Date(now.getTime() - (29-i) * 86400000);
+        return d.toISOString().split('T')[0];
+      });
+      const dailyRevenue: Record<string, number> = {};
+      days.forEach(d => { dailyRevenue[d] = 0; });
+      (orders||[]).forEach((o: any) => {
+        if (!o.paid_at) return;
+        const day = o.paid_at.split('T')[0];
+        if (dailyRevenue[day] !== undefined) dailyRevenue[day] += o.amount_inr;
+      });
+
+      const { data: aiLogs } = await supabase
+        .from('ai_usage_logs')
+        .select('estimated_cost_usd,module,model,created_at')
+        .gte('created_at', since);
+
+      const totalCostUsd = (aiLogs||[]).reduce((sum: number, l: any) => sum + parseFloat(l.estimated_cost_usd||0), 0);
+      const totalCostInr = totalCostUsd * rate;
+
+      const costByModule: Record<string, number> = {};
+      (aiLogs||[]).forEach((l: any) => {
+        costByModule[l.module] = (costByModule[l.module]||0) + parseFloat(l.estimated_cost_usd||0);
+      });
+
+      const dailyCostUsd: Record<string, number> = {};
+      days.forEach(d => { dailyCostUsd[d] = 0; });
+      (aiLogs||[]).forEach((l: any) => {
+        const day = l.created_at?.split('T')[0];
+        if (day && dailyCostUsd[day] !== undefined)
+          dailyCostUsd[day] += parseFloat(l.estimated_cost_usd||0);
+      });
+
+      const { count: byokCalls } = await supabase
+        .from('byok_usage_logs')
+        .select('*', { count:'exact', head:true })
+        .gte('created_at', since);
+
+      const { data: creditStats } = await supabase
+        .from('user_credits')
+        .select('balance,lifetime_topped,lifetime_spent,free_credits_given');
+
+      const totalOutstandingBalance = (creditStats||[]).reduce((sum: number, u: any) => sum + (u.balance||0), 0);
+      const totalLifetimeTopped     = (creditStats||[]).reduce((sum: number, u: any) => sum + (u.lifetime_topped||0), 0);
+      const totalFreeGiven          = (creditStats||[]).reduce((sum: number, u: any) => sum + (u.free_credits_given||0), 0);
+
+      const userRevenue: Record<string, any> = {};
+      (orders||[]).forEach((o: any) => {
+        if (!o.user_email) return;
+        userRevenue[o.user_email] = userRevenue[o.user_email] || { email:o.user_email, amount:0, count:0 };
+        userRevenue[o.user_email].amount += o.amount_inr;
+        userRevenue[o.user_email].count++;
+      });
+      const topUsers    = Object.values(userRevenue).sort((a:any,b:any) => b.amount - a.amount).slice(0,5);
+      const payingUsers = Object.keys(userRevenue).length;
+      const arpu        = payingUsers > 0 ? Math.round(totalRevenue / payingUsers) : 0;
+      const grossMargin = totalRevenue - totalCostInr;
+      const marginPct   = totalRevenue > 0 ? Math.round((grossMargin / totalRevenue) * 100) : 0;
+
+      setRevenueData({
+        totalRevenue, totalCostUsd, totalCostInr, grossMargin, marginPct,
+        totalPaidCredits, totalBonusCredits, totalOutstandingBalance,
+        totalLifetimeTopped, totalFreeGiven,
+        byPack, dailyRevenue, dailyCostUsd, days, costByModule,
+        topUsers, payingUsers, arpu,
+        byokCalls: byokCalls || 0,
+        orderCount: (orders||[]).length,
+      });
+    } catch (err: any) {
+      console.error('loadRevenue error:', err);
+    }
+    setRevenueLoading(false);
+  };
+
+  const loadPricing = async () => {
+    const { data } = await supabase
+      .from('credit_pricing').select('*').order('tool_module').order('call_type');
+    setPricing(data || []);
+    const { data: log } = await supabase
+      .from('price_change_log').select('*')
+      .order('changed_at', { ascending:false }).limit(20);
+    setPriceChangeLog(log || []);
+  };
+
+  const loadGiftHistory = async () => {
+    const { data } = await supabase
+      .from('credit_transactions')
+      .select('*').in('type',['gift','promo'])
+      .order('created_at', { ascending:false }).limit(30);
+    setGiftHistory(data || []);
+  };
+
+  const loadTransactions = async () => {
+    setTxLoading(true);
+    let q = supabase.from('credit_transactions').select('*')
+      .order('created_at', { ascending:false }).limit(100);
+    if (txFilter !== 'all') q = q.eq('type', txFilter);
+    const { data } = await q;
+    setTransactions(data || []);
+    setTxLoading(false);
+  };
+
+  /* ─── Action handlers ─────────────────────────────────────────────────── */
+  const handleSavePrice = async (toolModule: string, callType: string) => {
+    const key = `${toolModule}:${callType}`;
+    const newCredits = editingPrice[key];
+    if (!newCredits || newCredits < 1 || newCredits > 500) return;
+    setSavingPrice(prev => ({ ...prev, [key]: true }));
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data } = await supabase.functions.invoke('update-credit-pricing', {
+      body: { toolModule, callType, newCredits, reason: priceReason || null },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (data?.success) {
+      setPriceResults(prev => ({ ...prev, [key]: `✅ Updated to ${newCredits}` }));
+      setPricing(prev => prev.map((p: any) =>
+        p.tool_module===toolModule && p.call_type===callType ? {...p,credits:newCredits} : p
+      ));
+      await loadPricing();
+      setTimeout(() => setPriceResults(prev => ({ ...prev, [key]: '' })), 3000);
+    } else {
+      setPriceResults(prev => ({ ...prev, [key]: `❌ ${data?.error}` }));
+    }
+    setSavingPrice(prev => ({ ...prev, [key]: false }));
+  };
 
   const handleGift = async () => {
     if (!giftEmail.trim() || !giftAmount) return;
-    setGiftLoading(true);
-    setGiftResult(null);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const { data, error } = await supabase.functions.invoke('gift-credits', {
-        body: { targetEmail: giftEmail.trim().toLowerCase(), amount: parseInt(giftAmount), reason: giftReason || 'Admin gift' },
-        headers: { Authorization: `Bearer ${session?.access_token}` },
-      });
-      if (error || !data?.success) {
-        setGiftResult({ success: false, message: `❌ ${data?.error || 'Gift failed'}` });
-      } else {
-        setGiftResult({ success: true, message: `✅ ${giftAmount} credits gifted to ${data.giftedTo?.email}` });
-        setGiftEmail(''); setGiftAmount(''); setGiftReason('');
-        loadData();
-      }
-    } catch (err: any) {
-      setGiftResult({ success: false, message: `❌ ${err.message}` });
+    setGiftLoading(true); setGiftResult(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data } = await supabase.functions.invoke('gift-credits', {
+      body: { targetEmail: giftEmail.trim().toLowerCase(), amount: parseInt(giftAmount), reason: giftReason||'Admin gift' },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (data?.success) {
+      setGiftResult({ success:true, message:`✅ ${giftAmount} credits gifted to ${data.giftedTo?.email}` });
+      setGiftEmail(''); setGiftAmount(''); setGiftReason('');
+      await loadGiftHistory();
+    } else {
+      setGiftResult({ success:false, message:`❌ ${data?.error||'Gift failed'}` });
     }
     setGiftLoading(false);
+    setTimeout(() => setGiftResult(null), 5000);
   };
 
-  const handleEnforcementChange = async (userId: string, value: string) => {
-    await supabase.from('user_profiles').update({ credits_enforcement: value }).eq('id', userId);
-    setUserProfiles((prev: any) => ({ ...prev, [userId]: { ...prev[userId], credits_enforcement: value } }));
-    showToast(`Enforcement updated to ${value}`, 'success');
+  const handleBulkGift = async () => {
+    if (!bulkAmount || !confirm(`Gift ${bulkAmount} credits to ALL active users? This cannot be undone.`)) return;
+    setBulkLoading(true);
+    const { data: profiles } = await supabase
+      .from('user_profiles').select('id').neq('access_tier','revoked');
+    let success = 0, failed = 0;
+    for (const p of (profiles||[])) {
+      try {
+        await supabase.rpc('add_user_credits', {
+          p_user_id: p.id, p_amount: parseInt(bulkAmount),
+          p_type: 'promo', p_description: bulkReason||'Bulk gift from admin',
+        });
+        success++;
+      } catch (_) { failed++; }
+    }
+    setBulkLoading(false); setShowBulkGift(false);
+    setBulkAmount(''); setBulkReason('');
+    setGiftResult({ success:true, message:`✅ Gifted ${bulkAmount} credits to ${success} users${failed>0?` (${failed} failed)`:''}.` });
+    await loadGiftHistory();
+    setTimeout(() => setGiftResult(null), 6000);
   };
 
-  const totalIssued = allCredits.reduce((sum, u) => sum + (u.lifetime_topped || 0), 0);
-  const totalConsumed = allCredits.reduce((sum, u) => sum + (u.lifetime_spent || 0), 0);
-  const usersWithBal = allCredits.filter(u => u.balance > 0).length;
+  /* ─── Shared helpers ──────────────────────────────────────────────────── */
+  const moduleNames: Record<string, string> = {
+    product_navigator:'🧭 Product Navigator', niche_clarity:'🎯 Niche Clarity',
+    offer_creation:'🎁 Offer Creation', funnel_builder:'🔀 Funnel Builder',
+    copywriting_suite:'✍️ Copy Suite',
+  };
 
-  const inputStyle: CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans', fontSize: 13, boxSizing: 'border-box', outline: 'none' };
+  const fmtInr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+  const fmtUsd = (n: number) => `$${n.toFixed(2)}`;
+  const fmtRel = (d: string) => {
+    const diff = Date.now() - new Date(d).getTime();
+    if (diff < 3600000)   return `${Math.floor(diff/60000)}m ago`;
+    if (diff < 86400000)  return `${Math.floor(diff/3600000)}h ago`;
+    if (diff < 604800000) return `${Math.floor(diff/86400000)}d ago`;
+    return new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+  };
+
+  const card: CSSProperties = {
+    background:'rgba(255,255,255,0.92)', borderRadius:16,
+    border:'1px solid rgba(255,255,255,0.95)', boxShadow:'0 4px 20px rgba(0,0,0,0.05)',
+    padding: 20,
+  };
 
   return (
     <div>
       {/* Shadow Mode Control */}
-      <ShadowModeControl onToggle={loadData} />
+      <ShadowModeControl onToggle={loadAll} />
 
-      {/* Shadow Insights */}
-      <ShadowInsights />
-
-      {/* KPI strip */}
-      <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 })}>
-        {[
-          { label: 'Total Revenue', value: `₹${revenue.toLocaleString('en-IN')}`, color: '#059669' },
-          { label: 'Credits Issued', value: totalIssued.toLocaleString('en-IN'), color: '#7c3aed' },
-          { label: 'Credits Used', value: totalConsumed.toLocaleString('en-IN'), color: '#ea580c' },
-          { label: 'Active Balances', value: usersWithBal, color: '#0284c7' },
-        ].map(stat => (
-          <div key={stat.label} style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', padding: 20 })}>
-            <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' })}>{stat.label}</div>
-            <div style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 24, color: stat.color, marginTop: 4 })}>{stat.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Gift credits */}
-      <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', padding: 20, marginBottom: 24 })}>
-        <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 16 })}>🎁 Gift Credits to User</div>
-        <div style={s({ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr auto', gap: 10, alignItems: 'end' })}>
-          <div>
-            <label style={s({ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 })}>User Email</label>
-            <input value={giftEmail} onChange={e => setGiftEmail(e.target.value)} placeholder="user@example.com" style={inputStyle} />
-          </div>
-          <div>
-            <label style={s({ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 })}>Credits</label>
-            <input value={giftAmount} onChange={e => setGiftAmount(e.target.value)} placeholder="100" type="number" style={inputStyle} />
-          </div>
-          <div>
-            <label style={s({ display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 })}>Reason</label>
-            <input value={giftReason} onChange={e => setGiftReason(e.target.value)} placeholder="e.g. Compensation for issue" style={inputStyle} />
-          </div>
-          <button onClick={handleGift} disabled={giftLoading || !giftEmail.trim() || !giftAmount} style={s({ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: giftLoading ? 'not-allowed' : 'pointer', opacity: giftLoading ? 0.5 : 1, whiteSpace: 'nowrap' })}>
-            {giftLoading ? 'Gifting...' : '🎁 Gift'}
+      {/* Sub-tab nav */}
+      <div style={s({ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6, marginBottom:20, background:'rgba(255,255,255,0.6)', borderRadius:14, padding:6 })}>
+        {([
+          { id:'revenue' as const,      icon:'📈', label:'Revenue'  },
+          { id:'pricing' as const,      icon:'💰', label:'Pricing'  },
+          { id:'gift' as const,         icon:'🎁', label:'Gift'     },
+          { id:'transactions' as const, icon:'📋', label:'Ledger'   },
+        ]).map(t => (
+          <button key={t.id} onClick={() => setSubTab(t.id)} style={s({
+            padding:'9px 4px', borderRadius:10, border:'none', cursor:'pointer',
+            background: subTab===t.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'transparent',
+            color: subTab===t.id ? 'white' : '#64748b',
+            fontFamily:'DM Sans,sans-serif', fontWeight:subTab===t.id?800:600, fontSize:12,
+            display:'flex', flexDirection:'column', alignItems:'center', gap:3,
+            boxShadow: subTab===t.id ? '0 2px 12px rgba(124,58,237,0.25)' : 'none',
+            transition:'all 0.15s',
+          })}>
+            <span>{t.icon}</span><span>{t.label}</span>
           </button>
-        </div>
-        {giftResult && (
-          <div style={s({ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: giftResult.success ? 'rgba(5,150,105,0.08)' : 'rgba(239,68,68,0.08)', fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: giftResult.success ? '#059669' : '#dc2626' })}>
-            {giftResult.message}
-          </div>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <div style={s({ display: 'flex', gap: 4, marginBottom: 16 })}>
-        {[{ id: 'balances', label: '💰 User Balances' }, { id: 'transactions', label: '📋 Recent Transactions' }].map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id as any)} style={s({
-            padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
-            fontWeight: activeTab === t.id ? 800 : 500, fontSize: 13,
-            background: activeTab === t.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f1f5f9',
-            color: activeTab === t.id ? 'white' : '#64748b',
-          })}>{t.label}</button>
         ))}
       </div>
 
-      {/* Balances table */}
-      {activeTab === 'balances' && (
-        <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' })}>
-          <table style={s({ width: '100%', borderCollapse: 'collapse' })}>
-            <thead>
-              <tr style={s({ background: '#f8fafc' })}>
-                {['User', 'Balance', 'Total Topped', 'Total Used', 'Free Given', 'Enforcement'].map(h => (
-                  <th key={h} style={s({ padding: '12px 16px', textAlign: 'left', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' })}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {allCredits.map(u => {
-                const profile = userProfiles[u.user_id];
-                const enforcement = profile?.credits_enforcement || 'shadow';
-                return (
-                  <tr key={u.user_id} style={s({ borderTop: '1px solid #f1f5f9' })}>
-                    <td style={s({ padding: '10px 16px' })}>
-                      <div style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: '#0f172a' })}>{profile?.full_name || '—'}</div>
-                      <div style={s({ fontFamily: 'DM Sans', fontSize: 10, color: '#94a3b8' })}>{u.user_id?.slice(0, 8)}…</div>
-                    </td>
-                    <td style={s({ padding: '10px 16px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: u.balance > 0 ? '#7c3aed' : '#94a3b8' })}>{u.balance}</td>
-                    <td style={s({ padding: '10px 16px', fontFamily: 'DM Sans', fontSize: 13, color: '#059669', fontWeight: 600 })}>{u.lifetime_topped}</td>
-                    <td style={s({ padding: '10px 16px', fontFamily: 'DM Sans', fontSize: 13, color: '#ea580c', fontWeight: 600 })}>{u.lifetime_spent}</td>
-                    <td style={s({ padding: '10px 16px', fontFamily: 'DM Sans', fontSize: 13, color: '#64748b' })}>{u.free_credits_given}</td>
-                    <td style={s({ padding: '10px 16px' })}>
-                      <select
-                        value={enforcement}
-                        onChange={e => handleEnforcementChange(u.user_id, e.target.value)}
-                        style={s({
-                          fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, padding: '4px 8px', borderRadius: 8,
-                          border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer',
-                          color: enforcement === 'exempt' ? '#7c3aed' : enforcement === 'enforced' ? '#059669' : '#b45309',
-                        })}
-                      >
-                        <option value="shadow">👻 Shadow</option>
-                        <option value="enforced">⚡ Enforced</option>
-                        <option value="exempt">⭐ Exempt</option>
-                      </select>
-                    </td>
-                  </tr>
+      {/* ══════════════════════════════════════ */}
+      {/* SUB-TAB 1: REVENUE DASHBOARD          */}
+      {/* ══════════════════════════════════════ */}
+      {subTab === 'revenue' && (
+        <div style={s({ display:'flex', flexDirection:'column', gap:16 })}>
+
+          {/* Range selector */}
+          <div style={s({ display:'flex', gap:6, justifyContent:'flex-end' })}>
+            {([['7d','7 Days'],['30d','30 Days'],['all','All Time']] as const).map(([v,l]) => (
+              <button key={v} onClick={() => setRevenueRange(v)} style={s({
+                padding:'6px 16px', borderRadius:50, border:'none', cursor:'pointer', fontSize:12,
+                background: revenueRange===v ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f8fafc',
+                color: revenueRange===v ? 'white' : '#64748b',
+                fontFamily:'DM Sans,sans-serif', fontWeight:700, transition:'all 0.15s',
+              })}>{l}</button>
+            ))}
+          </div>
+
+          {revenueLoading ? (
+            <div style={s({ display:'flex', justifyContent:'center', padding:48 })}>
+              <div style={s({ width:32, height:32, border:'3px solid #e2e8f0', borderTopColor:'#7c3aed', borderRadius:'50%', animation:'spin 0.8s linear infinite' })} />
+            </div>
+          ) : revenueData && (<>
+
+            {/* Top 3 KPIs */}
+            <div style={s({ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 })}>
+              {[
+                { label:'Total Revenue',   value:fmtInr(revenueData.totalRevenue), sub:`${revenueData.orderCount} orders`,                       color:'#059669', icon:'💰' },
+                { label:'AI Cost (INR)',    value:fmtInr(revenueData.totalCostInr), sub:`${fmtUsd(revenueData.totalCostUsd)} @ ₹${usdRate}/$`,   color:'#dc2626', icon:'🤖' },
+                { label:'Gross Margin',    value:fmtInr(revenueData.grossMargin),   sub:`${revenueData.marginPct}% margin`,                        color:revenueData.grossMargin>=0?'#7c3aed':'#dc2626', icon:'📊' },
+              ].map(stat => (
+                <div key={stat.label} style={s({ ...card })}>
+                  <div style={s({ display:'flex', alignItems:'center', gap:8, marginBottom:8 })}>
+                    <span style={s({ fontSize:18 })}>{stat.icon}</span>
+                    <span style={s({ fontFamily:'DM Sans', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em' })}>{stat.label}</span>
+                  </div>
+                  <p style={s({ fontFamily:'Sora', fontWeight:900, fontSize:26, color:stat.color, margin:0 })}>{stat.value}</p>
+                  <p style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', margin:'4px 0 0' })}>{stat.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Revenue vs Cost 30-day chart */}
+            <div style={s({ ...card })}>
+              <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#0f172a', margin:'0 0 12px' })}>📈 Revenue vs AI Cost — Last 30 Days</p>
+              <div style={s({ display:'flex', gap:16, marginBottom:8, fontFamily:'DM Sans', fontSize:11 })}>
+                <span><span style={s({ display:'inline-block', width:10, height:10, borderRadius:2, background:'#059669', marginRight:4 })} />Revenue</span>
+                <span><span style={s({ display:'inline-block', width:10, height:10, borderRadius:2, background:'#dc2626', marginRight:4 })} />AI Cost</span>
+              </div>
+              {(() => {
+                const maxVal = Math.max(
+                  ...revenueData.days.map((d: string) => revenueData.dailyRevenue[d]||0),
+                  ...revenueData.days.map((d: string) => (revenueData.dailyCostUsd[d]||0)*usdRate),
+                  1
                 );
-              })}
-              {allCredits.length === 0 && (
-                <tr><td colSpan={6} style={s({ padding: 32, textAlign: 'center', fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' })}>No credit accounts yet.</td></tr>
-              )}
-            </tbody>
-          </table>
+                return (
+                  <div style={s({ display:'flex', alignItems:'flex-end', gap:2, height:120 })}>
+                    {revenueData.days.map((day: string, i: number) => {
+                      const rev  = revenueData.dailyRevenue[day]  || 0;
+                      const cost = (revenueData.dailyCostUsd[day] || 0) * usdRate;
+                      const isToday = day === new Date().toISOString().split('T')[0];
+                      return (
+                        <div key={day} style={s({ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:1 })} title={`${day}\nRevenue: ${fmtInr(rev)}\nCost: ${fmtInr(cost)}`}>
+                          <div style={s({ display:'flex', gap:1, alignItems:'flex-end', height:100, width:'100%' })}>
+                            <div style={s({ flex:1, background: isToday ? '#059669' : 'rgba(5,150,105,0.5)', borderRadius:'2px 2px 0 0', height:`${Math.max((rev/maxVal)*100,1)}%`, minHeight:1 })} />
+                            <div style={s({ flex:1, background: isToday ? '#dc2626' : 'rgba(220,38,38,0.4)', borderRadius:'2px 2px 0 0', height:`${Math.max((cost/maxVal)*100,1)}%`, minHeight:1 })} />
+                          </div>
+                          {i%5===0 && <span style={s({ fontFamily:'DM Sans', fontSize:8, color:'#94a3b8', whiteSpace:'nowrap' })}>{new Date(day).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* 4 secondary KPIs */}
+            <div style={s({ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 })}>
+              {[
+                { label:'ARPU',               value:`₹${revenueData.arpu}`,                                   sub:'avg revenue/user',    icon:'👤' },
+                { label:'Paying Users',       value:revenueData.payingUsers,                                   sub:'bought credits',       icon:'💳' },
+                { label:'BYOK Calls',         value:revenueData.byokCalls,                                     sub:'zero cost to us',     icon:'🔑' },
+                { label:'Credit Liability',   value:(revenueData.totalOutstandingBalance||0).toLocaleString('en-IN'), sub:'unredeemed balance', icon:'⚡' },
+              ].map(stat => (
+                <div key={stat.label} style={s({ ...card, textAlign:'center' })}>
+                  <span style={s({ fontSize:20 })}>{stat.icon}</span>
+                  <p style={s({ fontFamily:'Sora', fontWeight:900, fontSize:22, color:'#7c3aed', margin:'6px 0 2px' })}>{stat.value}</p>
+                  <p style={s({ fontFamily:'DM Sans', fontWeight:700, fontSize:12, color:'#374151', margin:0 })}>{stat.label}</p>
+                  <p style={s({ fontFamily:'DM Sans', fontSize:10, color:'#94a3b8', margin:'2px 0 0' })}>{stat.sub}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Revenue by pack + Cost by module */}
+            <div style={s({ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 })}>
+              <div style={s({ ...card })}>
+                <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#0f172a', margin:'0 0 12px' })}>💳 Revenue by Pack</p>
+                {Object.entries(revenueData.byPack).sort((a:any,b:any)=>b[1].revenue-a[1].revenue).map(([pack,data]:any) => {
+                  const pct = revenueData.totalRevenue>0 ? (data.revenue/revenueData.totalRevenue)*100 : 0;
+                  return (
+                    <div key={pack} style={s({ marginBottom:10 })}>
+                      <div style={s({ display:'flex', justifyContent:'space-between', marginBottom:3 })}>
+                        <span style={s({ fontFamily:'DM Sans', fontWeight:600, fontSize:12, color:'#374151' })}>
+                          {pack} <span style={s({ color:'#94a3b8' })}>×{data.count}</span>
+                        </span>
+                        <span style={s({ fontFamily:'Sora', fontWeight:700, fontSize:12, color:'#059669' })}>{fmtInr(data.revenue)}</span>
+                      </div>
+                      <div style={s({ height:5, background:'#f1f5f9', borderRadius:50, overflow:'hidden' })}>
+                        <div style={s({ height:'100%', width:`${pct}%`, background:'linear-gradient(135deg,#059669,#10b981)', borderRadius:50 })} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {Object.keys(revenueData.byPack).length===0 && <p style={s({ fontFamily:'DM Sans', fontSize:13, color:'#94a3b8' })}>No orders yet</p>}
+              </div>
+
+              <div style={s({ ...card })}>
+                <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#0f172a', margin:'0 0 12px' })}>🤖 AI Cost by Module</p>
+                {Object.entries(revenueData.costByModule).sort((a:any,b:any)=>b[1]-a[1]).map(([mod,cost]:any) => {
+                  const total = Object.values(revenueData.costByModule as Record<string,number>).reduce((sum:number,v:number)=>sum+v,0)||1;
+                  return (
+                    <div key={mod} style={s({ marginBottom:10 })}>
+                      <div style={s({ display:'flex', justifyContent:'space-between', marginBottom:3 })}>
+                        <span style={s({ fontFamily:'DM Sans', fontWeight:600, fontSize:12, color:'#374151' })}>{moduleNames[mod]||mod}</span>
+                        <span style={s({ fontFamily:'Sora', fontWeight:700, fontSize:12, color:'#dc2626' })}>{fmtUsd(cost)} / {fmtInr(cost*usdRate)}</span>
+                      </div>
+                      <div style={s({ height:5, background:'#f1f5f9', borderRadius:50, overflow:'hidden' })}>
+                        <div style={s({ height:'100%', width:`${(cost/total)*100}%`, background:'linear-gradient(135deg,#dc2626,#ef4444)', borderRadius:50 })} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Top paying users */}
+            {revenueData.topUsers.length > 0 && (
+              <div style={s({ ...card })}>
+                <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#0f172a', margin:'0 0 12px' })}>🏆 Top Paying Users</p>
+                {revenueData.topUsers.map((u:any, i:number) => (
+                  <div key={u.email} style={s({ display:'flex', alignItems:'center', gap:12, padding:'8px 0', borderTop: i>0 ? '1px solid #f1f5f9' : 'none' })}>
+                    <p style={s({ fontFamily:'Sora', fontWeight:900, fontSize:16, color:'#7c3aed', margin:0, width:28, textAlign:'center' })}>{i+1}</p>
+                    <div style={s({ flex:1 })}>
+                      <p style={s({ fontFamily:'DM Sans', fontWeight:600, fontSize:13, color:'#0f172a', margin:0 })}>{u.email}</p>
+                      <p style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', margin:0 })}>{u.count} top-up{u.count>1?'s':''}</p>
+                    </div>
+                    <span style={s({ fontFamily:'Sora', fontWeight:800, fontSize:15, color:'#059669' })}>{fmtInr(u.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Credits liability */}
+            <div style={s({ ...card })}>
+              <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#0f172a', margin:'0 0 12px' })}>⚡ Credits Liability</p>
+              <div style={s({ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 })}>
+                {[
+                  { label:'Outstanding Balance', value:(revenueData.totalOutstandingBalance||0).toLocaleString('en-IN'), sub:'credits owed to users' },
+                  { label:'Free Credits Given',  value:(revenueData.totalFreeGiven||0).toLocaleString('en-IN'),           sub:'gifts + promos' },
+                  { label:'All-time Issued',     value:(revenueData.totalLifetimeTopped||0).toLocaleString('en-IN'),      sub:'paid credits ever sold' },
+                ].map(stat => (
+                  <div key={stat.label} style={s({ textAlign:'center', padding:12, background:'#f8fafc', borderRadius:12 })}>
+                    <p style={s({ fontFamily:'Sora', fontWeight:900, fontSize:22, color:'#7c3aed', margin:'0 0 4px' })}>{stat.value}</p>
+                    <p style={s({ fontFamily:'DM Sans', fontWeight:700, fontSize:12, color:'#374151', margin:0 })}>{stat.label}</p>
+                    <p style={s({ fontFamily:'DM Sans', fontSize:10, color:'#94a3b8', margin:'2px 0 0' })}>{stat.sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* USD/INR rate editor */}
+            <div style={s({ ...card, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' })}>
+              <div>
+                <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:14, color:'#0f172a', margin:'0 0 4px' })}>💱 USD/INR Rate</p>
+                <p style={s({ fontFamily:'DM Sans', fontSize:12, color:'#94a3b8', margin:0 })}>Used to convert AI API costs from USD to INR in this dashboard</p>
+              </div>
+              <div style={s({ display:'flex', alignItems:'center', gap:8 })}>
+                <span style={s({ fontFamily:'DM Sans', fontWeight:700, fontSize:13, color:'#374151' })}>₹</span>
+                <input id="usd-rate-input" type="number" defaultValue={usdRate} style={s({ width:70, padding:'8px 10px', borderRadius:8, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:13, outline:'none', textAlign:'center' })} />
+                <span style={s({ fontFamily:'DM Sans', fontSize:12, color:'#94a3b8' })}>per $1</span>
+                <button onClick={async () => {
+                  const val = parseFloat((document.getElementById('usd-rate-input') as HTMLInputElement).value);
+                  if (!val || val < 1) return;
+                  await supabase.from('global_settings').update({ value: String(val) }).eq('key','usd_inr_rate');
+                  setUsdRate(val); await loadRevenue();
+                  showToast('USD/INR rate updated', 'success');
+                }} style={s({ background:'linear-gradient(135deg,#7c3aed,#a855f7)', color:'white', border:'none', padding:'8px 16px', borderRadius:8, cursor:'pointer', fontFamily:'DM Sans', fontWeight:700, fontSize:12 })}>
+                  Update
+                </button>
+              </div>
+            </div>
+
+          </>)}
         </div>
       )}
 
-      {/* Transactions table */}
-      {activeTab === 'transactions' && (
-        <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' })}>
-          <table style={s({ width: '100%', borderCollapse: 'collapse' })}>
-            <thead>
-              <tr style={s({ background: '#f8fafc' })}>
-                {['Type', 'Amount', 'Balance After', 'Description', 'Date'].map(h => (
-                  <th key={h} style={s({ padding: '12px 16px', textAlign: 'left', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' })}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {recentTx.map(tx => (
-                <tr key={tx.id} style={s({ borderTop: '1px solid #f1f5f9' })}>
-                  <td style={s({ padding: '10px 16px' })}>
-                    <span style={s({ fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 50, background: tx.type === 'topup' ? '#dcfce7' : tx.type === 'deduction' ? '#ede9fe' : tx.type === 'shadow_deduction' ? '#fef3c7' : '#fef3c7', color: tx.type === 'topup' ? '#15803d' : tx.type === 'deduction' ? '#7c3aed' : tx.type === 'shadow_deduction' ? '#92400e' : '#92400e', textTransform: 'uppercase' })}>{tx.type === 'shadow_deduction' ? '👻 shadow' : tx.type}</span>
-                  </td>
-                  <td style={s({ padding: '10px 16px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: tx.amount > 0 ? '#059669' : '#7c3aed' })}>{tx.amount > 0 ? '+' : ''}{tx.amount}</td>
-                  <td style={s({ padding: '10px 16px', fontFamily: 'DM Sans', fontSize: 13, color: '#475569' })}>{tx.balance_after}</td>
-                  <td style={s({ padding: '10px 16px', fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{tx.description}</td>
-                  <td style={s({ padding: '10px 16px', fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>{new Date(tx.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
-                </tr>
-              ))}
-              {recentTx.length === 0 && (
-                <tr><td colSpan={5} style={s({ padding: 32, textAlign: 'center', fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' })}>No transactions yet.</td></tr>
-              )}
-            </tbody>
-          </table>
+      {/* Sub-tabs 2, 3, 4 — Part B placeholder */}
+      {subTab === 'pricing' && (
+        <div style={s({ ...card, textAlign:'center', padding:48 })}>
+          <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:16, color:'#94a3b8' })}>💰 Pricing Editor — Coming in Part B</p>
+        </div>
+      )}
+      {subTab === 'gift' && (
+        <div style={s({ ...card, textAlign:'center', padding:48 })}>
+          <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:16, color:'#94a3b8' })}>🎁 Gift Credits — Coming in Part B</p>
+        </div>
+      )}
+      {subTab === 'transactions' && (
+        <div style={s({ ...card, textAlign:'center', padding:48 })}>
+          <p style={s({ fontFamily:'Sora', fontWeight:800, fontSize:16, color:'#94a3b8' })}>📋 Transaction Ledger — Coming in Part B</p>
         </div>
       )}
     </div>

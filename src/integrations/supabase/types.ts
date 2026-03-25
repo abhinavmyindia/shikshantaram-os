@@ -542,6 +542,45 @@ export type Database = {
         }
         Relationships: []
       }
+      price_change_log: {
+        Row: {
+          call_type: string
+          changed_at: string | null
+          changed_by: string | null
+          changed_by_email: string | null
+          display_name: string | null
+          id: string
+          new_credits: number
+          old_credits: number
+          reason: string | null
+          tool_module: string
+        }
+        Insert: {
+          call_type: string
+          changed_at?: string | null
+          changed_by?: string | null
+          changed_by_email?: string | null
+          display_name?: string | null
+          id?: string
+          new_credits: number
+          old_credits: number
+          reason?: string | null
+          tool_module: string
+        }
+        Update: {
+          call_type?: string
+          changed_at?: string | null
+          changed_by?: string | null
+          changed_by_email?: string | null
+          display_name?: string | null
+          id?: string
+          new_credits?: number
+          old_credits?: number
+          reason?: string | null
+          tool_module?: string
+        }
+        Relationships: []
+      }
       razorpay_orders: {
         Row: {
           amount_inr: number
