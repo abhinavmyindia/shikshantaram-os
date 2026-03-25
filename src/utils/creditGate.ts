@@ -30,8 +30,14 @@ export const deductCredits = async (
   userId: string,
   toolModule: string,
   callType: string,
-  aiUsageLogId?: string
+  aiUsageLogId?: string,
+  wasByok?: boolean
 ): Promise<{ success: boolean; newBalance?: number }> => {
+  // If BYOK was used, skip deduction entirely
+  if (wasByok) {
+    return { success: true };
+  }
+
   try {
     const { data } = await supabase.functions.invoke('deduct-credits', {
       body: { userId, toolModule, callType, aiUsageLogId },

@@ -207,6 +207,8 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
           baseBrief: brief,
           typeSpecificInputs: typeInputs,
           tone,
+          userId: credits.currentUser?.id,
+          userEmail: credits.currentUser?.email,
         },
       });
 
@@ -221,7 +223,7 @@ export default function CopySuite({ onBack }: { onBack: () => void }) {
       setSections(safeSections);
       setScore(data.score || null);
       setStep('output');
-      credits.deductAfterSuccess('copywriting_suite', 'generate_copy');
+      credits.deductAfterSuccess('copywriting_suite', 'generate_copy', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
     } finally {

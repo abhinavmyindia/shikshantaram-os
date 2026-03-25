@@ -608,7 +608,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setAiStep('loading-ideas');
     try {
       const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
-        body: { action: 'generate-ideas', niche: inputData.niche, country: inputData.country, productType: inputData.productType },
+        body: { action: 'generate-ideas', niche: inputData.niche, country: inputData.country, productType: inputData.productType, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
@@ -616,7 +616,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       setProductIdeas(ideas);
       setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
       setAiStep('results');
-      credits.deductAfterSuccess('product_navigator', 'generate_30_ideas');
+      credits.deductAfterSuccess('product_navigator', 'generate_30_ideas', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setAiStep('input');
@@ -630,14 +630,14 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setRawIdeaStep('analyzing');
     try {
       const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
-        body: { action: 'analyze-idea', ideaText: rawIdeaData.ideaText, country: rawIdeaData.country },
+        body: { action: 'analyze-idea', ideaText: rawIdeaData.ideaText, country: rawIdeaData.country, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
       setIdeaAnalysis(data.result);
       setSelectedAngle(data.result.recommendedAngle);
       setRawIdeaStep('analysis-result');
-      credits.deductAfterSuccess('product_navigator', 'idea_analysis');
+      credits.deductAfterSuccess('product_navigator', 'idea_analysis', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Could not analyze idea. Please try again.');
       setRawIdeaStep('input');
@@ -661,6 +661,8 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           analysis: ideaAnalysis,
           chosenAngle,
           country: rawIdeaData.country,
+          userId: credits.currentUser?.id,
+          userEmail: credits.currentUser?.email,
         },
       });
       if (fnError) throw fnError;
@@ -676,7 +678,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         productType: chosenAngle?.productFormat || 'Digital Product',
       }));
       setAiStep('results');
-      credits.deductAfterSuccess('product_navigator', 'generate_more_ideas');
+      credits.deductAfterSuccess('product_navigator', 'generate_more_ideas', data?.byok);
     } catch (err: any) {
       setError(err.message || 'Could not generate ideas. Please try again.');
       setRawIdeaStep('analysis-result');
@@ -700,7 +702,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
 
     try {
       const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
-        body: { action: 'deep-research', product, inputData },
+        body: { action: 'deep-research', product, inputData, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
@@ -715,7 +717,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
       });
       setSectionStatus(finalStatus);
       setAiStep('report');
-      credits.deductAfterSuccess('product_navigator', 'deep_research_report');
+      credits.deductAfterSuccess('product_navigator', 'deep_research_report', data?.byok);
     } catch (err: any) {
       // Mark all sections as error
       const errorStatus: Record<string, 'loading' | 'done' | 'error'> = {};
@@ -735,7 +737,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
 
     try {
       const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
-        body: { action: 'deep-research', product: selectedProduct, inputData },
+        body: { action: 'deep-research', product: selectedProduct, inputData, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
@@ -786,6 +788,8 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
           moreCount,
           direction: moreDirection,
           rawIdea,
+          userId: credits.currentUser?.id,
+          userEmail: credits.currentUser?.email,
         },
       });
       if (fnError) throw fnError;

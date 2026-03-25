@@ -49,9 +49,10 @@ export function useCreditGate() {
     setShowCreditConfirm(true);
   }, [currentUser]);
 
-  /** Call after a successful AI generation to deduct */
-  const deductAfterSuccess = useCallback(async (toolModule: string, callType: string) => {
+  /** Call after a successful AI generation to deduct (skip if BYOK) */
+  const deductAfterSuccess = useCallback(async (toolModule: string, callType: string, wasByok?: boolean) => {
     if (!currentUser) return;
+    if (wasByok) return; // BYOK — no credits deducted
     const result = await deductCredits(currentUser.id, toolModule, callType);
     if (result.newBalance !== undefined) {
       setUserBalance(result.newBalance);
