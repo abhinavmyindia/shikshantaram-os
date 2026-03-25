@@ -287,7 +287,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       if (data?.error) throw new Error(data.error);
       setOfferStructures(data.result);
       setOfferStep('structures');
-      credits.deductAfterSuccess('offer_creation', 'generate_offer_structures', data?.byok);
+      credits.deductAfterSuccess('offer_creation', 'generate_offer_structures', data?.byok, data?.provider);
     } catch (err: any) {
       setError(err.message || 'Could not generate structures. Please try again.');
       setOfferStep('brief');
@@ -308,7 +308,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
       setOfferData(data.result);
       setOfferScore(data.result.offerScore?.total || 0);
       setOfferStep('builder');
-      credits.deductAfterSuccess('offer_creation', 'build_full_offer', data?.byok);
+      credits.deductAfterSuccess('offer_creation', 'build_full_offer', data?.byok, data?.provider);
     } catch (err: any) {
       setError(err.message || 'Could not build offer. Please try again.');
       setOfferStep('structures');
@@ -660,9 +660,15 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
 
       {/* ═══ STEP 3 — INTERACTIVE BUILDER ═══ */}
       {offerStep === 'builder' && offerData && (
-        <div style={s({ display: 'flex', gap: 20, alignItems: 'flex-start' })}>
-          {/* Left — Editor */}
-          <div style={s({ flex: 1, minWidth: 0 })}>
+        <div>
+          {credits.lastCallByok && credits.lastCallProvider && (
+            <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#059669', marginBottom: 16 })}>
+              🔑 Generated with your {credits.lastCallProvider === 'anthropic' ? 'Claude' : credits.lastCallProvider === 'openai' ? 'GPT-4o' : 'Gemini'} key · No credits used
+            </div>
+          )}
+          <div style={s({ display: 'flex', gap: 20, alignItems: 'flex-start' })}>
+            {/* Left — Editor */}
+            <div style={s({ flex: 1, minWidth: 0 })}>
             {/* Section 1 — Headline */}
             <EditorSection icon="✍️" iconBg="#fff7ed" title="Headline & Hook" defaultOpen>
               <label style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: 6 })}>OFFER HEADLINE</label>
@@ -813,6 +819,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
               <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#059669', marginTop: 4 })}>🎁 + {offerData.valueStack.filter(v => v.type === 'bonus').length} bonuses included</div>
               <div onClick={() => setOfferStep('output')} style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: '#f59e0b', cursor: 'pointer', marginTop: 12, textAlign: 'right' })}>View Full Output →</div>
             </div>
+          </div>
           </div>
         </div>
       )}

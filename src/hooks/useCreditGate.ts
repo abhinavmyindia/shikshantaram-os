@@ -9,6 +9,8 @@ export function useCreditGate() {
   const [userBalance, setUserBalance] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [lastCallByok, setLastCallByok] = useState(false);
+  const [lastCallProvider, setLastCallProvider] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -50,7 +52,9 @@ export function useCreditGate() {
   }, [currentUser]);
 
   /** Call after a successful AI generation to deduct (skip if BYOK) */
-  const deductAfterSuccess = useCallback(async (toolModule: string, callType: string, wasByok?: boolean) => {
+  const deductAfterSuccess = useCallback(async (toolModule: string, callType: string, wasByok?: boolean, provider?: string) => {
+    setLastCallByok(!!wasByok);
+    setLastCallProvider(provider || null);
     if (!currentUser) return;
     if (wasByok) return; // BYOK — no credits deducted
     const result = await deductCredits(currentUser.id, toolModule, callType);
@@ -85,5 +89,7 @@ export function useCreditGate() {
     deductAfterSuccess,
     confirmAndProceed,
     cancelConfirm,
+    lastCallByok,
+    lastCallProvider,
   };
 }
