@@ -850,6 +850,66 @@ function AIAnalyticsTab() {
           </div>
         )}
       </div>
+      <ByokStatsSection />
+    </div>
+  );
+}
+
+// ─── BYOK STATS SECTION ──────────────────────────────────────
+function ByokStatsSection() {
+  const [byokStats, setByokStats] = useState<any>({ byokLogs: [], byokUsers: 0, byProvider: {}, activeKeys: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+      const { data: byokLogs } = await supabase.from('byok_usage_logs').select('*').gte('created_at', thirtyDaysAgo).order('created_at', { ascending: false });
+      const byokUsers = new Set((byokLogs || []).map((l: any) => l.user_id)).size;
+      const byProvider: Record<string, number> = {};
+      (byokLogs || []).forEach((l: any) => { byProvider[l.provider] = (byProvider[l.provider] || 0) + 1; });
+      const { count: activeKeys } = await supabase.from('user_byok_keys').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('is_valid', true);
+      setByokStats({ byokLogs: byokLogs || [], byokUsers, byProvider, activeKeys: activeKeys || 0 });
+      setLoading(false);
+    };
+    fetch();
+  }, []);
+
+  if (loading || (byokStats.byokLogs.length === 0 && byokStats.activeKeys === 0)) return null;
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      <h3 style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 14 }}>🔑 BYOK Usage (Last 30 Days)</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
+        {[
+          { label: 'Active Keys', value: byokStats.activeKeys, color: '#059669' },
+          { label: 'BYOK Users', value: byokStats.byokUsers, color: '#7c3aed' },
+          { label: 'Total BYOK Calls', value: byokStats.byokLogs.length, color: '#0284c7' },
+          { label: 'Credits Saved', value: `~${Math.floor(byokStats.byokLogs.length * 8)}`, color: '#ea580c' },
+        ].map(stat => (
+          <div key={stat.label} style={{ ...glassCard, padding: 14 }}>
+            <p style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 4px' }}>{stat.label}</p>
+            <p style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: stat.color, margin: 0 }}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{ ...glassCard, padding: '16px 20px' }}>
+        <p style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>By Provider</p>
+        {['anthropic', 'openai', 'gemini'].map(provider => {
+          const count = byokStats.byProvider?.[provider] || 0;
+          const total = byokStats.byokLogs.length || 1;
+          return (
+            <div key={provider} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, color: '#374151', textTransform: 'capitalize' }}>{provider}</span>
+                <span style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 13, color: '#7c3aed' }}>{count} calls</span>
+              </div>
+              <div style={{ height: 5, background: '#f1f5f9', borderRadius: 50, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${(count / total) * 100}%`, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', borderRadius: 50 }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
