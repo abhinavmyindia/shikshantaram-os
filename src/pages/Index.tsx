@@ -1585,7 +1585,6 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
       {ncTab === 'browse' && (
         <div>
           <FilterBar search={search} onSearch={setSearch} accentColor="#7c3aed"
-            searchProps={{ 'data-niche-search': true } as any}
             filters={[
               { label: 'Growth', options: ['All', 'High', 'Medium', 'Low'], value: growth, onChange: setGrowth },
               { label: 'Competition', options: ['All', 'High', 'Medium', 'Low'], value: comp, onChange: setComp },
