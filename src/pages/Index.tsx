@@ -1365,28 +1365,33 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
       </div>
 
 
-      {/* Tab switcher — two-line style matching Product Navigator */}
+      {/* Tab switcher — compact pill style */}
       <div style={{
-        display:'grid', gridTemplateColumns:'1fr 1fr', gap:'4px',
-        background:'#f8fafc', borderRadius:'14px', padding:'4px',
-        marginBottom:'20px',
+        display:'flex',
+        background:'rgba(255,255,255,0.85)',
+        backdropFilter:'blur(12px)',
+        borderRadius:'50px',
+        padding:'5px',
+        border:'1px solid rgba(255,255,255,0.95)',
+        boxShadow:'0 2px 16px rgba(0,0,0,0.07)',
+        marginBottom:'24px',
+        width:'fit-content',
       }}>
         {([
-          { id:'ai_finder' as const, icon:'🤖', label:'AI Niche Finder', sub:'Personalised for you' },
-          { id:'browse' as const, icon:'📚', label:'Browse 594 Niches', sub:'Research-backed' },
+          { id:'ai_finder' as const, icon:'🤖', label:'AI Niche Finder' },
+          { id:'browse' as const, icon:'📚', label:'Browse 594 Niches' },
         ]).map(tab => (
           <button key={tab.id} onClick={() => setNcTab(tab.id)} style={{
-            padding:'10px 8px', borderRadius:'10px', border:'none', cursor:'pointer',
+            display:'flex', alignItems:'center', gap:'7px',
+            padding:'9px 20px', borderRadius:'50px', border:'none', cursor:'pointer',
+            fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'14px',
+            whiteSpace:'nowrap' as const, transition:'all 0.18s',
             background: ncTab===tab.id ? 'linear-gradient(135deg,#0284c7,#0891b2)' : 'transparent',
             color: ncTab===tab.id ? 'white' : '#64748b',
-            fontFamily:'DM Sans,sans-serif', fontWeight: ncTab===tab.id ? 800 : 600, fontSize:'13px',
-            display:'flex', flexDirection:'column' as const, alignItems:'center', gap:'2px',
             boxShadow: ncTab===tab.id ? '0 2px 12px rgba(2,132,199,0.3)' : 'none',
-            transition:'all 0.15s',
           }}>
-            <span style={{ fontSize:'16px' }}>{tab.icon}</span>
-            <span>{tab.label}</span>
-            <span style={{ fontSize:'10px', fontWeight:500, opacity: ncTab===tab.id ? 0.85 : 0.7 }}>{tab.sub}</span>
+            <span style={{ fontSize:'16px', lineHeight:1 }}>{tab.icon}</span>
+            {tab.label}
           </button>
         ))}
       </div>
