@@ -1374,8 +1374,8 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
         padding:'5px',
         border:'1px solid rgba(255,255,255,0.95)',
         boxShadow:'0 2px 16px rgba(0,0,0,0.07)',
-        marginBottom:'24px',
         width:'fit-content',
+        margin:'0 auto 24px',
       }}>
         {([
           { id:'ai_finder' as const, icon:'🤖', label:'AI Niche Finder' },
