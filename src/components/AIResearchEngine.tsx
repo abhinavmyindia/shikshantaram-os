@@ -529,7 +529,11 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   const credits = useCreditGate();
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
   const [loadingStartTime, setLoadingStartTime] = useState<number>(Date.now());
-  const [inputData, setInputData] = useState({ niche: '', country: '', productType: '' });
+  const [inputData, setInputData] = useState(() => {
+    const prefill = sessionStorage.getItem('prefillNiche');
+    if (prefill) { sessionStorage.removeItem('prefillNiche'); return { niche: prefill, country: '', productType: '' }; }
+    return { niche: '', country: '', productType: '' };
+  });
   const [productIdeas, setProductIdeas] = useState<ProductIdea[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductIdea | null>(null);
   const [researchReport, setResearchReport] = useState<ResearchReport | null>(null);
