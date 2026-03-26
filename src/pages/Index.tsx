@@ -1364,57 +1364,63 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
         <span style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)', borderRadius: 50, padding: '5px 14px', fontSize: 10, fontWeight: 700, color: '#7c3aed', letterSpacing: '0.06em', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const }}>✦ 594 Niches</span>
       </div>
 
-      {/* Restore banner */}
-      {ncRestoreBanner && ncRecentData && (
-        <div style={{
-          display:'flex', alignItems:'center', justifyContent:'space-between',
-          gap:'12px', flexWrap:'wrap' as const,
-          background:'rgba(2,132,199,0.06)', border:'1px solid rgba(2,132,199,0.2)',
-          borderRadius:'14px', padding:'12px 18px', marginBottom:'16px',
-        }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-            <span style={{ fontSize:'18px' }}>🕐</span>
-            <div>
-              <p style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'13px', color:'#0f172a', margin:0 }}>Continue your niche research?</p>
-              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#64748b', margin:0 }}>{ncRecentData.title}</p>
-            </div>
-          </div>
-          <div style={{ display:'flex', gap:'8px' }}>
-            <button onClick={() => setNcRestoreBanner(false)} style={{ padding:'7px 14px', borderRadius:'8px', border:'1.5px solid #e2e8f0', background:'transparent', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:600, fontSize:'12px', color:'#64748b' }}>Dismiss</button>
-            <button onClick={handleNcRestore} style={{ padding:'7px 16px', borderRadius:'8px', border:'none', background:'linear-gradient(135deg,#0284c7,#0891b2)', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px', color:'white' }}>↩ Restore</button>
-          </div>
-        </div>
-      )}
 
-      {/* Tab switcher */}
-      <div style={{ display:'flex', gap:'4px', background:'#f8fafc', borderRadius:'14px', padding:'4px', marginBottom:'24px' }}>
+      {/* Tab switcher — two-line style matching Product Navigator */}
+      <div style={{
+        display:'grid', gridTemplateColumns:'1fr 1fr', gap:'4px',
+        background:'#f8fafc', borderRadius:'14px', padding:'4px',
+        marginBottom:'20px',
+      }}>
         {([
-          { id: 'ai_finder' as const, label: '🤖 AI Niche Finder', sub: 'Personalised for you' },
-          { id: 'browse' as const, label: '📚 Browse 594 Niches', sub: 'Research-backed' },
+          { id:'ai_finder' as const, icon:'🤖', label:'AI Niche Finder', sub:'Personalised for you' },
+          { id:'browse' as const, icon:'📚', label:'Browse 594 Niches', sub:'Research-backed' },
         ]).map(tab => (
           <button key={tab.id} onClick={() => setNcTab(tab.id)} style={{
-            flex:1, padding:'10px 8px', borderRadius:'10px', border:'none', cursor:'pointer',
+            padding:'10px 8px', borderRadius:'10px', border:'none', cursor:'pointer',
             background: ncTab===tab.id ? 'linear-gradient(135deg,#0284c7,#0891b2)' : 'transparent',
             color: ncTab===tab.id ? 'white' : '#64748b',
             fontFamily:'DM Sans,sans-serif', fontWeight: ncTab===tab.id ? 800 : 600, fontSize:'13px',
             display:'flex', flexDirection:'column' as const, alignItems:'center', gap:'2px',
-            boxShadow: ncTab===tab.id ? '0 2px 12px rgba(2,132,199,0.25)' : 'none',
+            boxShadow: ncTab===tab.id ? '0 2px 12px rgba(2,132,199,0.3)' : 'none',
             transition:'all 0.15s',
           }}>
-            {tab.label}
-            <span style={{ fontSize:'10px', opacity:0.8, fontWeight:500 }}>{tab.sub}</span>
+            <span style={{ fontSize:'16px' }}>{tab.icon}</span>
+            <span>{tab.label}</span>
+            <span style={{ fontSize:'10px', fontWeight:500, opacity: ncTab===tab.id ? 0.85 : 0.7 }}>{tab.sub}</span>
           </button>
         ))}
       </div>
 
       {/* TAB 1: AI NICHE FINDER */}
       {ncTab === 'ai_finder' && (
-        <div style={{ maxWidth:'660px', margin:'0 auto' }}>
+        <div style={{ maxWidth:'680px', margin:'0 auto' }}>
+
+          {/* Restore banner — inside ai_finder tab */}
+          {ncRestoreBanner && ncRecentData && (
+            <div style={{
+              display:'flex', alignItems:'center', justifyContent:'space-between',
+              gap:'12px', flexWrap:'wrap' as const,
+              background:'rgba(2,132,199,0.06)', border:'1px solid rgba(2,132,199,0.2)',
+              borderRadius:'14px', padding:'12px 18px', marginBottom:'20px',
+            }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                <div style={{ width:'32px', height:'32px', borderRadius:'8px', background:'rgba(2,132,199,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'15px', flexShrink:0 }}>🕐</div>
+                <div>
+                  <p style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'13px', color:'#0f172a', margin:0 }}>Continue your niche research?</p>
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#64748b', margin:0 }}>{ncRecentData.title}</p>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:'8px', flexShrink:0 }}>
+                <button onClick={() => setNcRestoreBanner(false)} style={{ padding:'7px 14px', borderRadius:'8px', border:'1.5px solid #e2e8f0', background:'transparent', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:600, fontSize:'12px', color:'#64748b' }}>Dismiss</button>
+                <button onClick={handleNcRestore} style={{ padding:'7px 16px', borderRadius:'8px', border:'none', background:'linear-gradient(135deg,#0284c7,#0891b2)', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px', color:'white', display:'flex', alignItems:'center', gap:'5px' }}>↩ Restore</button>
+              </div>
+            </div>
+          )}
 
           {/* Results */}
           {ncResults.length > 0 && !ncLoading && (
             <>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'16px', flexWrap:'wrap' as const, gap:'10px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px', flexWrap:'wrap' as const, gap:'10px' }}>
                 <div>
                   <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'18px', color:'#0f172a', margin:'0 0 4px' }}>Your 5 Perfect Niches</h3>
                   <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:0 }}>Ranked by how well they match your background</p>
@@ -1507,72 +1513,103 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
             </>
           )}
 
-          {/* Form */}
+          {/* Form — unified single card */}
           {ncResults.length === 0 && !ncLoading && (
             <>
-              <div style={{ textAlign:'center' as const, marginBottom:'28px' }}>
-                <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(2,132,199,0.08)', border:'1px solid rgba(2,132,199,0.2)', borderRadius:'50px', padding:'5px 14px', marginBottom:'14px' }}>
-                  <span style={{ fontSize:'14px' }}>✦</span>
-                  <span style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'11px', color:'#0284c7', textTransform:'uppercase' as const, letterSpacing:'0.1em' }}>AI-Powered Niche Discovery</span>
+              <div style={{ textAlign:'center' as const, marginBottom:'28px', animation:'fadeUp 0.4s ease' }}>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(2,132,199,0.08)', border:'1px solid rgba(2,132,199,0.2)', borderRadius:'50px', padding:'5px 16px', marginBottom:'14px' }}>
+                  <span style={{ fontSize:'12px' }}>✦</span>
+                  <span style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'10px', color:'#0284c7', textTransform:'uppercase' as const, letterSpacing:'0.1em' }}>AI-Powered Niche Discovery</span>
                 </div>
-                <h2 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'22px', color:'#0f172a', margin:'0 0 8px', letterSpacing:'-0.02em' }}>Not sure which niche is right for you?</h2>
-                <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#64748b', margin:0, lineHeight:1.7 }}>Tell us about yourself and we'll recommend 5 perfect niches that only YOU could dominate</p>
+                <h2 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'clamp(22px,4vw,30px)', color:'#0f172a', letterSpacing:'-0.03em', margin:'0 0 10px', lineHeight:1.2 }}>Not sure which niche is right for you?</h2>
+                <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#64748b', lineHeight:1.7, maxWidth:'460px', margin:'0 auto' }}>Tell us about yourself and we'll recommend 5 perfect niches that only YOU could dominate</p>
               </div>
 
-              <div style={{ display:'flex', flexDirection:'column' as const, gap:'14px', marginBottom:'20px' }}>
-                {NC_QUESTIONS.map((q) => (
-                  <div key={q.label} style={{ background:'rgba(255,255,255,0.88)', backdropFilter:'blur(20px)', borderRadius:'16px', padding:'18px', border:'1px solid rgba(255,255,255,0.95)', boxShadow:'0 4px 16px rgba(0,0,0,0.05)' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' }}>
-                      <div style={{ width:'32px', height:'32px', borderRadius:'10px', background:'rgba(2,132,199,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', flexShrink:0 }}>{q.icon}</div>
-                      <div>
-                        <label style={{ fontFamily:'DM Sans,sans-serif', fontWeight:800, fontSize:'13px', color:'#0f172a', display:'block' }}>{q.label} <span style={{ color:'#94a3b8', fontWeight:400, fontSize:'11px' }}>(optional)</span></label>
-                        <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:0 }}>{q.hint}</p>
+              <div style={{ background:'rgba(255,255,255,0.9)', backdropFilter:'blur(20px)', borderRadius:'24px', padding:'32px', border:'1px solid rgba(255,255,255,0.95)', boxShadow:'0 8px 32px rgba(0,0,0,0.07)', animation:'fadeUp 0.4s ease 0.08s both' }}>
+
+                {/* Field 1: Background */}
+                {(() => {
+                  const chipAppend = (setter: (fn: (prev: string) => string) => void, text: string) => {
+                    setter((prev: string) => prev ? `${prev}, ${text}` : text);
+                  };
+                  const chipStyle = { background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'50px', padding:'4px 12px', fontFamily:'DM Sans,sans-serif', fontSize:'12px', fontWeight:600, color:'#64748b', cursor:'pointer', transition:'all 0.15s' };
+                  const chipHoverIn = (e: React.MouseEvent) => { const t = e.currentTarget as HTMLElement; t.style.background='rgba(2,132,199,0.06)'; t.style.borderColor='rgba(2,132,199,0.3)'; t.style.color='#0284c7'; };
+                  const chipHoverOut = (e: React.MouseEvent) => { const t = e.currentTarget as HTMLElement; t.style.background='#f8fafc'; t.style.borderColor='#e2e8f0'; t.style.color='#64748b'; };
+                  const fieldFocus = (e: React.FocusEvent<HTMLTextAreaElement>) => { e.target.style.borderColor='#0284c7'; e.target.style.background='white'; e.target.style.boxShadow='0 0 0 3px rgba(2,132,199,0.08)'; };
+                  const fieldBlur = (val: string) => (e: React.FocusEvent<HTMLTextAreaElement>) => { e.target.style.borderColor = val.length > 0 ? 'rgba(2,132,199,0.4)' : '#e2e8f0'; e.target.style.boxShadow='none'; };
+                  const fieldStyle = (val: string) => ({ width:'100%', padding:'13px 16px', borderRadius:'12px', border: val.length > 0 ? '1.5px solid rgba(2,132,199,0.4)' : '1.5px solid #e2e8f0', fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#0f172a', background: val.length >= 10 ? 'white' : '#f8fafc', outline:'none', resize:'vertical' as const, lineHeight:1.6, boxSizing:'border-box' as const, transition:'border-color 0.15s, background 0.15s, box-shadow 0.15s' });
+                  const validNote = (val: string) => val.length > 0 ? (
+                    <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'10px', color: val.length >= 10 ? '#059669' : '#94a3b8', marginTop:'4px', textAlign:'right' as const }}>{val.length >= 10 ? '✓ Great detail' : `${10 - val.length} more characters needed`}</p>
+                  ) : null;
+
+                  const FIELDS = [
+                    { num:'01', label:'Your Background', opt:'(optional)', hint:'e.g. 10 years as an HR manager, single parent, recovered from burnout', placeholder:'Work experience, education, life story — what have you been through?', value:ncBackground, setter:setNcBackground, chips:['👩‍💼 Corporate professional','👨‍🏫 Teacher / Trainer','🏥 Healthcare worker','🎨 Creative / Designer','💻 Tech professional','🏠 Stay-at-home parent'] },
+                    { num:'02', label:'Your Skills', opt:'(optional)', hint:'e.g. simplifying complex topics, writing, financial planning', placeholder:'What are you naturally good at? What do people ask your help for?', value:ncSkills, setter:setNcSkills, chips:['✍️ Writing & Content','🎤 Public Speaking','💰 Finance & Budgeting','📊 Data & Analytics','🎓 Teaching & Training','🤝 Coaching & Mentoring'] },
+                    { num:'03', label:'Your Passions', opt:'(optional)', hint:'What topics energise you? What could you talk about for hours?', placeholder:'Topics, hobbies, causes, or areas you genuinely love...', value:ncPassions, setter:setNcPassions, chips:['🧘 Health & Wellness','💸 Personal Finance','🌱 Sustainability','📚 Learning & Books','🎯 Entrepreneurship','🤝 Helping Others','🎨 Art & Creativity','🏃 Fitness & Sports'] },
+                    { num:'04', label:'Experience & Results', opt:'(optional)', hint:'Achievements, transformations, or clients you\'ve helped', placeholder:'e.g. Lost 20kg in 6 months, helped 50 colleagues get promoted, grew my Instagram to 10k...', value:ncExperience, setter:setNcExperience, chips:['📈 Grew a business','🎓 Certified professional','🏆 Award or recognition','👥 Managed a team','🔄 Career transition','💪 Personal transformation'] },
+                    { num:'05', label:'Your Goals', opt:'(optional)', hint:'Income, impact, freedom — what do you want from this?', placeholder:'e.g. I want Rs.1 lakh/month working 4 hours a day, helping women build financial confidence...', value:ncGoals, setter:setNcGoals, chips:['💰 Rs.1L/month income','⏰ Work 4 hrs/day','🌍 Build global audience','🇮🇳 Serve Indian market','📣 Establish authority','🕊️ Time & location freedom'] },
+                  ];
+
+                  return FIELDS.map((f, idx) => (
+                    <div key={f.num}>
+                      {idx > 0 && <div style={{ height:'1px', background:'#f1f5f9', margin:'22px 0' }} />}
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px', flexWrap:'wrap' as const, gap:'4px' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                          <span style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'11px', color:'#0284c7' }}>{f.num}</span>
+                          <span style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'15px', color:'#0f172a' }}>{f.label}</span>
+                          <span style={{ fontFamily:'DM Sans,sans-serif', fontWeight:500, fontSize:'12px', color:'#94a3b8' }}>{f.opt}</span>
+                        </div>
+                        <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11.5px', color:'#94a3b8' }}>{f.hint}</span>
                       </div>
+                      <textarea value={f.value} onChange={e => f.setter(e.target.value)} placeholder={f.placeholder} rows={2} style={fieldStyle(f.value)} onFocus={fieldFocus} onBlur={fieldBlur(f.value)} />
+                      <div style={{ display:'flex', flexWrap:'wrap' as const, gap:'6px', marginTop:'8px' }}>
+                        {f.chips.map(chip => (
+                          <button key={chip} onClick={() => chipAppend(f.setter, chip.split(' ').slice(1).join(' '))} style={chipStyle} onMouseEnter={chipHoverIn} onMouseLeave={chipHoverOut}>{chip}</button>
+                        ))}
+                      </div>
+                      {validNote(f.value)}
                     </div>
-                    <textarea value={q.value} onChange={e => q.setter(e.target.value)} placeholder={q.placeholder} rows={2}
-                      style={{ width:'100%', padding:'11px 14px', borderRadius:'12px', border:'1.5px solid #e2e8f0', fontFamily:'DM Sans,sans-serif', fontSize:'13.5px', color:'#0f172a', outline:'none', boxSizing:'border-box' as const, resize:'vertical' as const, lineHeight:1.6, transition:'border-color 0.15s', background: q.value.length >= 10 ? 'rgba(2,132,199,0.02)' : 'white' }}
-                      onFocus={e => e.target.style.borderColor='#0284c7'}
-                      onBlur={e => e.target.style.borderColor = q.value.length >= 10 ? 'rgba(2,132,199,0.4)' : '#e2e8f0'}
-                    />
-                    {q.value.length > 0 && (
-                      <div style={{ display:'flex', justifyContent:'space-between', marginTop:'4px' }}>
-                        <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'10px', color: q.value.length >= 10 ? '#059669' : '#94a3b8' }}>{q.value.length >= 10 ? '✓ Great!' : `${10 - q.value.length} more characters needed`}</span>
-                        <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'10px', color:'#94a3b8' }}>{q.value.length} chars</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ));
+                })()}
+
+                {/* Generate button with separator */}
+                {(() => {
+                  const fc = [ncBackground, ncSkills, ncPassions, ncExperience, ncGoals].filter(f => f.trim().length >= 10).length;
+                  const ready = fc >= 1;
+                  return (
+                    <div style={{ marginTop:'28px', paddingTop:'24px', borderTop:'1px solid #f1f5f9' }}>
+                      {ncError && (
+                        <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'12px', padding:'12px 16px', marginBottom:'14px', fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#dc2626', fontWeight:600 }}>❌ {ncError}</div>
+                      )}
+                      <button onClick={handleNicheFinder} disabled={!ready} style={{
+                        width:'100%', padding:'15px', borderRadius:'14px', border:'none',
+                        background: ready ? 'linear-gradient(135deg,#0284c7,#0891b2)' : 'rgba(2,132,199,0.25)',
+                        color:'white', cursor: ready ? 'pointer' : 'not-allowed',
+                        fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'16px',
+                        display:'flex', alignItems:'center', justifyContent:'center', gap:'10px',
+                        boxShadow: ready ? '0 4px 20px rgba(2,132,199,0.35)' : 'none', transition:'all 0.2s',
+                      }}>✦ Discover My Perfect Niches</button>
+                      <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', textAlign:'center' as const, marginTop:'10px' }}>
+                        {fc === 0 ? 'Fill in at least one field with 10+ characters to continue' : `${fc} field${fc !== 1 ? 's' : ''} filled · Uses 10 credits · ~15 seconds`}
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
-
-              {ncError && (
-                <div style={{ background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:'12px', padding:'12px 16px', marginBottom:'16px', fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#dc2626', fontWeight:600 }}>❌ {ncError}</div>
-              )}
-
-              <button onClick={handleNicheFinder} disabled={!isReady} style={{
-                width:'100%', padding:'16px', borderRadius:'14px', border:'none',
-                background: isReady ? 'linear-gradient(135deg,#0284c7,#0891b2)' : 'rgba(2,132,199,0.3)',
-                color:'white', cursor: isReady ? 'pointer' : 'not-allowed',
-                fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'16px',
-                display:'flex', alignItems:'center', justifyContent:'center', gap:'10px',
-                boxShadow: isReady ? '0 4px 20px rgba(2,132,199,0.35)' : 'none', transition:'all 0.2s',
-              }}>✦ Discover My Perfect Niches</button>
-              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', textAlign:'center' as const, marginTop:'10px' }}>
-                {filledCount >= 1 ? 'Ready!' : `Fill in ${1 - filledCount} more field`} · Uses 10 credits · Powered by Claude Sonnet · ~15 seconds
-              </p>
             </>
           )}
 
           {/* Loading */}
           {ncLoading && (
-            <div style={{ textAlign:'center' as const, padding:'48px 24px' }}>
-              <div style={{ width:'64px', height:'64px', borderRadius:'18px', background:'linear-gradient(135deg,#0284c7,#0891b2)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:'28px' }}>🎯</div>
-              <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'18px', color:'#0f172a', margin:'0 0 8px' }}>Analysing your background...</h3>
-              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#64748b', margin:'0 0 24px' }}>Finding niches that fit your unique story and strengths</p>
-              <div style={{ display:'flex', flexDirection:'column' as const, gap:'8px', maxWidth:'340px', margin:'0 auto', textAlign:'left' as const }}>
-                {['Reading your background and experiences', 'Matching your skills to market demand', 'Identifying your unique positioning angle', 'Finding niches with low competition and high fit', 'Building your personalised recommendations'].map(step => (
+            <div style={{ textAlign:'center' as const, padding:'60px 24px', animation:'fadeUp 0.3s ease' }}>
+              <div style={{ width:'64px', height:'64px', borderRadius:'18px', background:'linear-gradient(135deg,#0284c7,#0891b2)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', fontSize:'28px', boxShadow:'0 8px 24px rgba(2,132,199,0.3)' }}>🎯</div>
+              <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'20px', color:'#0f172a', margin:'0 0 8px' }}>Analysing your background...</h3>
+              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#64748b', margin:'0 0 28px' }}>Finding niches that fit your unique story and strengths</p>
+              <div style={{ display:'flex', flexDirection:'column' as const, gap:'10px', maxWidth:'360px', margin:'0 auto', textAlign:'left' as const }}>
+                {['Reading your background and experiences','Matching your skills to market demand in India','Identifying your unique positioning angle','Scoring niches by personal fit','Building your personalised recommendations'].map(step => (
                   <div key={step} style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                    <div style={{ width:'14px', height:'14px', borderRadius:'50%', border:'2px solid #0284c7', borderTopColor:'transparent', animation:'spinSlow 0.8s linear infinite', flexShrink:0 }} />
-                    <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#64748b' }}>{step}</span>
+                    <div style={{ width:'16px', height:'16px', borderRadius:'50%', border:'2px solid #0284c7', borderTopColor:'transparent', animation:'spin 0.8s linear infinite', flexShrink:0 }} />
+                    <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b' }}>{step}</span>
                   </div>
                 ))}
               </div>
