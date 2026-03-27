@@ -136,29 +136,40 @@ Return ONLY a JSON array of exactly 5 objects:
       }
     }
 
-    // ─── Platform path (Anthropic) ───
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 5000,
-        temperature: 0.9,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-    });
+    // ─── Platform path (Anthropic) with retry ───
+    let response: Response | null = null;
+    let lastErr = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 5000,
+          temperature: 0.9,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      });
 
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Anthropic API error: ${err}`);
+      if (response.ok) break;
+
+      lastErr = await response.text();
+      const isRetryable = response.status === 429 || response.status === 529
+        || response.status === 500 || response.status === 503
+        || lastErr.includes('overloaded');
+      if (!isRetryable || attempt === 2) {
+        throw new Error(`Anthropic API error: ${lastErr}`);
+      }
+      console.warn(`Anthropic attempt ${attempt + 1} failed (${response.status}), retrying...`);
+      await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
     }
 
-    const data = await response.json();
+    const data = await response!.json();
     const raw = data.content[0].text.replace(/```json|```/g, '').trim();
     const niches = JSON.parse(raw);
 
