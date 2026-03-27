@@ -120,7 +120,7 @@ const TRAFFIC_SOURCES = [
   { id: 'google_ads', icon: '🔍', name: 'Google Ads', description: 'Search & display advertising', color: '#ea4335', lightBg: 'rgba(234,67,53,0.06)', lightBorder: 'rgba(234,67,53,0.2)' },
   { id: 'linkedin_ads', icon: '💼', name: 'LinkedIn Ads', description: 'B2B & professional targeting', color: '#0a66c2', lightBg: 'rgba(10,102,194,0.06)', lightBorder: 'rgba(10,102,194,0.2)' },
   { id: 'youtube', icon: '📺', name: 'YouTube', description: 'Video content & pre-roll ads', color: '#ff0000', lightBg: 'rgba(255,0,0,0.05)', lightBorder: 'rgba(255,0,0,0.15)' },
-  { id: 'organic_social', icon: '🌱', name: 'Organic Social', description: 'Free posts, reels & stories', color: '#059669', lightBg: 'rgba(5,150,105,0.06)', lightBorder: 'rgba(5,150,105,0.2)' },
+  { id: 'organic_social', icon: '🌱', name: 'Organic Social', description: 'Free posts, reels & stories', color: '#0d7a5f', lightBg: 'rgba(13,122,95,0.06)', lightBorder: 'rgba(13,122,95,0.2)' },
   { id: 'email_list', icon: '📧', name: 'Email List', description: 'Existing subscribers & nurture', color: '#7c3aed', lightBg: 'rgba(124,58,237,0.06)', lightBorder: 'rgba(124,58,237,0.2)' },
   { id: 'google_seo', icon: '🔎', name: 'Google SEO', description: 'Organic search traffic', color: '#0891b2', lightBg: 'rgba(8,145,178,0.06)', lightBorder: 'rgba(8,145,178,0.2)' },
   { id: 'referrals', icon: '🤝', name: 'Referrals', description: 'Word of mouth & partnerships', color: '#d97706', lightBg: 'rgba(217,119,6,0.06)', lightBorder: 'rgba(217,119,6,0.2)' },
@@ -190,7 +190,7 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
               <span style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: isCompleted ? '#0d7a5f' : isActive ? '#06b6d4' : '#94a3b8' })}>{label}</span>
             </div>
             {i < steps.length - 1 && (
-              <div style={s({ flex: 1, height: 3, marginLeft: 8, marginRight: 8, marginBottom: 18, background: isCompleted ? '#0d7a5f' : isActive ? 'linear-gradient(90deg,#059669,#f1f5f9)' : '#f1f5f9' })} />
+              <div style={s({ flex: 1, height: 3, marginLeft: 8, marginRight: 8, marginBottom: 18, background: isCompleted ? '#0d7a5f' : isActive ? 'linear-gradient(90deg,#0d7a5f,#f1f5f9)' : '#f1f5f9' })} />
             )}
           </div>
         );
@@ -601,7 +601,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
               {/* Generate Button */}
               <style>{`@keyframes ctaPulse { 0%, 100% { box-shadow: 0 4px 20px rgba(6,182,212,0.3); } 50% { box-shadow: 0 4px 32px rgba(6,182,212,0.55), 0 0 0 4px rgba(6,182,212,0.1); } }`}</style>
               <div style={s({ marginTop: 28, borderTop: '1px solid #f1f5f9', paddingTop: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
-                <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: canGenerate ? '#059669' : '#64748b', textAlign: 'center', transition: 'all 0.3s' })}>
+                <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: canGenerate ? '#0d7a5f' : '#64748b', textAlign: 'center', transition: 'all 0.3s' })}>
                   {getValidationMessage()}
                 </span>
                 <button onClick={generateFunnel} disabled={!canGenerate}
@@ -628,7 +628,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
           <div style={s({ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 340, margin: '28px auto 0' })}>
             {loadingTexts.map((t, i) => (
               <div key={i} style={s({ fontFamily: 'DM Sans', fontSize: 13, color: i <= loadingTextIdx ? '#0f172a' : '#cbd5e1', fontWeight: i === loadingTextIdx ? 700 : 400, transition: 'all 0.3s', display: 'flex', gap: 8, alignItems: 'center' })}>
-                <span style={s({ width: 18, height: 18, borderRadius: '50%', background: i < loadingTextIdx ? '#dcfce7' : i === loadingTextIdx ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i < loadingTextIdx ? '#059669' : 'white', flexShrink: 0 })}>
+                <span style={s({ width: 18, height: 18, borderRadius: '50%', background: i < loadingTextIdx ? '#e6f4ed' : i === loadingTextIdx ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i < loadingTextIdx ? '#0d7a5f' : 'white', flexShrink: 0 })}>
                   {i < loadingTextIdx ? '✓' : i === loadingTextIdx ? '⟳' : ''}
                 </span>
                 {t}
@@ -870,7 +870,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
             <h1 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 26, color: '#0f172a', letterSpacing: '-0.02em', marginTop: 4 })}>Funnel Builder</h1>
             <p style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', marginTop: 3 })}>Design your complete sales system — from first touch to final sale.</p>
             {credits.lastCallByok && credits.lastCallProvider && (
-              <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#059669', marginTop: 6 })}>
+              <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(13,122,95,0.08)', border: '1px solid rgba(13,122,95,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#0d7a5f', marginTop: 6 })}>
                 🔑 Generated with your {credits.lastCallProvider === 'anthropic' ? 'Claude' : credits.lastCallProvider === 'openai' ? 'GPT-4o' : 'Gemini'} key · No credits used
               </div>
             )}
@@ -912,7 +912,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
               <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.65, marginBottom: 14 })}>{funnelData.funnelTagline}</p>
               <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
                 <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(6,182,212,0.1)', color: '#0891b2', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>🎯 {funnelData.estimatedConversionRate}</span>
-                <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(16,185,129,0.1)', color: '#059669', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>⏱ {funnelData.estimatedTimeToLaunch}</span>
+                <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(13,122,95,0.1)', color: '#0d7a5f', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>⏱ {funnelData.estimatedTimeToLaunch}</span>
                 <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.1)', color: '#b45309', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>💰 {funnelData.estimatedMonthlyRevenue}/mo</span>
               </div>
             </div>
@@ -977,7 +977,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
                   <h3 style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 })}>⚡ Quick Wins</h3>
                   {funnelData.quickWins?.map((w, i) => (
                     <div key={i} style={s({ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' })}>
-                      <span style={s({ width: 18, height: 18, borderRadius: '50%', background: '#dcfce7', color: '#059669', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>✓</span>
+                      <span style={s({ width: 18, height: 18, borderRadius: '50%', background: '#e6f4ed', color: '#0d7a5f', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>✓</span>
                       <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#334155', lineHeight: 1.6 })}>{w}</span>
                     </div>
                   ))}
@@ -1075,7 +1075,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
                 {stepCopy[selStep.stepId] ? (
                   <div>
                     <div style={s({ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 })}>
-                      <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#059669' })}>✓ Copy Generated</span>
+                      <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#0d7a5f' })}>✓ Copy Generated</span>
                       <span onClick={() => generateStepCopy(selStep)} style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#06b6d4', cursor: 'pointer' })}>🔄 Regenerate</span>
                     </div>
                     {/* Preview */}
