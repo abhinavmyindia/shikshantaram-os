@@ -129,7 +129,7 @@ const TRAFFIC_SOURCES = [
 const GOAL_OPTIONS = [
   { label: '💰 Maximize Sales', value: 'Maximize Sales', accent: '#f59e0b' },
   { label: '📧 Build Email List', value: 'Build Email List', accent: '#7c3aed' },
-  { label: '🤝 Build Relationships', value: 'Build Relationships', accent: '#22c55e' },
+  { label: '🤝 Build Relationships', value: 'Build Relationships', accent: '#15803d' },
   { label: '🚀 Launch Fast', value: 'Launch Fast', accent: '#06b6d4' },
 ];
 
@@ -146,6 +146,13 @@ const STEP_TYPES_FOR_ADD = [
 
 /* ───────── Helpers ───────── */
 const s = (styles: CSSProperties): CSSProperties => styles;
+
+/** Remap low-visibility greens to deeper, accessible alternatives */
+const LOW_VIS_GREENS: Record<string, string> = {
+  '#10b981': '#0d7a5f', '#059669': '#0d7a5f', '#22c55e': '#15803d',
+  '#34d399': '#0d7a5f', '#6ee7b7': '#15803d', '#4ade80': '#15803d',
+};
+const safeAccent = (c: string): string => LOW_VIS_GREENS[c?.toLowerCase()] || c;
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
