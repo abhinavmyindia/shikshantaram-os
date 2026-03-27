@@ -1,3 +1,6 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolveAIKey, callWithBYOK, logByokUsage } from '../_shared/byok.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -17,6 +20,17 @@ Deno.serve(async (req) => {
   const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!;
 
   try {
+    // Auth
+    const authHeader = req.headers.get('Authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    const anonClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!
+    );
+    const { data: { user } } = await anonClient.auth.getUser(token);
+    const userId = user?.id || '';
+    const userEmail = user?.email || '';
+
     const {
       background,
       skills,
@@ -43,6 +57,8 @@ Deno.serve(async (req) => {
       buildField('Experience & Achievements', experience),
       buildField('Goals & Ambitions', goals),
     ].filter(Boolean).join('\n\n');
+
+    const systemPrompt = pickOne(PERSONAS);
 
     const prompt = `A person wants to find their perfect niche to build a digital product or coaching business. Here is everything they've shared about themselves:
 
@@ -77,6 +93,50 @@ Return ONLY a JSON array of exactly 5 objects:
   }
 ]`;
 
+    // ─── BYOK routing ───
+    let byokUsed = false;
+    let byokProvider = '';
+
+    if (userId) {
+      try {
+        const resolved = await resolveAIKey(userId);
+        if (resolved.useByok) {
+          byokUsed = true;
+          byokProvider = resolved.provider;
+          const result = await callWithBYOK({
+            provider: resolved.provider as any,
+            apiKey: resolved.apiKey,
+            model: resolved.model,
+            system: systemPrompt,
+            userMessage: prompt,
+            maxTokens: 5000,
+          });
+
+          await logByokUsage(
+            userId, userEmail, resolved.provider, resolved.model,
+            'niche_clarity', 'find_niche',
+            result.inputTokens, result.outputTokens, true
+          );
+
+          const raw = result.text.replace(/```json|```/g, '').trim();
+          const niches = JSON.parse(raw);
+
+          return new Response(JSON.stringify({
+            niches,
+            usage: { input_tokens: result.inputTokens, output_tokens: result.outputTokens },
+            byok: true,
+            provider: resolved.provider,
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (byokErr) {
+        console.error('BYOK fallback to platform:', byokErr);
+        // Fall through to platform key
+      }
+    }
+
+    // ─── Platform path (Anthropic) ───
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -88,7 +148,7 @@ Return ONLY a JSON array of exactly 5 objects:
         model: 'claude-sonnet-4-20250514',
         max_tokens: 5000,
         temperature: 0.9,
-        system: pickOne(PERSONAS),
+        system: systemPrompt,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -102,7 +162,27 @@ Return ONLY a JSON array of exactly 5 objects:
     const raw = data.content[0].text.replace(/```json|```/g, '').trim();
     const niches = JSON.parse(raw);
 
-    return new Response(JSON.stringify({ niches, usage: data.usage }), {
+    // Log platform usage
+    if (userId) {
+      try {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL')!,
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+          { auth: { persistSession: false } }
+        );
+        await supabase.from('ai_usage_logs').insert({
+          user_id: userId, user_email: userEmail,
+          module: 'niche_clarity', call_type: 'find_niche',
+          model: 'claude-sonnet-4-20250514',
+          input_tokens: data.usage?.input_tokens || 0,
+          output_tokens: data.usage?.output_tokens || 0,
+          total_tokens: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
+          estimated_cost_usd: ((data.usage?.input_tokens || 0) * 0.003 + (data.usage?.output_tokens || 0) * 0.015) / 1000,
+        });
+      } catch (_) { /* logging failure should never block */ }
+    }
+
+    return new Response(JSON.stringify({ niches, usage: data.usage, byok: false }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
