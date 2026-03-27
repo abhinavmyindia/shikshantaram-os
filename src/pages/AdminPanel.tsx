@@ -867,7 +867,7 @@ function ByokStatsSection() {
       const byokUsers = new Set((byokLogs || []).map((l: any) => l.user_id)).size;
       const byProvider: Record<string, number> = {};
       (byokLogs || []).forEach((l: any) => { byProvider[l.provider] = (byProvider[l.provider] || 0) + 1; });
-      const { count: activeKeys } = await supabase.from('user_byok_keys').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('is_valid', true);
+      const { count: activeKeys } = await supabase.from('user_byok_keys_safe').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('is_valid', true);
       setByokStats({ byokLogs: byokLogs || [], byokUsers, byProvider, activeKeys: activeKeys || 0 });
       setLoading(false);
     };
@@ -1172,7 +1172,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
 
   useEffect(() => {
-    supabase.from('user_byok_keys').select('user_id, provider').eq('is_active', true).eq('is_valid', true)
+    supabase.from('user_byok_keys_safe').select('user_id, provider').eq('is_active', true).eq('is_valid', true)
       .then(({ data }) => setByokKeys(data || []));
   }, [users]);
 
