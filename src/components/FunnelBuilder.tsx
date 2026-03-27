@@ -120,7 +120,7 @@ const TRAFFIC_SOURCES = [
   { id: 'google_ads', icon: '🔍', name: 'Google Ads', description: 'Search & display advertising', color: '#ea4335', lightBg: 'rgba(234,67,53,0.06)', lightBorder: 'rgba(234,67,53,0.2)' },
   { id: 'linkedin_ads', icon: '💼', name: 'LinkedIn Ads', description: 'B2B & professional targeting', color: '#0a66c2', lightBg: 'rgba(10,102,194,0.06)', lightBorder: 'rgba(10,102,194,0.2)' },
   { id: 'youtube', icon: '📺', name: 'YouTube', description: 'Video content & pre-roll ads', color: '#ff0000', lightBg: 'rgba(255,0,0,0.05)', lightBorder: 'rgba(255,0,0,0.15)' },
-  { id: 'organic_social', icon: '🌱', name: 'Organic Social', description: 'Free posts, reels & stories', color: '#059669', lightBg: 'rgba(5,150,105,0.06)', lightBorder: 'rgba(5,150,105,0.2)' },
+  { id: 'organic_social', icon: '🌱', name: 'Organic Social', description: 'Free posts, reels & stories', color: '#0d7a5f', lightBg: 'rgba(13,122,95,0.06)', lightBorder: 'rgba(13,122,95,0.2)' },
   { id: 'email_list', icon: '📧', name: 'Email List', description: 'Existing subscribers & nurture', color: '#7c3aed', lightBg: 'rgba(124,58,237,0.06)', lightBorder: 'rgba(124,58,237,0.2)' },
   { id: 'google_seo', icon: '🔎', name: 'Google SEO', description: 'Organic search traffic', color: '#0891b2', lightBg: 'rgba(8,145,178,0.06)', lightBorder: 'rgba(8,145,178,0.2)' },
   { id: 'referrals', icon: '🤝', name: 'Referrals', description: 'Word of mouth & partnerships', color: '#d97706', lightBg: 'rgba(217,119,6,0.06)', lightBorder: 'rgba(217,119,6,0.2)' },
@@ -129,7 +129,7 @@ const TRAFFIC_SOURCES = [
 const GOAL_OPTIONS = [
   { label: '💰 Maximize Sales', value: 'Maximize Sales', accent: '#f59e0b' },
   { label: '📧 Build Email List', value: 'Build Email List', accent: '#7c3aed' },
-  { label: '🤝 Build Relationships', value: 'Build Relationships', accent: '#22c55e' },
+  { label: '🤝 Build Relationships', value: 'Build Relationships', accent: '#15803d' },
   { label: '🚀 Launch Fast', value: 'Launch Fast', accent: '#06b6d4' },
 ];
 
@@ -147,6 +147,13 @@ const STEP_TYPES_FOR_ADD = [
 /* ───────── Helpers ───────── */
 const s = (styles: CSSProperties): CSSProperties => styles;
 
+/** Remap low-visibility greens to deeper, accessible alternatives */
+const LOW_VIS_GREENS: Record<string, string> = {
+  '#10b981': '#0d7a5f', '#059669': '#0d7a5f', '#22c55e': '#15803d',
+  '#34d399': '#0d7a5f', '#6ee7b7': '#15803d', '#4ade80': '#15803d',
+};
+const safeAccent = (c: string): string => LOW_VIS_GREENS[c?.toLowerCase()] || c;
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -155,7 +162,7 @@ function CopyButton({ text }: { text: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <button onClick={copy} style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: copied ? '#059669' : '#06b6d4', background: copied ? '#dcfce7' : 'rgba(6,182,212,0.08)', border: `1px solid ${copied ? '#bbf7d0' : 'rgba(6,182,212,0.2)'}`, borderRadius: 8, padding: '5px 12px', cursor: 'pointer', transition: 'all 0.15s' })}>
+    <button onClick={copy} style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: copied ? '#0d7a5f' : '#06b6d4', background: copied ? '#e6f4ed' : 'rgba(6,182,212,0.08)', border: `1px solid ${copied ? '#a7d7c5' : 'rgba(6,182,212,0.2)'}`, borderRadius: 8, padding: '5px 12px', cursor: 'pointer', transition: 'all 0.15s' })}>
       {copied ? '✓ Copied!' : '📋 Copy'}
     </button>
   );
@@ -175,15 +182,15 @@ function StepProgressBar({ currentStep }: { currentStep: number }) {
               <div style={s({
                 width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: 'Sora', fontWeight: 900, fontSize: 15, color: 'white',
-                background: isCompleted ? '#dcfce7' : isActive ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : '#f1f5f9',
-                ...(isCompleted ? { color: '#059669' } : isActive ? { boxShadow: '0 0 0 5px rgba(6,182,212,0.2)' } : { color: '#94a3b8' }),
+                background: isCompleted ? '#e6f4ed' : isActive ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : '#f1f5f9',
+                ...(isCompleted ? { color: '#0d7a5f' } : isActive ? { boxShadow: '0 0 0 5px rgba(6,182,212,0.2)' } : { color: '#94a3b8' }),
               })}>
                 {isCompleted ? '✓' : i + 1}
               </div>
-              <span style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: isCompleted ? '#059669' : isActive ? '#06b6d4' : '#94a3b8' })}>{label}</span>
+              <span style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: isCompleted ? '#0d7a5f' : isActive ? '#06b6d4' : '#94a3b8' })}>{label}</span>
             </div>
             {i < steps.length - 1 && (
-              <div style={s({ flex: 1, height: 3, marginLeft: 8, marginRight: 8, marginBottom: 18, background: isCompleted ? '#059669' : isActive ? 'linear-gradient(90deg,#059669,#f1f5f9)' : '#f1f5f9' })} />
+              <div style={s({ flex: 1, height: 3, marginLeft: 8, marginRight: 8, marginBottom: 18, background: isCompleted ? '#0d7a5f' : isActive ? 'linear-gradient(90deg,#0d7a5f,#f1f5f9)' : '#f1f5f9' })} />
             )}
           </div>
         );
@@ -594,7 +601,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
               {/* Generate Button */}
               <style>{`@keyframes ctaPulse { 0%, 100% { box-shadow: 0 4px 20px rgba(6,182,212,0.3); } 50% { box-shadow: 0 4px 32px rgba(6,182,212,0.55), 0 0 0 4px rgba(6,182,212,0.1); } }`}</style>
               <div style={s({ marginTop: 28, borderTop: '1px solid #f1f5f9', paddingTop: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 })}>
-                <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: canGenerate ? '#059669' : '#64748b', textAlign: 'center', transition: 'all 0.3s' })}>
+                <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 600, color: canGenerate ? '#0d7a5f' : '#64748b', textAlign: 'center', transition: 'all 0.3s' })}>
                   {getValidationMessage()}
                 </span>
                 <button onClick={generateFunnel} disabled={!canGenerate}
@@ -621,7 +628,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
           <div style={s({ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 340, margin: '28px auto 0' })}>
             {loadingTexts.map((t, i) => (
               <div key={i} style={s({ fontFamily: 'DM Sans', fontSize: 13, color: i <= loadingTextIdx ? '#0f172a' : '#cbd5e1', fontWeight: i === loadingTextIdx ? 700 : 400, transition: 'all 0.3s', display: 'flex', gap: 8, alignItems: 'center' })}>
-                <span style={s({ width: 18, height: 18, borderRadius: '50%', background: i < loadingTextIdx ? '#dcfce7' : i === loadingTextIdx ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i < loadingTextIdx ? '#059669' : 'white', flexShrink: 0 })}>
+                <span style={s({ width: 18, height: 18, borderRadius: '50%', background: i < loadingTextIdx ? '#e6f4ed' : i === loadingTextIdx ? 'linear-gradient(135deg,#06b6d4,#3b82f6)' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: i < loadingTextIdx ? '#0d7a5f' : 'white', flexShrink: 0 })}>
                   {i < loadingTextIdx ? '✓' : i === loadingTextIdx ? '⟳' : ''}
                 </span>
                 {t}
@@ -653,7 +660,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
         <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 })}>
           {/* Headlines */}
           <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.95)' })}>
-            <div style={s({ height: 6, background: copyViewStep.accentColor })} />
+            <div style={s({ height: 6, background: safeAccent(copyViewStep.accentColor) })} />
             <div style={s({ padding: 20 })}>
               <h3 style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 20, color: '#0f172a', marginBottom: 8 })}>{copy.headline}</h3>
               <p style={s({ fontFamily: 'DM Sans', fontSize: 15, color: '#64748b', marginBottom: 12 })}>{copy.subheadline}</p>
@@ -863,7 +870,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
             <h1 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 26, color: '#0f172a', letterSpacing: '-0.02em', marginTop: 4 })}>Funnel Builder</h1>
             <p style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', marginTop: 3 })}>Design your complete sales system — from first touch to final sale.</p>
             {credits.lastCallByok && credits.lastCallProvider && (
-              <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#059669', marginTop: 6 })}>
+              <div style={s({ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(13,122,95,0.08)', border: '1px solid rgba(13,122,95,0.2)', borderRadius: 50, padding: '4px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#0d7a5f', marginTop: 6 })}>
                 🔑 Generated with your {credits.lastCallProvider === 'anthropic' ? 'Claude' : credits.lastCallProvider === 'openai' ? 'GPT-4o' : 'Gemini'} key · No credits used
               </div>
             )}
@@ -905,7 +912,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
               <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.65, marginBottom: 14 })}>{funnelData.funnelTagline}</p>
               <div style={s({ display: 'flex', gap: 8, flexWrap: 'wrap' })}>
                 <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(6,182,212,0.1)', color: '#0891b2', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>🎯 {funnelData.estimatedConversionRate}</span>
-                <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(16,185,129,0.1)', color: '#059669', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>⏱ {funnelData.estimatedTimeToLaunch}</span>
+                <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(13,122,95,0.1)', color: '#0d7a5f', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>⏱ {funnelData.estimatedTimeToLaunch}</span>
                 <span style={s({ fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.1)', color: '#b45309', padding: '6px 14px', borderRadius: 50, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' })}>💰 {funnelData.estimatedMonthlyRevenue}/mo</span>
               </div>
             </div>
@@ -917,32 +924,32 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
                   style={s({
                     width: '100%', borderRadius: 14, padding: '20px 20px 18px 20px', cursor: 'pointer',
                     background: selectedStep === step.stepId ? 'white' : 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)',
-                    border: `2px solid ${selectedStep === step.stepId ? step.accentColor : '#e2e8f0'}`,
-                    boxShadow: selectedStep === step.stepId ? `0 4px 20px ${step.accentColor}25` : 'none',
+                    border: `2px solid ${selectedStep === step.stepId ? safeAccent(step.accentColor) : '#e2e8f0'}`,
+                    boxShadow: selectedStep === step.stepId ? `0 4px 20px ${safeAccent(step.accentColor)}25` : 'none',
                     transition: 'all 0.2s',
                   })}
-                  onMouseEnter={e => { if (selectedStep !== step.stepId) e.currentTarget.style.borderColor = `${step.accentColor}50`; }}
+                  onMouseEnter={e => { if (selectedStep !== step.stepId) e.currentTarget.style.borderColor = `${safeAccent(step.accentColor)}50`; }}
                   onMouseLeave={e => { if (selectedStep !== step.stepId) e.currentTarget.style.borderColor = '#e2e8f0'; }}>
                   <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 })}>
                     <div style={s({ display: 'flex', gap: 12, alignItems: 'center' })}>
-                      <div style={s({ width: 36, height: 36, borderRadius: '50%', background: step.accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 900, fontSize: 14, color: 'white', flexShrink: 0, boxShadow: `0 3px 10px ${step.accentColor}50` })}>{step.stepNumber}</div>
+                      <div style={s({ width: 36, height: 36, borderRadius: '50%', background: safeAccent(step.accentColor), display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 900, fontSize: 14, color: 'white', flexShrink: 0, boxShadow: `0 3px 10px ${safeAccent(step.accentColor)}50` })}>{step.stepNumber}</div>
                       <span style={s({ fontSize: 16 })}>{step.stepIcon}</span>
                       <span style={s({ fontFamily: 'Sora', fontWeight: 700, fontSize: 14.5, color: '#0f172a' })}>{step.stepName}</span>
                     </div>
                     <div style={s({ display: 'flex', gap: 6, alignItems: 'center' })}>
                       {step.emailTriggered && <span style={s({ width: 20, height: 20, borderRadius: '50%', background: '#ede9fe', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' })}>📧</span>}
-                      <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: step.accentColor, background: `${step.accentColor}12`, padding: '2px 7px', borderRadius: 50 })}>{step.conversionBenchmark}</span>
+                      <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: safeAccent(step.accentColor), background: `${safeAccent(step.accentColor)}12`, padding: '2px 7px', borderRadius: 50 })}>{step.conversionBenchmark}</span>
                     </div>
                   </div>
                   <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.65, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{step.goal}</p>
                   <div style={s({ paddingTop: 10, borderTop: '1px solid rgba(0,0,0,0.06)' })}>
-                    <p style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 800, color: step.accentColor })}>CTA: {step.primaryCTA}</p>
+                    <p style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 800, color: safeAccent(step.accentColor) })}>CTA: {step.primaryCTA}</p>
                   </div>
                 </div>
                 {/* Connecting arrow */}
                 {i < funnelData.steps.length - 1 && (
                   <div style={s({ display: 'flex', flexDirection: 'column', alignItems: 'center', height: 40, justifyContent: 'center' })}>
-                    <svg height="28" width="3"><line x1="1.5" y1="0" x2="1.5" y2="28" stroke={step.accentColor} strokeWidth="3" strokeDasharray="6 4" opacity="0.4" /></svg>
+                    <svg height="28" width="3"><line x1="1.5" y1="0" x2="1.5" y2="28" stroke={safeAccent(step.accentColor)} strokeWidth="3" strokeDasharray="6 4" opacity="0.4" /></svg>
                     <span style={s({ fontSize: 13, color: funnelData.steps[i + 1]?.accentColor || '#94a3b8', lineHeight: 1, marginTop: -4 })}>▼</span>
                   </div>
                 )}
@@ -970,7 +977,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
                   <h3 style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 12 })}>⚡ Quick Wins</h3>
                   {funnelData.quickWins?.map((w, i) => (
                     <div key={i} style={s({ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' })}>
-                      <span style={s({ width: 18, height: 18, borderRadius: '50%', background: '#dcfce7', color: '#059669', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>✓</span>
+                      <span style={s({ width: 18, height: 18, borderRadius: '50%', background: '#e6f4ed', color: '#0d7a5f', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>✓</span>
                       <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#334155', lineHeight: 1.6 })}>{w}</span>
                     </div>
                   ))}
@@ -1005,7 +1012,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
                   <div style={s({ display: 'flex', gap: 10, alignItems: 'center' })}>
                     <span style={s({ fontSize: 28 })}>{selStep.stepIcon}</span>
                     <span style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 20, color: '#0f172a' })}>{selStep.stepName}</span>
-                    <span style={s({ fontSize: 10, fontWeight: 700, background: `${selStep.accentColor}15`, color: selStep.accentColor, padding: '3px 10px', borderRadius: 50 })}>{selStep.stepType}</span>
+                    <span style={s({ fontSize: 10, fontWeight: 700, background: `${safeAccent(selStep.accentColor)}15`, color: safeAccent(selStep.accentColor), padding: '3px 10px', borderRadius: 50 })}>{selStep.stepType}</span>
                   </div>
                   <span onClick={() => setSelectedStep(null)} style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', cursor: 'pointer' })}>✕ Close</span>
                 </div>
@@ -1018,8 +1025,8 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
                     { icon: '⏱', label: 'TIME ON PAGE', value: selStep.timeOnStep },
                     { icon: '✍️', label: 'FRAMEWORK', value: selStep.copyFramework },
                   ].map(card => (
-                    <div key={card.label} style={s({ background: `${selStep.accentColor}08`, border: `1px solid ${selStep.accentColor}20`, borderRadius: 14, padding: '16px 18px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', borderBottom: `3px solid ${selStep.accentColor}` })}>
-                      <div style={s({ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, color: selStep.accentColor, textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 8 })}>{card.icon} {card.label}</div>
+                    <div key={card.label} style={s({ background: `${safeAccent(selStep.accentColor)}08`, border: `1px solid ${safeAccent(selStep.accentColor)}20`, borderRadius: 14, padding: '16px 18px', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', borderBottom: `3px solid ${safeAccent(selStep.accentColor)}` })}>
+                      <div style={s({ fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, color: safeAccent(selStep.accentColor), textTransform: 'uppercase', letterSpacing: '0.09em', marginBottom: 8 })}>{card.icon} {card.label}</div>
                       <div style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#0f172a', lineHeight: 1.65 })}>{card.value}</div>
                     </div>
                   ))}
@@ -1068,7 +1075,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
                 {stepCopy[selStep.stepId] ? (
                   <div>
                     <div style={s({ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 })}>
-                      <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#059669' })}>✓ Copy Generated</span>
+                      <span style={s({ fontFamily: 'DM Sans', fontSize: 13, fontWeight: 700, color: '#0d7a5f' })}>✓ Copy Generated</span>
                       <span onClick={() => generateStepCopy(selStep)} style={s({ fontFamily: 'DM Sans', fontSize: 12, fontWeight: 600, color: '#06b6d4', cursor: 'pointer' })}>🔄 Regenerate</span>
                     </div>
                     {/* Preview */}
