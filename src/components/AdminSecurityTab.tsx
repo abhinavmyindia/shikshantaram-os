@@ -635,30 +635,81 @@ function LoginHistorySubTab() {
                 </tr>
               </thead>
               <tbody>
-                {history.map((s, i) => (
-                  <tr key={s.id}
-                    onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
-                    style={{
-                      borderBottom: '1px solid #f1f5f9', cursor: 'pointer',
-                      background: i % 2 === 0 ? 'white' : '#fafbfc',
-                      transition: 'background 0.1s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.03)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafbfc')}
-                  >
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{formatDate(s.created_at)}</td>
-                    <td style={{ padding: '10px 12px', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.user_email?.split('@')[0] || '—'}</div>
-                    </td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_address}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{[s.ip_city, s.ip_state].filter(Boolean).join(', ') || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_isp || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 14, textAlign: 'center' as const }}>{deviceIcon(s.device_type)}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.browser || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.os || '—'}</td>
-                    <td style={{ padding: '10px 12px', verticalAlign: 'middle' as const }}>{statusBadge(s)}</td>
-                  </tr>
-                ))}
+                {history.map((s, i) => {
+                  const isExpanded = expandedId === s.id;
+                  return (
+                    <React.Fragment key={s.id}>
+                      <tr
+                        onClick={() => setExpandedId(isExpanded ? null : s.id)}
+                        style={{
+                          borderBottom: isExpanded ? 'none' : '1px solid #f1f5f9', cursor: 'pointer',
+                          background: i % 2 === 0 ? 'white' : '#fafbfc',
+                          transition: 'background 0.1s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.03)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafbfc')}
+                      >
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{formatDate(s.created_at)}</td>
+                        <td style={{ padding: '10px 12px', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.user_email?.split('@')[0] || '—'}</div>
+                        </td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_address}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{[s.ip_city, s.ip_state].filter(Boolean).join(', ') || '—'}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_isp || '—'}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 14, textAlign: 'center' as const }}>{deviceIcon(s.device_type)}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.browser || '—'}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.os || '—'}</td>
+                        <td style={{ padding: '10px 12px', verticalAlign: 'middle' as const }}>{statusBadge(s)}</td>
+                      </tr>
+                      {isExpanded && (
+                        <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td colSpan={9} style={{ padding: '0 12px 14px' }}>
+                            <div style={{ background: '#f8fafc', borderRadius: 10, padding: '14px 16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 4 }}>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Full Email</div>
+                                <div style={{ fontSize: 12, color: '#0f172a', fontWeight: 600 }}>{s.user_email || '—'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Session Token</div>
+                                <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace', wordBreak: 'break-all' as const }}>{s.session_token?.slice(0, 12)}...</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>User Agent</div>
+                                <div style={{ fontSize: 11, color: '#64748b', wordBreak: 'break-all' as const, maxHeight: 40, overflow: 'hidden' }}>{s.user_agent || '—'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Login Time</div>
+                                <div style={{ fontSize: 12, color: '#0f172a' }}>{new Date(s.created_at).toLocaleString('en-IN')}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Last Seen</div>
+                                <div style={{ fontSize: 12, color: '#0f172a' }}>{s.last_seen ? new Date(s.last_seen).toLocaleString('en-IN') : '—'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Logout</div>
+                                <div style={{ fontSize: 12, color: '#0f172a' }}>
+                                  {s.logged_out_at ? `${new Date(s.logged_out_at).toLocaleString('en-IN')} (${s.logout_reason || 'manual'})` : '—'}
+                                </div>
+                              </div>
+                              {s.ip_org && (
+                                <div>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Organization</div>
+                                  <div style={{ fontSize: 12, color: '#0f172a' }}>{s.ip_org}</div>
+                                </div>
+                              )}
+                              {s.ip_timezone && (
+                                <div>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Timezone</div>
+                                  <div style={{ fontSize: 12, color: '#0f172a' }}>{s.ip_timezone}</div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
