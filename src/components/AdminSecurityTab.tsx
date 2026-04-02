@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const glassCard = {
