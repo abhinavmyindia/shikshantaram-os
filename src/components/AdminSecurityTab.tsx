@@ -413,14 +413,35 @@ function AuthenticatedSessionsSubTab({ adminId, showToast }: { adminId: string; 
     await supabase.from('login_sessions').update({
       is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'forced_logout',
     } as any).eq('id', sessionId);
-    await supabase.from('security_events').insert({
-      user_id: userId, user_email: userEmail,
-      event_type: 'force_logout', severity: 'medium',
-      description: 'Admin force-logged out user',
-      metadata: { session_id: sessionId, admin_id: adminId },
-    } as any);
+    // Log security event via edge function to bypass owner-only RLS
+    await supabase.functions.invoke('log-error', {
+      body: {
+        errorType: 'force_logout', severity: 'low', module: 'security',
+        message: `Admin force-logged out ${userEmail}`,
+        additionalData: { session_id: sessionId, admin_id: adminId, event_type: 'force_logout' },
+      },
+    });
     fetchSessions();
     showToast(`⚡ Force logged out ${userEmail?.split('@')[0] || 'user'}`);
+  };
+
+  const forceLogoutAll = async () => {
+    if (!confirm(`Force logout all ${sessions.length} active session(s)?\n\nThis will end every user's session immediately.\nAll users will need to log in again.`)) return;
+    const count = sessions.length;
+    for (const s of sessions) {
+      await supabase.from('login_sessions').update({
+        is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'forced_logout',
+      } as any).eq('id', s.id);
+    }
+    await supabase.functions.invoke('log-error', {
+      body: {
+        errorType: 'bulk_force_logout', severity: 'warning', module: 'security',
+        message: `Admin bulk force-logged out ${count} sessions`,
+        additionalData: { count, admin_id: adminId },
+      },
+    });
+    fetchSessions();
+    showToast(`⚡ Force logged out ${count} session(s)`);
   };
 
   const deviceIcon = (d: string) => d === 'mobile' ? '📱' : d === 'tablet' ? '📋' : '💻';
