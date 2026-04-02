@@ -775,8 +775,25 @@ function SecurityEventsSubTab({ adminId, showToast }: { adminId: string; showToa
     showToast('✅ Event marked as reviewed');
   };
 
+  const markAllReviewed = async () => {
+    const unreviewedCount = events.filter(e => !e.is_reviewed).length;
+    if (unreviewedCount === 0) return;
+    if (!confirm(`Mark all ${unreviewedCount} unreviewed events as reviewed?`)) return;
+    const ids = events.filter(e => !e.is_reviewed).map(e => e.id);
+    for (const id of ids) {
+      await supabase.from('security_events').update({
+        is_reviewed: true, reviewed_by: adminId, reviewed_at: new Date().toISOString(),
+      } as any).eq('id', id);
+    }
+    fetchEvents();
+    fetchKPIs();
+    showToast(`✅ ${unreviewedCount} events marked as reviewed`);
+  };
+
   if (loading) return <LoadingSpinner color="#f59e0b" />;
   if (fetchError) return <div style={{ color: '#991b1b', textAlign: 'center', padding: 20 }}>❌ {fetchError}</div>;
+
+  const unreviewedCount = events.filter(e => !e.is_reviewed).length;
 
   return (
     <div>
@@ -795,6 +812,13 @@ function SecurityEventsSubTab({ adminId, showToast }: { adminId: string; showToa
             textTransform: 'capitalize',
           }}>{s}</button>
         ))}
+        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
+        {unreviewedCount > 0 && (
+          <button onClick={markAllReviewed} style={{
+            padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(5,150,105,0.2)',
+            background: 'rgba(5,150,105,0.06)', color: '#059669', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          }}>✓ Mark All Reviewed ({unreviewedCount})</button>
+        )}
         <div style={{ flex: 1 }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b', cursor: 'pointer' }}>
           <input type="checkbox" checked={showReviewed} onChange={e => setShowReviewed(e.target.checked)} />
