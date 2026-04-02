@@ -886,12 +886,14 @@ function BlockedUsersSubTab({ adminId, showToast }: { adminId: string; showToast
     await supabase.from('user_security_settings').update({
       is_blocked: false, block_reason: null, blocked_at: null, blocked_by: null,
     } as any).eq('user_id', userId);
-    await supabase.from('security_events').insert({
-      user_id: userId, user_email: email,
-      event_type: 'user_unblocked', severity: 'low',
-      description: 'Admin manually unblocked user',
-      metadata: { admin_id: adminId },
-    } as any);
+    // Use edge function to bypass owner-only RLS on security_events
+    await supabase.functions.invoke('log-error', {
+      body: {
+        errorType: 'user_unblocked', severity: 'low', module: 'security',
+        message: `Admin unblocked user: ${email}`,
+        additionalData: { user_id: userId, admin_id: adminId, event_type: 'user_unblocked' },
+      },
+    });
     fetchBlocked();
     showToast(`✅ ${email} unblocked successfully`);
   };
