@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef } from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 const glassCard = {
@@ -413,14 +413,35 @@ function AuthenticatedSessionsSubTab({ adminId, showToast }: { adminId: string; 
     await supabase.from('login_sessions').update({
       is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'forced_logout',
     } as any).eq('id', sessionId);
-    await supabase.from('security_events').insert({
-      user_id: userId, user_email: userEmail,
-      event_type: 'force_logout', severity: 'medium',
-      description: 'Admin force-logged out user',
-      metadata: { session_id: sessionId, admin_id: adminId },
-    } as any);
+    // Log security event via edge function to bypass owner-only RLS
+    await supabase.functions.invoke('log-error', {
+      body: {
+        errorType: 'force_logout', severity: 'low', module: 'security',
+        message: `Admin force-logged out ${userEmail}`,
+        additionalData: { session_id: sessionId, admin_id: adminId, event_type: 'force_logout' },
+      },
+    });
     fetchSessions();
     showToast(`⚡ Force logged out ${userEmail?.split('@')[0] || 'user'}`);
+  };
+
+  const forceLogoutAll = async () => {
+    if (!confirm(`Force logout all ${sessions.length} active session(s)?\n\nThis will end every user's session immediately.\nAll users will need to log in again.`)) return;
+    const count = sessions.length;
+    for (const s of sessions) {
+      await supabase.from('login_sessions').update({
+        is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'forced_logout',
+      } as any).eq('id', s.id);
+    }
+    await supabase.functions.invoke('log-error', {
+      body: {
+        errorType: 'bulk_force_logout', severity: 'warning', module: 'security',
+        message: `Admin bulk force-logged out ${count} sessions`,
+        additionalData: { count, admin_id: adminId },
+      },
+    });
+    fetchSessions();
+    showToast(`⚡ Force logged out ${count} session(s)`);
   };
 
   const deviceIcon = (d: string) => d === 'mobile' ? '📱' : d === 'tablet' ? '📋' : '💻';
@@ -440,9 +461,16 @@ function AuthenticatedSessionsSubTab({ adminId, showToast }: { adminId: string; 
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
         <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{sessions.length} authenticated session{sessions.length !== 1 ? 's' : ''}</span>
+        <div style={{ flex: 1 }} />
+        {sessions.length > 0 && (
+          <button onClick={forceLogoutAll} style={{
+            padding: '6px 16px', borderRadius: 20, border: '1px solid rgba(239,68,68,0.2)',
+            background: 'rgba(239,68,68,0.06)', color: '#dc2626', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          }}>⚡ Force Logout All ({sessions.length})</button>
+        )}
       </div>
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
@@ -607,30 +635,81 @@ function LoginHistorySubTab() {
                 </tr>
               </thead>
               <tbody>
-                {history.map((s, i) => (
-                  <tr key={s.id}
-                    onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
-                    style={{
-                      borderBottom: '1px solid #f1f5f9', cursor: 'pointer',
-                      background: i % 2 === 0 ? 'white' : '#fafbfc',
-                      transition: 'background 0.1s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.03)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafbfc')}
-                  >
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{formatDate(s.created_at)}</td>
-                    <td style={{ padding: '10px 12px', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.user_email?.split('@')[0] || '—'}</div>
-                    </td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_address}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{[s.ip_city, s.ip_state].filter(Boolean).join(', ') || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_isp || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 14, textAlign: 'center' as const }}>{deviceIcon(s.device_type)}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.browser || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.os || '—'}</td>
-                    <td style={{ padding: '10px 12px', verticalAlign: 'middle' as const }}>{statusBadge(s)}</td>
-                  </tr>
-                ))}
+                {history.map((s, i) => {
+                  const isExpanded = expandedId === s.id;
+                  return (
+                    <React.Fragment key={s.id}>
+                      <tr
+                        onClick={() => setExpandedId(isExpanded ? null : s.id)}
+                        style={{
+                          borderBottom: isExpanded ? 'none' : '1px solid #f1f5f9', cursor: 'pointer',
+                          background: i % 2 === 0 ? 'white' : '#fafbfc',
+                          transition: 'background 0.1s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.03)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafbfc')}
+                      >
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{formatDate(s.created_at)}</td>
+                        <td style={{ padding: '10px 12px', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.user_email?.split('@')[0] || '—'}</div>
+                        </td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_address}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{[s.ip_city, s.ip_state].filter(Boolean).join(', ') || '—'}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.ip_isp || '—'}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 14, textAlign: 'center' as const }}>{deviceIcon(s.device_type)}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.browser || '—'}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 11, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' as const, whiteSpace: 'nowrap' as const }}>{s.os || '—'}</td>
+                        <td style={{ padding: '10px 12px', verticalAlign: 'middle' as const }}>{statusBadge(s)}</td>
+                      </tr>
+                      {isExpanded && (
+                        <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td colSpan={9} style={{ padding: '0 12px 14px' }}>
+                            <div style={{ background: '#f8fafc', borderRadius: 10, padding: '14px 16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 4 }}>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Full Email</div>
+                                <div style={{ fontSize: 12, color: '#0f172a', fontWeight: 600 }}>{s.user_email || '—'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Session Token</div>
+                                <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace', wordBreak: 'break-all' as const }}>{s.session_token?.slice(0, 12)}...</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>User Agent</div>
+                                <div style={{ fontSize: 11, color: '#64748b', wordBreak: 'break-all' as const, maxHeight: 40, overflow: 'hidden' }}>{s.user_agent || '—'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Login Time</div>
+                                <div style={{ fontSize: 12, color: '#0f172a' }}>{new Date(s.created_at).toLocaleString('en-IN')}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Last Seen</div>
+                                <div style={{ fontSize: 12, color: '#0f172a' }}>{s.last_seen ? new Date(s.last_seen).toLocaleString('en-IN') : '—'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Logout</div>
+                                <div style={{ fontSize: 12, color: '#0f172a' }}>
+                                  {s.logged_out_at ? `${new Date(s.logged_out_at).toLocaleString('en-IN')} (${s.logout_reason || 'manual'})` : '—'}
+                                </div>
+                              </div>
+                              {s.ip_org && (
+                                <div>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Organization</div>
+                                  <div style={{ fontSize: 12, color: '#0f172a' }}>{s.ip_org}</div>
+                                </div>
+                              )}
+                              {s.ip_timezone && (
+                                <div>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' as const, marginBottom: 4 }}>Timezone</div>
+                                  <div style={{ fontSize: 12, color: '#0f172a' }}>{s.ip_timezone}</div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -696,8 +775,25 @@ function SecurityEventsSubTab({ adminId, showToast }: { adminId: string; showToa
     showToast('✅ Event marked as reviewed');
   };
 
+  const markAllReviewed = async () => {
+    const unreviewedCount = events.filter(e => !e.is_reviewed).length;
+    if (unreviewedCount === 0) return;
+    if (!confirm(`Mark all ${unreviewedCount} unreviewed events as reviewed?`)) return;
+    const ids = events.filter(e => !e.is_reviewed).map(e => e.id);
+    for (const id of ids) {
+      await supabase.from('security_events').update({
+        is_reviewed: true, reviewed_by: adminId, reviewed_at: new Date().toISOString(),
+      } as any).eq('id', id);
+    }
+    fetchEvents();
+    fetchKPIs();
+    showToast(`✅ ${unreviewedCount} events marked as reviewed`);
+  };
+
   if (loading) return <LoadingSpinner color="#f59e0b" />;
   if (fetchError) return <div style={{ color: '#991b1b', textAlign: 'center', padding: 20 }}>❌ {fetchError}</div>;
+
+  const unreviewedCount = events.filter(e => !e.is_reviewed).length;
 
   return (
     <div>
@@ -716,6 +812,13 @@ function SecurityEventsSubTab({ adminId, showToast }: { adminId: string; showToa
             textTransform: 'capitalize',
           }}>{s}</button>
         ))}
+        <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
+        {unreviewedCount > 0 && (
+          <button onClick={markAllReviewed} style={{
+            padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(5,150,105,0.2)',
+            background: 'rgba(5,150,105,0.06)', color: '#059669', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          }}>✓ Mark All Reviewed ({unreviewedCount})</button>
+        )}
         <div style={{ flex: 1 }} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b', cursor: 'pointer' }}>
           <input type="checkbox" checked={showReviewed} onChange={e => setShowReviewed(e.target.checked)} />
@@ -783,12 +886,14 @@ function BlockedUsersSubTab({ adminId, showToast }: { adminId: string; showToast
     await supabase.from('user_security_settings').update({
       is_blocked: false, block_reason: null, blocked_at: null, blocked_by: null,
     } as any).eq('user_id', userId);
-    await supabase.from('security_events').insert({
-      user_id: userId, user_email: email,
-      event_type: 'user_unblocked', severity: 'low',
-      description: 'Admin manually unblocked user',
-      metadata: { admin_id: adminId },
-    } as any);
+    // Use edge function to bypass owner-only RLS on security_events
+    await supabase.functions.invoke('log-error', {
+      body: {
+        errorType: 'user_unblocked', severity: 'low', module: 'security',
+        message: `Admin unblocked user: ${email}`,
+        additionalData: { user_id: userId, admin_id: adminId, event_type: 'user_unblocked' },
+      },
+    });
     fetchBlocked();
     showToast(`✅ ${email} unblocked successfully`);
   };
@@ -809,12 +914,13 @@ function BlockedUsersSubTab({ adminId, showToast }: { adminId: string; showToast
         is_blocked: true, block_reason: blockReason || 'Blocked by admin',
         blocked_at: new Date().toISOString(), blocked_by: adminId,
       } as any, { onConflict: 'user_id' });
-      await supabase.from('security_events').insert({
-        user_id: userId, user_email: blockEmail.trim(),
-        event_type: 'user_blocked', severity: 'high',
-        description: `Admin manually blocked user: ${blockReason || 'No reason specified'}`,
-        metadata: { admin_id: adminId },
-      } as any);
+      await supabase.functions.invoke('log-error', {
+        body: {
+          errorType: 'user_blocked', severity: 'high', module: 'security',
+          message: `Admin blocked user: ${blockEmail.trim()} — ${blockReason || 'No reason specified'}`,
+          additionalData: { user_id: userId, admin_id: adminId, event_type: 'user_blocked' },
+        },
+      });
       setBlockEmail('');
       setBlockReason('');
       fetchBlocked();
