@@ -914,12 +914,13 @@ function BlockedUsersSubTab({ adminId, showToast }: { adminId: string; showToast
         is_blocked: true, block_reason: blockReason || 'Blocked by admin',
         blocked_at: new Date().toISOString(), blocked_by: adminId,
       } as any, { onConflict: 'user_id' });
-      await supabase.from('security_events').insert({
-        user_id: userId, user_email: blockEmail.trim(),
-        event_type: 'user_blocked', severity: 'high',
-        description: `Admin manually blocked user: ${blockReason || 'No reason specified'}`,
-        metadata: { admin_id: adminId },
-      } as any);
+      await supabase.functions.invoke('log-error', {
+        body: {
+          errorType: 'user_blocked', severity: 'high', module: 'security',
+          message: `Admin blocked user: ${blockEmail.trim()} — ${blockReason || 'No reason specified'}`,
+          additionalData: { user_id: userId, admin_id: adminId, event_type: 'user_blocked' },
+        },
+      });
       setBlockEmail('');
       setBlockReason('');
       fetchBlocked();
