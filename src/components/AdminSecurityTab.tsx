@@ -461,9 +461,16 @@ function AuthenticatedSessionsSubTab({ adminId, showToast }: { adminId: string; 
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
         <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' }}>{sessions.length} authenticated session{sessions.length !== 1 ? 's' : ''}</span>
+        <div style={{ flex: 1 }} />
+        {sessions.length > 0 && (
+          <button onClick={forceLogoutAll} style={{
+            padding: '6px 16px', borderRadius: 20, border: '1px solid rgba(239,68,68,0.2)',
+            background: 'rgba(239,68,68,0.06)', color: '#dc2626', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          }}>⚡ Force Logout All ({sessions.length})</button>
+        )}
       </div>
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
