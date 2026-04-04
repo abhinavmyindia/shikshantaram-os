@@ -8,126 +8,52 @@ const corsHeaders = {
 };
 
 // ─── DIVERSITY SYSTEM ────────────────────────────────────────
-// 5 layers of controlled randomness so identical niche searches
-// produce genuinely unique ideas for every user.
+// Diversity operates WITHIN the niche — angle variety, not topic drift.
+// The niche is the constant. These are the variables.
 
 const AUDIENCE_SEGMENTS = [
   'complete beginners who have never tried this before and feel overwhelmed',
-  'people who tried and failed once and are ready to try again with a smarter approach',
+  'people who tried and failed once and need a smarter second attempt',
   'mid-level practitioners stuck at a plateau who need the next breakthrough',
-  'advanced users who want to systematize and scale what they already know',
-  'busy professionals with limited time (under 30 min/day) who need fast wins',
-  'people in tier-2 and tier-3 Indian cities with limited access to mentors or networks',
-  'women who face unique social barriers and need culturally-aware solutions',
-  'young Indians aged 18-25 who are digitally native but financially inexperienced',
+  'advanced practitioners who want to systematize and scale what they know',
+  'busy professionals with under 30 minutes a day who need fast, practical wins',
+  'people in tier-2 and tier-3 Indian cities with limited access to mentors',
+  'women navigating unique social and professional barriers in this space',
+  'young Indians aged 18-25 who are digitally native but new to this field',
 ];
 
 const PAIN_ANCHORS = [
-  'information overload — too much advice, no clear starting point',
-  "inconsistent results — things work sometimes but they can't figure out why",
-  'fear of judgment, failure, or looking stupid in front of peers or family',
-  'lack of accountability and community — doing everything alone with no support',
-  "wasting money on things that don't work and not trusting new solutions",
-  'knowing what to do but completely failing at execution and follow-through',
-  'not being taken seriously by others because they lack credentials or proof',
-  "imposter syndrome — feeling like they don't deserve success or aren't ready",
+  'information overload — too much conflicting advice, no clear starting point',
+  'inconsistent results — things work sometimes but they cannot figure out why',
+  'fear of judgment or failure — imposter syndrome holding them back',
+  'lack of accountability — trying everything alone with no community or support',
+  'wasted money on courses that didn\'t work — deep distrust of new solutions',
+  'knowing exactly what to do but completely failing at consistent execution',
+  'not being taken seriously because they lack credentials or visible proof',
+  'too much theory from generic resources, zero practical implementation help',
 ];
 
 const DELIVERY_FORMATS = [
-  'done-for-you templates, swipe files, and copy-paste systems (zero thinking required)',
-  'step-by-step 7-day or 30-day challenge with daily micro-actions',
-  'toolkit or resource vault with 10+ plug-and-play components',
-  'community + accountability group with live weekly check-ins',
-  'video mini-course under 2 hours that delivers one transformative skill',
-  'AI-powered tool or calculator that gives personalised output instantly',
-  'WhatsApp or Telegram-based drip programme delivered over 21 days',
-  'physical or printable workbook with fill-in-the-blank exercises',
-];
-
-const CREATIVE_CONSTRAINTS = [
-  'At least 6 ideas must be executable by a solo creator in under 2 weeks with no team.',
-  'At least 5 ideas must use WhatsApp, Telegram, or Instagram DMs as the primary delivery channel.',
-  'At least 4 ideas must target a painful transition moment (new job, new city, new relationship, new baby, layoff).',
-  'At least 5 ideas must be priced under Rs.999 to capture impulse buyers first.',
-  'At least 4 ideas must solve a problem that causes embarrassment or social shame.',
-  'At least 5 ideas must leverage a current 2025 trend (AI tools, short-form video, remote work, gig economy).',
-  'At least 4 ideas must be hyper-local — targeting a specific Indian state, city type, or cultural context.',
-  'At least 5 ideas must have a visible, measurable outcome the buyer can show others within 30 days.',
-];
-
-const MARKET_TIMING_SIGNALS = [
-  'Post-layoff anxiety and job market uncertainty in India is at peak levels right now.',
-  'AI tool adoption among Indian professionals has exploded — people want to adapt or be left behind.',
-  "Side hustle culture is mainstream — everyone wants a second income stream but most don't know where to start.",
-  'Vernacular content is booming — Hindi, Tamil, Telugu audiences are underserved by English-only products.',
-  'Mental health awareness has gone mainstream — emotional and psychological products now have mass appeal.',
-  'Short-form video has made micro-celebrity possible for anyone — personal brand products are in high demand.',
+  'done-for-you templates, swipe files, and plug-and-play systems',
+  'a structured 7-day or 30-day challenge with daily micro-actions',
+  'a toolkit or resource vault with 10+ reusable components',
+  'a community plus accountability group with weekly check-ins',
+  'a focused video training under 2 hours delivering one core skill',
+  'a calculator, audit, or assessment tool that gives personalised output',
+  'a WhatsApp or Telegram-based programme delivered over 21 days',
+  'a printable or digital workbook with fill-in-the-blank exercises',
 ];
 
 const EXPERT_PERSONAS = [
-  'You are Rahul, a 34-year-old Mumbai-based digital entrepreneur who built a Rs.2 crore/year info-product business from a 1BHK in Andheri. You think in terms of mass market appeal, WhatsApp virality, and products that solve problems middle-class India is too embarrassed to Google. You always ask: "Would a bank employee in Pune buy this at 11pm after seeing a Reel?" Always respond with valid JSON only. No markdown, no explanation, no preamble.',
-  'You are Priya, a 29-year-old Bangalore product strategist who left a Flipkart PM role to build digital products for working women. You identify underserved female buyer segments and products that address the unique pressures Indian women face — career, family expectations, financial independence, and social judgment. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
-  'You are Vikram, a 41-year-old Chennai-based educator-turned-entrepreneur who built 6 online courses across engineering, upskilling, and career switching. You think in frameworks, systems, and structured learning. Your products always have a clear before/after transformation and measurable milestones. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
-  'You are Meera, a 32-year-old Delhi-based growth consultant who specialises in finding "blue ocean" product opportunities — gaps that everyone overlooks because they seem too niche or too weird. You love contrarian ideas that go against conventional wisdom and typically capture buyers who are fed up with mainstream solutions. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
-  'You are Arjun, a 27-year-old Pune-based Gen-Z founder who understands digital natives, meme culture, and the psychology of Indian 20-somethings navigating career pressure, relationship confusion, and identity crises. You create products that are brutally honest, relatable, and unapologetically Indian. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
-  'You are Sunita, a 38-year-old Jaipur-based entrepreneur who builds products specifically for tier-2 and tier-3 India — people with high ambitions, limited English proficiency, and zero access to the Bangalore startup ecosystem. You understand the real India, not the India tech bros imagine. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
-  'You are Karan, a 35-year-old Hyderabad-based performance marketer who has sold over 10,000 digital products across 15 niches. You think entirely in buyer psychology — what triggers shame, fear, desire, and urgency. Every product idea you generate has a crystal clear emotional hook and an obvious impulse trigger. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
-  'You are Deepa, a 43-year-old Mumbai-based veteran of the Indian self-improvement industry who has seen every trend come and go. You identify ideas with long-term evergreen demand — products people will still need in 5 years — and you always spot the exact sub-audience that is underserved within a popular niche. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Rahul, a Mumbai-based digital product creator who has built and sold products across dozens of Indian niches. You are obsessive about finding the overlooked sub-segments and underserved pain points that most creators miss. You think in terms of what a middle-class professional in Pune would buy at 11pm after watching a Reel. You always stay exactly within the niche you are given. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Priya, a Bangalore-based product strategist who specialises in finding the specific product angle that only a certain type of person can credibly create. You understand that the best products come from lived experience, not generic research. You create ideas that are deeply rooted in the niche given to you — not adjacent topics. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Vikram, a Chennai-based educator and entrepreneur who thinks in systems and frameworks. You create products that deliver a clear, measurable transformation within the niche you are given. You never drift from the niche — you go deeper into it instead. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Meera, a Delhi-based growth consultant who specialises in finding "blue ocean" angles within any niche — the specific pain point everyone overlooks, the format nobody has tried, the sub-audience nobody is serving. You always work within the niche. You make the niche more specific, you never replace it. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Arjun, a Pune-based Gen-Z founder who understands Indian 20-somethings deeply. You create products that are brutally honest, specific, and unapologetically rooted in the niche given. You never suggest ideas from other categories. You find new angles within the one you are given. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Sunita, a Jaipur-based entrepreneur who builds products specifically for tier-2 and tier-3 India. You understand the real India — high ambitions, limited English, no access to big-city networks. You always stay locked to the exact niche given, finding angles that serve this specific audience within that niche. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Karan, a Hyderabad-based performance marketer who thinks entirely in buyer psychology. You find the emotional trigger, the exact moment of pain, the specific person who will buy — all within the niche you are given. You never wander into other topics. You go deeper into the given niche. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
+  'You are Deepa, a Mumbai-based veteran of the Indian self-improvement industry. You identify long-term evergreen angles within any niche — sub-audiences that will always need help, problems that never go away. You stay within the niche. You do not suggest adjacent categories. You find the gold that is already there. Always respond with valid JSON only. No markdown, no explanation, no preamble.',
 ];
-
-const ADJACENT_NICHES: Record<string, string[]> = {
-  'freelancing': ['personal branding', 'B2B sales', 'productivity systems'],
-  'entrepreneurship': ['personal finance', 'leadership', 'sales psychology'],
-  'digital marketing': ['copywriting', 'personal branding', 'ecommerce'],
-  'sales': ['communication skills', 'negotiation', 'psychology'],
-  'leadership': ['team management', 'communication', 'executive presence'],
-  'career growth': ['personal branding', 'communication skills', 'negotiation'],
-  'job search': ['resume writing', 'networking', 'interview skills'],
-  'productivity': ['time management', 'mental health', 'deep work'],
-  'ecommerce': ['supply chain', 'digital marketing', 'customer psychology'],
-  'investing': ['personal finance', 'risk management', 'business analysis'],
-  'stock market': ['personal finance', 'trading psychology', 'financial planning'],
-  'real estate': ['personal finance', 'negotiation', 'investing'],
-  'content creation': ['personal branding', 'digital marketing', 'storytelling'],
-  'youtube': ['storytelling', 'personal branding', 'digital marketing'],
-  'instagram': ['personal branding', 'visual design', 'content creation'],
-  'copywriting': ['psychology', 'sales', 'storytelling'],
-  'public speaking': ['confidence building', 'communication', 'leadership'],
-  'coaching': ['psychology', 'communication', 'personal development'],
-  'consulting': ['B2B sales', 'positioning', 'thought leadership'],
-  'personal finance': ['psychology', 'behaviour change', 'investing'],
-  'fitness': ['nutrition', 'mental health', 'habit formation'],
-  'weight loss': ['nutrition', 'psychology', 'habit formation'],
-  'nutrition': ['fitness', 'mental health', 'wellness'],
-  'mental health': ['mindfulness', 'relationships', 'productivity'],
-  'mindfulness': ['mental health', 'spirituality', 'stress management'],
-  'relationships': ['communication', 'psychology', 'personal development'],
-  'dating': ['confidence building', 'communication', 'psychology'],
-  'marriage': ['relationships', 'communication', 'personal finance'],
-  'parenting': ['education', 'child psychology', 'relationships'],
-  'spirituality': ['mindfulness', 'mental health', 'personal development'],
-  'confidence': ['public speaking', 'communication', 'mental health'],
-  'habits': ['productivity', 'psychology', 'personal development'],
-  'sleep': ['mental health', 'fitness', 'productivity'],
-  'english speaking': ['communication skills', 'career growth', 'public speaking'],
-  'communication': ['public speaking', 'relationships', 'career growth'],
-  'writing': ['storytelling', 'content creation', 'copywriting'],
-  'design': ['content creation', 'branding', 'ecommerce'],
-  'coding': ['freelancing', 'career growth', 'productivity'],
-  'data science': ['career growth', 'investing', 'entrepreneurship'],
-  'ai tools': ['productivity', 'freelancing', 'digital marketing'],
-  'photography': ['content creation', 'personal branding', 'ecommerce'],
-  'music': ['content creation', 'personal branding', 'teaching'],
-  'teaching': ['communication', 'coaching', 'content creation'],
-  'travel': ['personal finance', 'content creation', 'freelancing'],
-  'food': ['ecommerce', 'content creation', 'entrepreneurship'],
-  'fashion': ['personal branding', 'ecommerce', 'content creation'],
-  'home decor': ['ecommerce', 'design', 'entrepreneurship'],
-  'pet care': ['wellness', 'ecommerce', 'content creation'],
-  'weddings': ['personal finance', 'relationships', 'ecommerce'],
-  'pregnancy': ['parenting', 'health', 'mental health'],
-  'women empowerment': ['confidence', 'career growth', 'personal finance'],
-};
 
 const pick = <T,>(arr: T[], n = 1): T[] => {
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
@@ -135,14 +61,45 @@ const pick = <T,>(arr: T[], n = 1): T[] => {
 };
 const pickOne = <T,>(arr: T[]): T => pick(arr, 1)[0];
 
-const getAdjacentNiches = (niche: string): string[] => {
-  const normalised = niche.toLowerCase().trim();
-  if (ADJACENT_NICHES[normalised]) return pick(ADJACENT_NICHES[normalised], 2);
-  const partialMatch = Object.keys(ADJACENT_NICHES).find(
-    key => normalised.includes(key) || key.includes(normalised)
+// Adjacent niche table — used for MECHANISM borrowing only, not topic drift.
+// We borrow the STRUCTURE/FORMAT from adjacent fields, applied TO the user's niche.
+const ADJACENT_MECHANISMS: Record<string, string[]> = {
+  'freelancing':        ['client acquisition system from B2B sales', 'personal brand positioning from thought leadership'],
+  'digital marketing':  ['case study format from consulting', 'ROI calculator from finance'],
+  'performance marketing': ['testing framework from product management', 'attribution model from data analytics'],
+  'entrepreneurship':   ['accountability structure from coaching', 'validation framework from lean startup'],
+  'sales':              ['objection handling script from negotiation', 'follow-up sequence from email marketing'],
+  'personal finance':   ['habit tracking from behaviour change', 'goal-setting framework from productivity'],
+  'fitness':            ['progressive overload structure from sports science', 'habit stacking from behaviour design'],
+  'content creation':   ['editorial calendar from journalism', 'audience persona from market research'],
+  'career growth':      ['skills gap analysis from HR', 'networking system from business development'],
+  'coaching':           ['transformation roadmap from therapy', 'accountability framework from mentoring'],
+  'investing':          ['risk assessment from insurance', 'portfolio diversification from asset management'],
+  'mental health':      ['journaling system from therapy', 'coping toolkit from CBT'],
+  'productivity':       ['energy management from sports performance', 'batching system from manufacturing'],
+  'leadership':         ['feedback framework from coaching', 'delegation system from project management'],
+  'ecommerce':          ['customer journey map from UX design', 'retention playbook from SaaS'],
+  'parenting':          ['age-appropriate milestone map from child psychology', 'communication script from family therapy'],
+  'relationships':      ['communication framework from conflict resolution', 'values alignment tool from therapy'],
+  'job search':         ['personal CRM from sales', 'portfolio system from design'],
+  'copywriting':        ['psychology framework from behavioural science', 'testing methodology from CRO'],
+  'public speaking':    ['rehearsal framework from performing arts', 'feedback loop from coaching'],
+  'consulting':         ['productisation framework from SaaS', 'case study system from academia'],
+  'stock market':       ['risk management framework from insurance', 'journaling system from trading psychology'],
+  'real estate':        ['deal analysis framework from private equity', 'networking system from B2B sales'],
+  'youtube':            ['editorial planning from journalism', 'audience retention from TV production'],
+  'instagram':          ['visual storytelling from photography', 'engagement framework from community management'],
+  'writing':            ['editing framework from publishing', 'accountability system from coaching'],
+  'coding':             ['project-based learning from bootcamps', 'portfolio system from design'],
+  'ai tools':           ['workflow automation from operations', 'prompt engineering from NLP research'],
+};
+
+const getMechanism = (niche: string): string => {
+  const key = Object.keys(ADJACENT_MECHANISMS).find(k =>
+    niche.toLowerCase().includes(k) || k.includes(niche.toLowerCase().split(' ')[0])
   );
-  if (partialMatch) return pick(ADJACENT_NICHES[partialMatch], 2);
-  return pick(['psychology', 'personal development', 'productivity', 'digital marketing', 'communication'], 2);
+  if (key) return pickOne(ADJACENT_MECHANISMS[key]);
+  return 'structured accountability system from coaching';
 };
 
 // ─── PRICING for Lovable AI Gateway models (per 1M tokens) ───
@@ -195,59 +152,64 @@ async function logAiUsage(
 // ─── PROMPTS ─────────────────────────────────────────────────
 
 function buildGenerateIdeasPrompt(niche: string, country: string, productType: string): { prompt: string; system: string; diversity: any } {
-  // Layer 2: Semantic diversity anchors
   const audienceAngle = pickOne(AUDIENCE_SEGMENTS);
   const painAnchor = pickOne(PAIN_ANCHORS);
   const deliveryFormat = pickOne(DELIVERY_FORMATS);
-
-  // Layer 3: Creative constraint seed
-  const creativeConstraint = pickOne(CREATIVE_CONSTRAINTS);
-  const timingSignal = pickOne(MARKET_TIMING_SIGNALS);
-
-  // Layer 4: Expert persona
   const persona = pickOne(EXPERT_PERSONAS);
+  const mechanism = getMechanism(niche);
 
-  // Layer 5: Cross-niche pollination
-  const adjacentNiches = getAdjacentNiches(niche);
-  const crossNicheLine = `You MUST include at least 3 ideas that borrow proven frameworks from these adjacent markets and apply them to ${niche}: ${adjacentNiches.join(' and ')}. These cross-pollinated ideas are often the most innovative and least saturated.`;
+  const prompt = `Generate exactly 30 unique digital product ideas.
 
-  const prompt = `Generate exactly 30 unique digital product ideas for the following:
+━━━ THE NICHE (NON-NEGOTIABLE) ━━━
+Every single one of the 30 ideas MUST be directly and specifically about: ${niche}
+Not adjacent to it. Not inspired by it. Not loosely related.
+Directly about it. If an idea could exist without referencing ${niche}, it does not belong here.
+This is the single most important rule. It overrides everything else.
 
-Niche: ${niche}
-Target Country/Market: ${country}
+━━━ MARKET ━━━
+Target Country: ${country}
 Product Type: ${productType}
 
---- YOUR MANDATORY FOCUS FOR THIS BATCH ---
-Target Audience Angle: Focus specifically on ${audienceAngle}
-Core Pain to Address: Centre your ideas around the pain of ${painAnchor}
-Preferred Delivery Format: Bias toward products structured as ${deliveryFormat}
+━━━ ANGLE FOR THIS BATCH ━━━
+Audience angle: ideas primarily serving ${audienceAngle}
+Pain angle: ideas centred on the pain of ${painAnchor}
+Product format bias: lean toward ${deliveryFormat}
 
---- MARKET CONTEXT ---
-${timingSignal}
+━━━ INNOVATION INSTRUCTION ━━━
+For 3 of your 30 ideas, apply the following mechanism to the ${niche} niche:
+"${mechanism}"
+These ideas must still be fully about ${niche} — you are borrowing the structure,
+not the topic. e.g. if the mechanism is "ROI calculator" and the niche is
+"performance marketing", the product is a "Performance Marketing ROI Calculator"
+— not a finance product.
 
---- CREATIVE CONSTRAINTS (MANDATORY) ---
-${creativeConstraint}
-${crossNicheLine}
+━━━ QUALITY STANDARD ━━━
+Do not generate the first 10 ideas that come to mind for this niche.
+Go past the obvious. Find the overlooked sub-segments, the underserved
+pain points, the format nobody has built yet. Variety in angles and
+formats is expected, but every idea must be rooted in ${niche}.
 
---- ORIGINALITY REQUIREMENT ---
-These 30 ideas must be DISTINCTLY different from the obvious, saturated, and generic products already flooding this niche.
-Avoid the top-10 most common ideas that anyone would think of immediately.
-Push deeper — target overlooked sub-segments, underserved pain points, unconventional formats.
+━━━ FINAL CHECK (do this before returning) ━━━
+Before outputting your JSON, review every idea and ask:
+"Is this product specifically about ${niche}?"
+If the answer for any idea is "not really" or "sort of" — replace it
+with one that is unambiguously about ${niche}.
 
-Return ONLY a JSON array of exactly 30 objects. Each object must have:
+Return ONLY a JSON array of exactly 30 objects. Each object:
 {
-  "productName": "specific, compelling product name — not generic",
-  "tagline": "one punchy benefit-driven line under 12 words",
-  "primaryPain": "the exact pain this solves in 8 words max",
+  "productName": "specific product name — must clearly relate to ${niche}",
+  "tagline": "benefit-driven line under 12 words",
+  "primaryPain": "exact pain this solves in 8 words — must be a ${niche} pain",
   "targetAudience": "specific buyer avatar in 10 words",
   "demandScore": <number 1-10>,
   "competitionLevel": "Low" | "Medium" | "High",
   "buildTime": "X-Y weeks" or "X-Y days",
-  "impulseScore": "High" | "Medium" | "Low",
-  "priceRange": "local currency price range",
-  "searchKeyword": "most likely search term buyer types",
-  "marketSize": "Massive" | "Large" | "Medium" | "Niche",
-  "whyUnique": "one sentence — what makes this idea different from the obvious alternatives"
+  "impulseScore": <number 1-10>,
+  "impulseTag": "🔥 Viral Potential" | "💎 Premium" | "⚡ Quick Win" | "🎯 High Demand" | "🌟 Evergreen",
+  "priceRange": "₹XXX–₹X,XXX",
+  "searchKeyword": "most likely search term buyer uses",
+  "productCategory": "${productType}",
+  "whyUnique": "one sentence — what makes this different from obvious ${niche} products"
 }
 
 Make each product highly specific to ${country} market realities and ${niche} niche.
@@ -261,7 +223,7 @@ Mix quick wins (high impulse, low competition) with premium plays.`;
       audienceAngle,
       painAnchor,
       deliveryFormat,
-      adjacentNiches,
+      mechanism,
       persona: persona.split(',')[0].replace('You are ', ''),
     },
   };
@@ -766,7 +728,7 @@ serve(async (req) => {
       const built = buildGenerateIdeasPrompt(niche, country, productType);
       prompt = built.prompt;
       systemPrompt = built.system;
-      temperature = 1.0; // Layer 1: force away from default safe answers
+      temperature = 0.9; // Enough diversity, eliminates topic drift
       diversityMeta = built.diversity;
       model = "google/gemini-3-flash-preview";
       maxTokens = 24000;
@@ -796,38 +758,45 @@ serve(async (req) => {
       const dirInstruction = directionInstructions[direction] || directionInstructions['different-angle'];
       const rawContext = rawIdea ? `\nORIGINAL RAW IDEA: "${rawIdea}"\nAll new ideas must stay relevant to this original concept.\n` : '';
 
-      // Apply diversity layers to generate-more as well
+      // Apply diversity layers to generate-more — niche-anchored
       const audienceAngle = pickOne(AUDIENCE_SEGMENTS);
       const painAnchor = pickOne(PAIN_ANCHORS);
-      const adjacentNiches = getAdjacentNiches(niche);
+      const mechanism = getMechanism(niche);
       systemPrompt = pickOne(EXPERT_PERSONAS);
-      temperature = 1.0;
+      temperature = 0.9;
 
       prompt = `Generate exactly ${moreCount} NEW digital product ideas. These must be COMPLETELY DIFFERENT from the ideas already generated.
 
-RESEARCH CONTEXT:
-- Niche: ${niche}
-- Country: ${country}
-- Product Type: ${productType}
-- Direction Focus: ${dirInstruction}
-${rawContext}
---- DIVERSITY FOCUS FOR THIS BATCH ---
-Target Audience: Focus on ${audienceAngle}
-Pain Anchor: Centre around ${painAnchor}
-Cross-niche inspiration: Borrow frameworks from ${adjacentNiches.join(' and ')}
+━━━ THE NICHE (NON-NEGOTIABLE) ━━━
+Every idea MUST be directly and specifically about: ${niche}
+Not adjacent to it. Not inspired by it. Directly about it.
+This rule overrides everything else.
 
-ALREADY GENERATED — DO NOT REPEAT THESE:
+━━━ CONTEXT ━━━
+Country: ${country}
+Product Type: ${productType}
+Direction: ${dirInstruction}
+${rawContext}
+━━━ ANGLE FOR THIS BATCH ━━━
+Audience: ${audienceAngle}
+Pain: ${painAnchor}
+For 1-2 ideas, borrow this mechanism and apply it to ${niche}: "${mechanism}"
+
+ALREADY GENERATED — DO NOT REPEAT:
 ${(existingNames || []).map((n: string, i: number) => `${i + 1}. ${n}`).join('\n')}
 
-STRICT RULES:
-1. None of your ${moreCount} ideas can be similar to ANY idea in the list above
+RULES:
+1. None of your ${moreCount} ideas can be similar to ANY idea above
 2. Apply the direction focus strictly: ${dirInstruction}
 3. All ideas must be specific to ${country} market context
-4. Vary demand scores, build times, and impulse scores realistically
-5. Every idea must feel genuinely fresh compared to what was already generated
+4. Every idea must be unambiguously about ${niche}
 
-For EACH idea return the EXACT same JSON structure:
-{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":"High","primaryPain":"...","searchKeyword":"...","whyUnique":"..."}
+━━━ FINAL CHECK ━━━
+Before returning, review each idea: "Is this specifically about ${niche}?"
+If not — replace it with one that is.
+
+For EACH idea return:
+{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":7,"impulseTag":"...","primaryPain":"...","searchKeyword":"...","productCategory":"${productType}","whyUnique":"..."}
 
 Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No markdown.`;
       model = "google/gemini-3-flash-preview";
