@@ -758,38 +758,45 @@ serve(async (req) => {
       const dirInstruction = directionInstructions[direction] || directionInstructions['different-angle'];
       const rawContext = rawIdea ? `\nORIGINAL RAW IDEA: "${rawIdea}"\nAll new ideas must stay relevant to this original concept.\n` : '';
 
-      // Apply diversity layers to generate-more as well
+      // Apply diversity layers to generate-more — niche-anchored
       const audienceAngle = pickOne(AUDIENCE_SEGMENTS);
       const painAnchor = pickOne(PAIN_ANCHORS);
-      const adjacentNiches = getAdjacentNiches(niche);
+      const mechanism = getMechanism(niche);
       systemPrompt = pickOne(EXPERT_PERSONAS);
-      temperature = 1.0;
+      temperature = 0.9;
 
       prompt = `Generate exactly ${moreCount} NEW digital product ideas. These must be COMPLETELY DIFFERENT from the ideas already generated.
 
-RESEARCH CONTEXT:
-- Niche: ${niche}
-- Country: ${country}
-- Product Type: ${productType}
-- Direction Focus: ${dirInstruction}
-${rawContext}
---- DIVERSITY FOCUS FOR THIS BATCH ---
-Target Audience: Focus on ${audienceAngle}
-Pain Anchor: Centre around ${painAnchor}
-Cross-niche inspiration: Borrow frameworks from ${adjacentNiches.join(' and ')}
+━━━ THE NICHE (NON-NEGOTIABLE) ━━━
+Every idea MUST be directly and specifically about: ${niche}
+Not adjacent to it. Not inspired by it. Directly about it.
+This rule overrides everything else.
 
-ALREADY GENERATED — DO NOT REPEAT THESE:
+━━━ CONTEXT ━━━
+Country: ${country}
+Product Type: ${productType}
+Direction: ${dirInstruction}
+${rawContext}
+━━━ ANGLE FOR THIS BATCH ━━━
+Audience: ${audienceAngle}
+Pain: ${painAnchor}
+For 1-2 ideas, borrow this mechanism and apply it to ${niche}: "${mechanism}"
+
+ALREADY GENERATED — DO NOT REPEAT:
 ${(existingNames || []).map((n: string, i: number) => `${i + 1}. ${n}`).join('\n')}
 
-STRICT RULES:
-1. None of your ${moreCount} ideas can be similar to ANY idea in the list above
+RULES:
+1. None of your ${moreCount} ideas can be similar to ANY idea above
 2. Apply the direction focus strictly: ${dirInstruction}
 3. All ideas must be specific to ${country} market context
-4. Vary demand scores, build times, and impulse scores realistically
-5. Every idea must feel genuinely fresh compared to what was already generated
+4. Every idea must be unambiguously about ${niche}
 
-For EACH idea return the EXACT same JSON structure:
-{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":"High","primaryPain":"...","searchKeyword":"...","whyUnique":"..."}
+━━━ FINAL CHECK ━━━
+Before returning, review each idea: "Is this specifically about ${niche}?"
+If not — replace it with one that is.
+
+For EACH idea return:
+{"productName":"...","tagline":"...","targetAudience":"...","priceRange":"...","buildTime":"...","marketSize":"...","demandScore":7,"competitionLevel":"Medium","impulseScore":7,"impulseTag":"...","primaryPain":"...","searchKeyword":"...","productCategory":"${productType}","whyUnique":"..."}
 
 Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No markdown.`;
       model = "google/gemini-3-flash-preview";
