@@ -152,59 +152,64 @@ async function logAiUsage(
 // ─── PROMPTS ─────────────────────────────────────────────────
 
 function buildGenerateIdeasPrompt(niche: string, country: string, productType: string): { prompt: string; system: string; diversity: any } {
-  // Layer 2: Semantic diversity anchors
   const audienceAngle = pickOne(AUDIENCE_SEGMENTS);
   const painAnchor = pickOne(PAIN_ANCHORS);
   const deliveryFormat = pickOne(DELIVERY_FORMATS);
-
-  // Layer 3: Creative constraint seed
-  const creativeConstraint = pickOne(CREATIVE_CONSTRAINTS);
-  const timingSignal = pickOne(MARKET_TIMING_SIGNALS);
-
-  // Layer 4: Expert persona
   const persona = pickOne(EXPERT_PERSONAS);
+  const mechanism = getMechanism(niche);
 
-  // Layer 5: Cross-niche pollination
-  const adjacentNiches = getAdjacentNiches(niche);
-  const crossNicheLine = `You MUST include at least 3 ideas that borrow proven frameworks from these adjacent markets and apply them to ${niche}: ${adjacentNiches.join(' and ')}. These cross-pollinated ideas are often the most innovative and least saturated.`;
+  const prompt = `Generate exactly 30 unique digital product ideas.
 
-  const prompt = `Generate exactly 30 unique digital product ideas for the following:
+━━━ THE NICHE (NON-NEGOTIABLE) ━━━
+Every single one of the 30 ideas MUST be directly and specifically about: ${niche}
+Not adjacent to it. Not inspired by it. Not loosely related.
+Directly about it. If an idea could exist without referencing ${niche}, it does not belong here.
+This is the single most important rule. It overrides everything else.
 
-Niche: ${niche}
-Target Country/Market: ${country}
+━━━ MARKET ━━━
+Target Country: ${country}
 Product Type: ${productType}
 
---- YOUR MANDATORY FOCUS FOR THIS BATCH ---
-Target Audience Angle: Focus specifically on ${audienceAngle}
-Core Pain to Address: Centre your ideas around the pain of ${painAnchor}
-Preferred Delivery Format: Bias toward products structured as ${deliveryFormat}
+━━━ ANGLE FOR THIS BATCH ━━━
+Audience angle: ideas primarily serving ${audienceAngle}
+Pain angle: ideas centred on the pain of ${painAnchor}
+Product format bias: lean toward ${deliveryFormat}
 
---- MARKET CONTEXT ---
-${timingSignal}
+━━━ INNOVATION INSTRUCTION ━━━
+For 3 of your 30 ideas, apply the following mechanism to the ${niche} niche:
+"${mechanism}"
+These ideas must still be fully about ${niche} — you are borrowing the structure,
+not the topic. e.g. if the mechanism is "ROI calculator" and the niche is
+"performance marketing", the product is a "Performance Marketing ROI Calculator"
+— not a finance product.
 
---- CREATIVE CONSTRAINTS (MANDATORY) ---
-${creativeConstraint}
-${crossNicheLine}
+━━━ QUALITY STANDARD ━━━
+Do not generate the first 10 ideas that come to mind for this niche.
+Go past the obvious. Find the overlooked sub-segments, the underserved
+pain points, the format nobody has built yet. Variety in angles and
+formats is expected, but every idea must be rooted in ${niche}.
 
---- ORIGINALITY REQUIREMENT ---
-These 30 ideas must be DISTINCTLY different from the obvious, saturated, and generic products already flooding this niche.
-Avoid the top-10 most common ideas that anyone would think of immediately.
-Push deeper — target overlooked sub-segments, underserved pain points, unconventional formats.
+━━━ FINAL CHECK (do this before returning) ━━━
+Before outputting your JSON, review every idea and ask:
+"Is this product specifically about ${niche}?"
+If the answer for any idea is "not really" or "sort of" — replace it
+with one that is unambiguously about ${niche}.
 
-Return ONLY a JSON array of exactly 30 objects. Each object must have:
+Return ONLY a JSON array of exactly 30 objects. Each object:
 {
-  "productName": "specific, compelling product name — not generic",
-  "tagline": "one punchy benefit-driven line under 12 words",
-  "primaryPain": "the exact pain this solves in 8 words max",
+  "productName": "specific product name — must clearly relate to ${niche}",
+  "tagline": "benefit-driven line under 12 words",
+  "primaryPain": "exact pain this solves in 8 words — must be a ${niche} pain",
   "targetAudience": "specific buyer avatar in 10 words",
   "demandScore": <number 1-10>,
   "competitionLevel": "Low" | "Medium" | "High",
   "buildTime": "X-Y weeks" or "X-Y days",
-  "impulseScore": "High" | "Medium" | "Low",
-  "priceRange": "local currency price range",
-  "searchKeyword": "most likely search term buyer types",
-  "marketSize": "Massive" | "Large" | "Medium" | "Niche",
-  "whyUnique": "one sentence — what makes this idea different from the obvious alternatives"
+  "impulseScore": <number 1-10>,
+  "impulseTag": "🔥 Viral Potential" | "💎 Premium" | "⚡ Quick Win" | "🎯 High Demand" | "🌟 Evergreen",
+  "priceRange": "₹XXX–₹X,XXX",
+  "searchKeyword": "most likely search term buyer uses",
+  "productCategory": "${productType}",
+  "whyUnique": "one sentence — what makes this different from obvious ${niche} products"
 }
 
 Make each product highly specific to ${country} market realities and ${niche} niche.
@@ -218,7 +223,7 @@ Mix quick wins (high impulse, low competition) with premium plays.`;
       audienceAngle,
       painAnchor,
       deliveryFormat,
-      adjacentNiches,
+      mechanism,
       persona: persona.split(',')[0].replace('You are ', ''),
     },
   };
