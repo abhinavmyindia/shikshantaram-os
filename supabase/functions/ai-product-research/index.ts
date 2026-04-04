@@ -220,7 +220,7 @@ Return ONLY a JSON array of exactly 30 objects. Each object:
   "competitionLevel": "Low" | "Medium" | "High",
   "buildTime": "X-Y weeks" or "X-Y days",
   "impulseScore": <number 1-10>,
-  "impulseTag": "🔥 Viral Potential" | "💎 Premium" | "⚡ Quick Win" | "🎯 High Demand" | "🌟 Evergreen",
+  "impulseTag": "🔥 Viral Potential" (score 9-10) | "⚡ Quick Win" (score 7-9) | "🎯 High Demand" (score 6-8) | "💎 Premium" (score 5-7) | "🌟 Evergreen" (score 3-5),
   "priceRange": "₹XXX–₹X,XXX",
   "searchKeyword": "most likely search term buyer uses",
   "productCategory": "${productType}",
