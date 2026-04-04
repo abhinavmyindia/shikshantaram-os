@@ -189,6 +189,21 @@ Go past the obvious. Find the overlooked sub-segments, the underserved
 pain points, the format nobody has built yet. Variety in angles and
 formats is expected, but every idea must be rooted in ${niche}.
 
+━━━ SCORE DISTRIBUTION (MANDATORY) ━━━
+Across your 30 ideas, you MUST include a realistic spread of impulse scores:
+- At least 8 ideas with impulseScore 8, 9, or 10 (high impulse — viral potential, quick win)
+- At least 8 ideas with impulseScore 5, 6, or 7 (medium impulse — strong demand)
+- The remaining ideas can be lower impulse (premium, evergreen, deeper transformation)
+Do NOT cluster all ideas at the same score. Real markets have a full range.
+
+impulseTag must match the score:
+- Score 8-10 → "🔥 Viral Potential" or "⚡ Quick Win"
+- Score 6-7 → "🎯 High Demand" or "💎 Premium"
+- Score 3-5 → "🌟 Evergreen"
+
+Also vary demandScore and competitionLevel across the 30 ideas.
+Mix quick wins (high impulse, low competition) with premium plays (lower impulse, higher value).
+
 ━━━ FINAL CHECK (do this before returning) ━━━
 Before outputting your JSON, review every idea and ask:
 "Is this product specifically about ${niche}?"
