@@ -6,6 +6,7 @@ import CopySuite from '@/components/CopySuite';
 import OfferCreation from '@/components/OfferCreation';
 import FunnelBuilder from '@/components/FunnelBuilder';
 import MySavedPage from '@/components/MySavedPage';
+import KnowledgeBasePage from '@/components/KnowledgeBasePage';
 import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
@@ -177,10 +178,10 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 );
 
 /* ───────── Types ───────── */
-type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'copy_suite' | 'settings' | 'help' | 'profile' | 'saved';
+type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'copy_suite' | 'settings' | 'help' | 'profile' | 'saved' | 'knowledge_base';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
-const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite'];
+const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite', 'knowledge_base'];
 
 const TOOL_ACCESS: Record<string, string[]> = {
   dashboard: ['basic','premium','beta'],
@@ -189,6 +190,7 @@ const TOOL_ACCESS: Record<string, string[]> = {
   offer: ['basic','premium','beta'],
   funnel: ['basic','premium','beta'],
   copy_suite: ['basic','premium','beta'],
+  knowledge_base: ['basic','premium','beta'],
   creator: ['premium','beta'],
   copy: ['premium','beta'],
   ads: ['premium','beta'],
@@ -449,6 +451,32 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', 
             {savedCount <= 9 ? `${savedCount} saved` : '9+ saved'}
           </span>
         )}
+      </div>
+
+      {/* Knowledge Base */}
+      <div onClick={() => onNavigate('knowledge_base' as PageId)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+          transition: 'all 0.2s', position: 'relative' as const,
+          background: activePage === ('knowledge_base' as string) ? 'linear-gradient(135deg,rgba(124,58,237,0.12),rgba(109,40,217,0.06))' : 'transparent',
+        }}
+        onMouseEnter={e => { if (activePage !== ('knowledge_base' as string)) (e.currentTarget.style.background = 'rgba(0,0,0,0.03)'); }}
+        onMouseLeave={e => { if (activePage !== ('knowledge_base' as string)) (e.currentTarget.style.background = 'transparent'); }}
+      >
+        {activePage === ('knowledge_base' as string) && <div style={{ position: 'absolute' as const, left: 0, top: '25%', bottom: '25%', width: 3, background: 'linear-gradient(180deg,#7c3aed,#a855f7)', borderRadius: '0 2px 2px 0' }} />}
+        <div style={{
+          width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16,
+          background: activePage === ('knowledge_base' as string) ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f8fafc',
+          boxShadow: activePage === ('knowledge_base' as string) ? '0 3px 10px rgba(124,58,237,0.3)' : 'none',
+        }}>
+          📚
+        </div>
+        <span style={{ fontFamily: activePage === ('knowledge_base' as string) ? 'Sora' : 'DM Sans', fontSize: 14, fontWeight: activePage === ('knowledge_base' as string) ? 800 : 600, color: activePage === ('knowledge_base' as string) ? '#7c3aed' : '#374151', flex: 1 }}>Knowledge Base</span>
+        <span style={{
+          background: 'linear-gradient(135deg,#10b981,#06b6d4)', color: 'white',
+          fontFamily: 'DM Sans', fontWeight: 800, fontSize: 8, padding: '2px 6px', borderRadius: 50,
+          letterSpacing: '0.06em',
+        }}>NEW</span>
       </div>
 
       {/* Settings/Help */}
@@ -2169,6 +2197,7 @@ const Index = () => {
             {activePage === 'copy_suite' && <CopySuite onBack={() => navigateTo('dashboard')} />}
             {activePage === 'saved' && user && <MySavedPage userId={user.id} onNavigate={navigateTo} onSavedCountChange={setSavedCount} onBuildFunnel={(data: any) => { setFunnelPrefill(data); navigateTo('funnel'); }} />}
             {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
+            {activePage === 'knowledge_base' && <KnowledgeBasePage onNavigate={navigateTo} />}
           </main>
         </div>
       </div>
