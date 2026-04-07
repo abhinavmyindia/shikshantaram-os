@@ -638,6 +638,10 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
       const totalCostUsd = l.reduce((s: number, x: any) => s + parseFloat(x.estimated_cost_usd || '0'), 0);
       const uniqueUsers = new Set(l.map((x: any) => x.user_id).filter(Boolean)).size;
 
+      // Data source split
+      const edgeFunctionLogs = l.filter((x: any) => x.logged_from === 'edge_function').length;
+      const frontendLogs = l.filter((x: any) => x.logged_from !== 'edge_function').length;
+
       const byModule: Record<string, any> = {};
       const byModel: Record<string, any> = {};
       const byUser: Record<string, any> = {};
@@ -666,7 +670,7 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
       l.forEach((x: any) => { const ct = x.call_type || 'unknown'; byCallType[ct] = (byCallType[ct] || 0) + 1; });
       const topCallTypes = Object.entries(byCallType).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-      setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes });
+      setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes, edgeFunctionLogs, frontendLogs });
       setLastRefreshed(new Date());
     } catch (err) {
       console.error('AI analytics fetch error:', err);
