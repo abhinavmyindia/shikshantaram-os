@@ -1772,17 +1772,24 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
                       fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151',
                     }}>Change Role ▾</button>
                     {rolePickerFor === member.user_id && (
-                      <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 10, background: 'white', borderRadius: 12, boxShadow: '0 8px 30px rgba(0,0,0,0.15)', border: '1px solid #e2e8f0', padding: 6, marginTop: 4, minWidth: 160 }}>
-                        {(['admin', 'manager', 'operator'] as const).map(r => (
-                          <button key={r} onClick={() => changeRole(member.user_id, r)} disabled={member.role === r} style={{
-                            display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', borderRadius: 8,
-                            cursor: member.role === r ? 'default' : 'pointer',
-                            background: member.role === r ? '#f8fafc' : 'transparent',
-                            fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
-                            color: member.role === r ? '#94a3b8' : '#374151',
-                          }}>{roleMeta[r].label} {member.role === r ? '✓' : ''}</button>
-                        ))}
-                      </div>
+                      <>
+                        <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
+                        <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 9999, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e2e8f0', padding: 6, marginTop: 4, minWidth: 180 }}>
+                          {(['admin', 'manager', 'operator'] as const).map(r => (
+                            <button key={r} onClick={() => changeRole(member.user_id, r)} disabled={member.role === r} style={{
+                              display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '10px 14px', border: 'none', borderRadius: 8,
+                              cursor: member.role === r ? 'default' : 'pointer',
+                              background: member.role === r ? 'rgba(124,58,237,0.08)' : 'transparent',
+                              fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
+                              color: member.role === r ? '#7c3aed' : '#374151',
+                            }}>
+                              <span>{r === 'admin' ? '🔧' : r === 'manager' ? '📋' : '⚙️'}</span>
+                              <span style={{ textTransform: 'capitalize' }}>{r}</span>
+                              {member.role === r && <span style={{ marginLeft: 'auto', color: '#7c3aed' }}>✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                   <button onClick={() => { if (confirm(`Remove ${member.display_name || member.email} from the team?`)) removeMember(member.user_id); }} style={{

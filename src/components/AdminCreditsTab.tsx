@@ -244,11 +244,23 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   };
 
   const loadGiftHistory = async () => {
-    const { data } = await supabase
+    const { data: gifts } = await supabase
       .from('credit_transactions')
       .select('*').in('type',['gift','promo'])
       .order('created_at', { ascending:false }).limit(30);
-    setGiftHistory(data || []);
+
+    // Enrich with user names
+    const userIds = [...new Set((gifts || []).map((g: any) => g.user_id).filter(Boolean))];
+    const { data: profiles } = userIds.length > 0
+      ? await supabase.from('user_profiles').select('id, full_name').in('id', userIds)
+      : { data: [] };
+    const userMap: Record<string, string> = {};
+    (profiles || []).forEach((p: any) => { userMap[p.id] = p.full_name; });
+
+    setGiftHistory((gifts || []).map((g: any) => ({
+      ...g,
+      _user_name: userMap[g.user_id] || null,
+    })));
   };
 
   const loadTransactions = async () => {
@@ -259,7 +271,19 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
     else if (txFilter === 'gift') q = q.in('type', ['gift', 'promo']);
     else if (txFilter !== 'all') q = q.eq('type', txFilter);
     const { data } = await q;
-    setTransactions(data || []);
+
+    // Enrich transactions with user names
+    const userIds = [...new Set((data || []).map((t: any) => t.user_id).filter(Boolean))];
+    const { data: profiles } = userIds.length > 0
+      ? await supabase.from('user_profiles').select('id, full_name').in('id', userIds)
+      : { data: [] };
+    const userMap: Record<string, string> = {};
+    (profiles || []).forEach((p: any) => { userMap[p.id] = p.full_name; });
+
+    setTransactions((data || []).map((t: any) => ({
+      ...t,
+      _user_name: userMap[t.user_id] || null,
+    })));
     setTxLoading(false);
   };
 
