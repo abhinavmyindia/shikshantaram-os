@@ -14,13 +14,30 @@ const PERSONAS = [
 
 const pickOne = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
+// Sanitize user input — strip control chars and limit length
+const sanitize = (input: string | undefined, maxLen = 2000): string => {
+  if (!input) return '';
+  return String(input)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim()
+    .substring(0, maxLen);
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
-  const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!;
-
   try {
-    // Auth
+    // ─── Request size guard ───
+    const bodyText = await req.text();
+    if (bodyText.length > 50000) {
+      return new Response(
+        JSON.stringify({ error: 'Request too large. Please reduce your input.' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const body = JSON.parse(bodyText);
+
+    // ─── Auth ───
     const authHeader = req.headers.get('Authorization') || '';
     const token = authHeader.replace('Bearer ', '');
     const anonClient = createClient(
@@ -31,20 +48,61 @@ Deno.serve(async (req) => {
     const userId = user?.id || '';
     const userEmail = user?.email || '';
 
-    const {
-      background,
-      skills,
-      passions,
-      experience,
-      goals,
-      country = 'India',
-    } = await req.json();
+    // ─── Check blocked users ───
+    if (userId) {
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+        { auth: { persistSession: false } }
+      );
+      const { data: profile } = await supabaseAdmin
+        .from('user_profiles')
+        .select('access_tier')
+        .eq('id', userId)
+        .single();
+      if (profile?.access_tier === 'revoked') {
+        return new Response(
+          JSON.stringify({ error: 'Your access has been revoked. Contact support.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
+    const {
+      background: rawBg,
+      skills: rawSkills,
+      passions: rawPassions,
+      experience: rawExp,
+      goals: rawGoals,
+      country = 'India',
+    } = body;
+
+    // ─── Sanitize inputs ───
+    const background = sanitize(rawBg);
+    const skills = sanitize(rawSkills);
+    const passions = sanitize(rawPassions);
+    const experience = sanitize(rawExp);
+    const goals = sanitize(rawGoals);
+
+    // ─── Input validation ───
     const hasContent = [background, skills, passions, experience, goals]
-      .some(f => f && String(f).trim().length >= 10);
+      .some(f => f && f.trim().length >= 10);
 
     if (!hasContent) {
-      throw new Error('Please fill in at least one field with 10+ characters.');
+      return new Response(
+        JSON.stringify({ error: 'Please fill in at least one field with 10+ characters.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ─── API key check ───
+    const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!ANTHROPIC_API_KEY) {
+      console.error('[find-my-niche] CRITICAL: No ANTHROPIC_API_KEY found in secrets');
+      return new Response(
+        JSON.stringify({ error: 'AI service temporarily unavailable. Please try again later.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const buildField = (label: string, value: string) =>
@@ -94,15 +152,10 @@ Return ONLY a JSON array of exactly 5 objects:
 ]`;
 
     // ─── BYOK routing ───
-    let byokUsed = false;
-    let byokProvider = '';
-
     if (userId) {
       try {
         const resolved = await resolveAIKey(userId);
         if (resolved.useByok) {
-          byokUsed = true;
-          byokProvider = resolved.provider;
           const result = await callWithBYOK({
             provider: resolved.provider as any,
             apiKey: resolved.apiKey,
@@ -119,7 +172,17 @@ Return ONLY a JSON array of exactly 5 objects:
           );
 
           const raw = result.text.replace(/```json|```/g, '').trim();
-          const niches = JSON.parse(raw);
+          let niches;
+          try {
+            niches = JSON.parse(raw);
+            if (!Array.isArray(niches) || niches.length === 0) throw new Error('Empty array');
+          } catch (parseErr) {
+            console.error('[find-my-niche] BYOK JSON parse failed:', (parseErr as Error).message);
+            return new Response(
+              JSON.stringify({ error: 'AI generated an unexpected format. Please try again.' }),
+              { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
 
           return new Response(JSON.stringify({
             niches,
@@ -132,29 +195,49 @@ Return ONLY a JSON array of exactly 5 objects:
         }
       } catch (byokErr) {
         console.error('BYOK fallback to platform:', byokErr);
-        // Fall through to platform key
       }
     }
 
-    // ─── Platform path (Anthropic) with retry ───
+    // ─── Platform path (Anthropic) with retry + timeout ───
     let response: Response | null = null;
     let lastErr = '';
     for (let attempt = 0; attempt < 3; attempt++) {
-      response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 5000,
-          temperature: 0.9,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: prompt }],
-        }),
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+
+      try {
+        response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 5000,
+            temperature: 0.9,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+      } catch (fetchErr: any) {
+        clearTimeout(timeout);
+        if (fetchErr.name === 'AbortError') {
+          if (attempt === 2) {
+            return new Response(
+              JSON.stringify({ error: 'AI request timed out. Please try again with shorter input.' }),
+              { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          console.warn(`[find-my-niche] Timeout attempt ${attempt + 1}, retrying...`);
+          await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
+          continue;
+        }
+        throw fetchErr;
+      }
 
       if (response.ok) break;
 
@@ -170,8 +253,26 @@ Return ONLY a JSON array of exactly 5 objects:
     }
 
     const data = await response!.json();
-    const raw = data.content[0].text.replace(/```json|```/g, '').trim();
-    const niches = JSON.parse(raw);
+    const rawText = data.content?.[0]?.text || '';
+
+    // ─── Safe JSON parse ───
+    let niches;
+    try {
+      const cleanText = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      niches = JSON.parse(cleanText);
+      if (!Array.isArray(niches) || niches.length === 0) {
+        throw new Error('AI returned empty or non-array response');
+      }
+    } catch (parseError) {
+      console.error('[find-my-niche] JSON parse failed:', (parseError as Error).message);
+      console.error('[find-my-niche] Raw AI text:', rawText.substring(0, 500));
+      return new Response(
+        JSON.stringify({
+          error: 'AI generated an unexpected format. Please try again — results may vary.',
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Log platform usage
     if (userId) {
@@ -194,7 +295,7 @@ Return ONLY a JSON array of exactly 5 objects:
 
   } catch (err: any) {
     console.error('find-my-niche error:', err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message || 'An unexpected error occurred. Please try again.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
