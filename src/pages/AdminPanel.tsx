@@ -1775,19 +1775,23 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
                       <>
                         <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
                         <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 9999, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e2e8f0', padding: 6, minWidth: 180 }}>
-                          {(['admin', 'manager', 'operator'] as const).map(r => (
-                            <button key={r} onClick={() => changeRole(member.user_id, r)} disabled={member.role === r} style={{
-                              display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '10px 14px', border: 'none', borderRadius: 8,
-                              cursor: member.role === r ? 'default' : 'pointer',
-                              background: member.role === r ? 'rgba(124,58,237,0.08)' : 'transparent',
-                              fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13,
-                              color: member.role === r ? '#7c3aed' : '#374151',
-                            }}>
-                              <span>{r === 'admin' ? '🔧' : r === 'manager' ? '📋' : '⚙️'}</span>
-                              <span style={{ textTransform: 'capitalize' }}>{r}</span>
-                              {member.role === r && <span style={{ marginLeft: 'auto', color: '#7c3aed' }}>✓</span>}
-                            </button>
-                          ))}
+                          {(['admin', 'manager', 'operator'] as const).map(r => {
+                            const isCurrent = member.role === r;
+                            return (
+                              <div key={r} onClick={() => { if (!isCurrent) { changeRole(member.user_id, r); setRolePickerFor(null); } }} style={{
+                                display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left' as const, padding: '10px 14px', borderRadius: 8,
+                                cursor: isCurrent ? 'default' : 'pointer',
+                                background: isCurrent ? (r === 'admin' ? 'rgba(124,58,237,0.08)' : r === 'manager' ? 'rgba(37,99,235,0.08)' : 'rgba(100,116,139,0.08)') : 'transparent',
+                                fontFamily: 'DM Sans', fontWeight: isCurrent ? 700 : 500, fontSize: 13,
+                                color: isCurrent ? (r === 'admin' ? '#7c3aed' : r === 'manager' ? '#2563eb' : '#64748b') : '#374151',
+                                opacity: 1,
+                              }}>
+                                <span style={{ fontSize: 16 }}>{r === 'admin' ? '🔧' : r === 'manager' ? '📋' : '⚙️'}</span>
+                                <span style={{ textTransform: 'capitalize' as const }}>{r}</span>
+                                {isCurrent && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
+                              </div>
+                            );
+                          })}
                         </div>
                       </>
                     )}
