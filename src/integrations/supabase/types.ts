@@ -121,11 +121,13 @@ export type Database = {
       }
       ai_usage_logs: {
         Row: {
+          byok: boolean | null
           call_type: string
           created_at: string | null
           estimated_cost_usd: number
           id: string
           input_tokens: number
+          logged_from: string | null
           model: string
           module: string
           output_tokens: number
@@ -136,11 +138,13 @@ export type Database = {
           user_name: string | null
         }
         Insert: {
+          byok?: boolean | null
           call_type: string
           created_at?: string | null
           estimated_cost_usd?: number
           id?: string
           input_tokens?: number
+          logged_from?: string | null
           model: string
           module: string
           output_tokens?: number
@@ -151,11 +155,13 @@ export type Database = {
           user_name?: string | null
         }
         Update: {
+          byok?: boolean | null
           call_type?: string
           created_at?: string | null
           estimated_cost_usd?: number
           id?: string
           input_tokens?: number
+          logged_from?: string | null
           model?: string
           module?: string
           output_tokens?: number
