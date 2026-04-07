@@ -1745,7 +1745,7 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
 
       {/* Current Team */}
       <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>Current Team ({teamMembers.length} members)</div>
-      <div style={{ ...glassCard, overflow: 'hidden', marginBottom: 20 }}>
+      <div style={{ ...glassCard, marginBottom: 20 }}>
         {teamMembers.map((member: any, i: number) => {
           const meta = roleMeta[member.role] || roleMeta.operator;
           const isOwnerRow = member.is_owner;
