@@ -181,7 +181,7 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'copy_suite' | 'settings' | 'help' | 'profile' | 'saved' | 'knowledge_base';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
-const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite'];
+const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite', 'knowledge_base'];
 
 const TOOL_ACCESS: Record<string, string[]> = {
   dashboard: ['basic','premium','beta'],
@@ -190,6 +190,7 @@ const TOOL_ACCESS: Record<string, string[]> = {
   offer: ['basic','premium','beta'],
   funnel: ['basic','premium','beta'],
   copy_suite: ['basic','premium','beta'],
+  knowledge_base: ['basic','premium','beta'],
   creator: ['premium','beta'],
   copy: ['premium','beta'],
   ads: ['premium','beta'],
