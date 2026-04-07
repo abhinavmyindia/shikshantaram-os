@@ -1675,6 +1675,7 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [rolePickerFor, setRolePickerFor] = useState<string | null>(null);
+  const [roleBtnRect, setRoleBtnRect] = useState({ top: 0, left: 0 });
 
   const fetchTeam = async () => {
     setLoading(true);
