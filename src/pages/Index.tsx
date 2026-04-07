@@ -2322,6 +2322,8 @@ const Index = () => {
   const [sessionCostUsd, setSessionCostUsd] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
   const [avatarColor, setAvatarColor] = useState('#7c3aed');
+  const [showMotivationPopup, setShowMotivationPopup] = useState(false);
+  const [motivationMessage, setMotivationMessage] = useState<any>(null);
   const tracking = useTracking(user?.id);
   const sessionStarted = useRef(false);
   const usagePopupShown = useRef(false);
@@ -2496,6 +2498,46 @@ const Index = () => {
     if (isMobile) setSidebarOpen(false);
   }, [activePage, isMobile]);
 
+  // ── Motivation popup ──
+  const MOTIVATION_MESSAGES = [
+    { emoji:"🎯", tag:"YOUR NICHE IS WAITING", gradient:"linear-gradient(135deg, #7c3aed, #c026d3)", accentColor:"#7c3aed", lightBg:"rgba(124,58,237,0.06)", headline:"The niche you keep postponing? Someone just claimed it.", body:"Every day you spend 'thinking about it' is a day another creator builds an audience in your space, publishes the ebook you had in your head, and takes the income that was supposed to be yours. The window is open — but it won't stay open forever.", hardTruth:"\"You don't need more information. You need to make a decision and start.\"", cta:"🎯 Find My Niche Right Now →", ctaTool:"niche" },
+    { emoji:"📦", tag:"BUILD IT TODAY", gradient:"linear-gradient(135deg, #ea580c, #f59e0b)", accentColor:"#ea580c", lightBg:"rgba(234,88,12,0.06)", headline:"Your first digital product could be live by tonight.", body:"Not next month. Not after you 'figure everything out.' Tonight. A simple ₹499 ebook, a Notion template, a prompt pack — something real, something sellable, something that makes your phone buzz with a payment notification while you sleep.", hardTruth:"\"Done and imperfect beats perfect and unpublished — every single time.\"", cta:"📦 Find My First Product →", ctaTool:"product" },
+    { emoji:"⚡", tag:"NO MORE WAITING", gradient:"linear-gradient(135deg, #0891b2, #7c3aed)", accentColor:"#0891b2", lightBg:"rgba(8,145,178,0.06)", headline:"Waiting for the 'right time' is the most expensive mistake you'll make.", body:"The creators earning ₹50,000 a month from digital products didn't wait until they felt ready. They picked a niche, built something scrappy, put it online, and improved from there. The only difference between them and you right now is that they started.", hardTruth:"\"Every morning you wake up without a product for sale is a morning you worked for free.\"", cta:"⚡ Start Building Now →", ctaTool:"product" },
+    { emoji:"🚀", tag:"72 HOURS. THAT'S ALL.", gradient:"linear-gradient(135deg, #059669, #06b6d4)", accentColor:"#059669", lightBg:"rgba(5,150,105,0.06)", headline:"72 hours from now, you could have your first digital product live.", body:"That's the exact time it takes to go from zero to a published product. Find your niche today. Pick your product format tomorrow. Build it the day after. This platform was built for exactly this — your 72-hour launch is not a dream, it's a plan.", hardTruth:"\"In 72 hours, you'll either have a product live or another set of excuses. Choose wisely.\"", cta:"🚀 Start My 72-Hour Launch →", ctaTool:"niche" },
+    { emoji:"💰", tag:"THE INCOME IS REAL", gradient:"linear-gradient(135deg, #b45309, #ea580c)", accentColor:"#b45309", lightBg:"rgba(180,83,9,0.06)", headline:"Someone bought a digital product in the last 3 seconds. It wasn't yours.", body:"The global digital product market doesn't pause while you think. Thousands of buyers are right now looking for exactly what you know — your niche knowledge, your system, your shortcut — packaged into something they can pay for instantly.", hardTruth:"\"You are one product launch away from changing your monthly income forever.\"", cta:"💰 Find My Profitable Niche →", ctaTool:"niche" },
+    { emoji:"🧠", tag:"YOU ALREADY KNOW ENOUGH", gradient:"linear-gradient(135deg, #7c3aed, #3b82f6)", accentColor:"#7c3aed", lightBg:"rgba(124,58,237,0.06)", headline:"You already know more than 10,000 people who would pay to learn from you.", body:"You don't need a degree. You don't need 10 years of experience. You just need to know more than a beginner on ONE specific topic — and turn that into a ₹299 guide, a template, a mini-course. That's it. That's the whole business model.", hardTruth:"\"Stop waiting to be an expert. Beginners with ₹50,000/month incomes started exactly where you are.\"", cta:"🧠 Explore My Niche Options →", ctaTool:"niche" },
+    { emoji:"🔥", tag:"YOUR COMPETITION IS SLEEPING", gradient:"linear-gradient(135deg, #ec4899, #f97316)", accentColor:"#ec4899", lightBg:"rgba(236,72,153,0.06)", headline:"Most people in your niche are consuming. You could be selling.", body:"Right now, 99% of people in your space are watching videos and saving posts about digital products. They're building a perfect plan they'll never execute. You have the tools. You have the platform. You just need to stop consuming and start creating.", hardTruth:"\"Your future buyers are already online. They're just buying from someone else right now.\"", cta:"🔥 Start Creating Today →", ctaTool:"product" },
+    { emoji:"📱", tag:"ONE SALE CHANGES EVERYTHING", gradient:"linear-gradient(135deg, #6366f1, #ec4899)", accentColor:"#6366f1", lightBg:"rgba(99,102,241,0.06)", headline:"Your first sale will feel like nothing else you've ever experienced.", body:"The first time your phone buzzes with a payment notification — ₹399 from a complete stranger who found your product and decided your knowledge was worth paying for — that feeling will rewrite what you believe is possible. You're one product away from that moment.", hardTruth:"\"The first sale is proof. Proof that you have value, that people will pay, that this is real.\"", cta:"📱 Find My First Product Idea →", ctaTool:"product" },
+    { emoji:"⏰", tag:"TODAY IS THE DAY", gradient:"linear-gradient(135deg, #0f172a, #334155)", accentColor:"#334155", lightBg:"rgba(15,23,42,0.05)", headline:"A year from now, you'll wish you had started today.", body:"That's not a cliché — it's a mathematical fact. If you start your first digital product today, one year from now you'll have 12 months of learning, iterations, sales, and growth behind you. If you don't start today, you'll have one more year of 'almost started.'", hardTruth:"\"The best time to launch your first product was last year. The second best time is right now.\"", cta:"⏰ Start Right Now →", ctaTool:"niche" },
+    { emoji:"🌏", tag:"INDIA'S CREATOR MOMENT", gradient:"linear-gradient(135deg, #059669, #7c3aed)", accentColor:"#059669", lightBg:"rgba(5,150,105,0.06)", headline:"India's digital product economy is exploding — and most people are missing it.", body:"Right now, Indian creators are selling Notion templates, Hindi-language guides, finance trackers, and AI prompt packs to buyers across India and the world. The infrastructure is ready. The buyers are ready. Shikshantaram OS is ready. The only missing piece is your first product.", hardTruth:"\"The Indian creator economy is ₹2,500 Cr and growing. Your slice is sitting there unclaimed.\"", cta:"🌏 Claim My Space Now →", ctaTool:"niche" },
+  ];
+
+  const getTimeGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "🌅 Good Morning";
+    if (hour >= 12 && hour < 17) return "☀️ Good Afternoon";
+    return "🌙 Good Evening";
+  };
+
+  useEffect(() => {
+    if (user && !sessionStorage.getItem('motivationShown')) {
+      const msg = MOTIVATION_MESSAGES[Math.floor(Math.random() * MOTIVATION_MESSAGES.length)];
+      const timer = setTimeout(() => {
+        setMotivationMessage(msg);
+        setShowMotivationPopup(true);
+        sessionStorage.setItem('motivationShown', 'true');
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  const closeMotivationPopup = () => setShowMotivationPopup(false);
+  const handleMotivationCTA = (ctaTool: string) => {
+    setShowMotivationPopup(false);
+    if (ctaTool === 'niche') navigateTo('niche');
+    if (ctaTool === 'product') navigateTo('product');
+  };
+
   return (
     <>
       <GlobalStyles />
@@ -2568,6 +2610,42 @@ const Index = () => {
           onNavigate={navigateTo}
           displayValue={getRetailValue(sessionCostUsd)}
         />
+      )}
+      {showMotivationPopup && motivationMessage && (
+        <div onClick={closeMotivationPopup} style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(5,10,20,0.72)', backdropFilter:'blur(14px) saturate(150%)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px', animation:'fadeIn 0.3s ease' }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:'480px', width:'100%', borderRadius:'28px', overflow:'hidden', boxShadow:'0 32px 80px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.1)', animation:'popIn 0.45s cubic-bezier(0.34,1.56,0.64,1)' }}>
+            {/* Hero band */}
+            <div style={{ height:'180px', background:motivationMessage.gradient, position:'relative', overflow:'hidden' }}>
+              <div style={{ position:'absolute', width:'220px', height:'220px', borderRadius:'50%', background:'rgba(255,255,255,0.08)', top:'-40px', right:'-40px', animation:'float 6s ease-in-out infinite' }} />
+              <div style={{ position:'absolute', width:'160px', height:'160px', borderRadius:'50%', background:'rgba(255,255,255,0.06)', bottom:'-30px', left:'-20px', animation:'float 8s ease-in-out infinite reverse' }} />
+              <div style={{ position:'absolute', top:'14px', left:'14px', background:'rgba(255,255,255,0.18)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'50px', padding:'4px 12px', fontSize:'10px', fontWeight:800, color:'white', letterSpacing:'0.06em', fontFamily:'DM Sans,sans-serif' }}>{getTimeGreeting()}</div>
+              <button onClick={closeMotivationPopup} style={{ position:'absolute', top:'14px', right:'14px', width:'30px', height:'30px', borderRadius:'50%', background:'rgba(255,255,255,0.18)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.25)', color:'white', fontSize:'13px', fontWeight:800, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'10px' }}>
+                <span style={{ fontSize:'52px', animation:'float 3s ease-in-out infinite', lineHeight:1 }}>{motivationMessage.emoji}</span>
+                <div style={{ background:'rgba(255,255,255,0.18)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.3)', borderRadius:'50px', padding:'4px 14px', fontSize:'10px', fontWeight:800, color:'white', letterSpacing:'0.1em', fontFamily:'DM Sans,sans-serif' }}>{motivationMessage.tag}</div>
+              </div>
+            </div>
+            {/* Content */}
+            <div style={{ background:'rgba(255,255,255,0.97)', backdropFilter:'blur(20px)', padding:'28px 28px 24px' }}>
+              <h2 style={{ fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'clamp(17px,4vw,21px)', color:'#0f172a', lineHeight:1.2, letterSpacing:'-0.03em', margin:'0 0 12px' }}>{motivationMessage.headline}</h2>
+              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'14px', color:'#475569', lineHeight:1.75, margin:'0 0 18px' }}>{motivationMessage.body}</p>
+              <div style={{ background:motivationMessage.lightBg, borderLeft:`3px solid ${motivationMessage.accentColor}`, borderRadius:'0 10px 10px 0', padding:'12px 16px', marginBottom:'22px' }}>
+                <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#334155', lineHeight:1.65, fontStyle:'italic', margin:0 }}>{motivationMessage.hardTruth}</p>
+              </div>
+              <div style={{ display:'flex', gap:'10px', alignItems:'center' }}>
+                <button onClick={() => handleMotivationCTA(motivationMessage.ctaTool)} style={{ flex:1, background:motivationMessage.gradient, color:'white', border:'none', borderRadius:'14px', padding:'13px 20px', fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'14px', cursor:'pointer', boxShadow:`0 4px 20px ${motivationMessage.accentColor}40`, transition:'all 0.18s cubic-bezier(0.34,1.56,0.64,1)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow=`0 8px 28px ${motivationMessage.accentColor}50`; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform='translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow=`0 4px 20px ${motivationMessage.accentColor}40`; }}
+                >{motivationMessage.cta}</button>
+                <button onClick={closeMotivationPopup} style={{ background:'none', border:'none', color:'#94a3b8', fontFamily:'DM Sans,sans-serif', fontSize:'12.5px', fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}>Maybe later</button>
+              </div>
+              <div style={{ borderTop:'1px solid #f1f5f9', marginTop:'20px', paddingTop:'14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', fontWeight:700, color:'#94a3b8' }}>🔥 Day {journeyDay} of your journey</span>
+                <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', fontWeight:700, color:'#64748b', background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'50px', padding:'4px 12px' }}>4 tools ready to use →</span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
