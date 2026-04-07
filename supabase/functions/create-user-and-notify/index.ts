@@ -39,7 +39,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Not an admin' }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { email, full_name, phone, temp_password, access_tier, payment_status, payment_amount } = await req.json();
+    const { email, full_name, phone, temp_password, access_tier, payment_status, payment_amount, is_beta_user, notes } = await req.json();
     const normalizedEmail = String(email || '').toLowerCase().trim();
 
     // 1. Create auth user
@@ -65,13 +65,15 @@ serve(async (req) => {
 
     const userId = authData.user.id;
 
-    // 2. Update the auto-created profile
+    // 2. Update the auto-created profile — access_tier comes directly from admin's selection
     await adminClient.from('user_profiles').update({
       full_name,
       phone: phone || '',
-      access_tier,
-      payment_status,
+      access_tier: access_tier || 'basic',
+      payment_status: payment_status || 'reserved',
       payment_amount: payment_amount || 0,
+      is_beta_user: is_beta_user || false,
+      notes: notes || '',
       added_by: 'admin',
     }).eq('id', userId);
 
