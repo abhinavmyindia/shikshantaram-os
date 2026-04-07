@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -1674,6 +1675,7 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [rolePickerFor, setRolePickerFor] = useState<string | null>(null);
+  const roleBtnRef = useRef<HTMLButtonElement>(null);
 
   const fetchTeam = async () => {
     setLoading(true);
@@ -1767,24 +1769,34 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
               ) : (
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0, position: 'relative' }}>
                   <div style={{ position: 'relative' }}>
-                    <button onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
+                    <button ref={roleBtnRef} onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
                       background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
                       fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151',
                     }}>Change Role ▾</button>
-                    {rolePickerFor === member.user_id && (
+                    {rolePickerFor === member.user_id && createPortal(
                       <>
-                        <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
-                        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 9999, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e2e8f0', padding: 6, minWidth: 180 }}>
+                        <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }} />
+                        <div style={{
+                          position: 'fixed',
+                          top: (roleBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                          left: (roleBtnRef.current?.getBoundingClientRect().right ?? 200) - 200,
+                          zIndex: 99999,
+                          background: 'white',
+                          borderRadius: 12,
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                          border: '1px solid #e2e8f0',
+                          padding: 6,
+                          width: 200,
+                        }}>
                           {(['admin', 'manager', 'operator'] as const).map(r => {
                             const isCurrent = member.role === r;
                             return (
-                              <div key={r} onClick={() => { if (!isCurrent) { changeRole(member.user_id, r); setRolePickerFor(null); } }} style={{
+                              <div key={r} onClick={() => { if (!isCurrent) { changeRole(member.user_id, r); } setRolePickerFor(null); }} style={{
                                 display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left' as const, padding: '10px 14px', borderRadius: 8,
                                 cursor: isCurrent ? 'default' : 'pointer',
                                 background: isCurrent ? (r === 'admin' ? 'rgba(124,58,237,0.08)' : r === 'manager' ? 'rgba(37,99,235,0.08)' : 'rgba(100,116,139,0.08)') : 'transparent',
                                 fontFamily: 'DM Sans', fontWeight: isCurrent ? 700 : 500, fontSize: 13,
                                 color: isCurrent ? (r === 'admin' ? '#7c3aed' : r === 'manager' ? '#2563eb' : '#64748b') : '#374151',
-                                opacity: 1,
                               }}>
                                 <span style={{ fontSize: 16 }}>{r === 'admin' ? '🔧' : r === 'manager' ? '📋' : '⚙️'}</span>
                                 <span style={{ textTransform: 'capitalize' as const }}>{r}</span>
@@ -1793,7 +1805,8 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
                             );
                           })}
                         </div>
-                      </>
+                      </>,
+                      document.body
                     )}
                   </div>
                   <button onClick={() => { if (confirm(`Remove ${member.display_name || member.email} from the team?`)) removeMember(member.user_id); }} style={{
