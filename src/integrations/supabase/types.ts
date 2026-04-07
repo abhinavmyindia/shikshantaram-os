@@ -952,6 +952,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_knowledge_docs: {
+        Row: {
+          created_at: string | null
+          detected_niche: string | null
+          expertise_tags: string[] | null
+          extracted_text: string | null
+          file_size_bytes: number | null
+          file_type: string
+          filename: string
+          id: string
+          is_active: boolean | null
+          storage_path: string | null
+          summary: string | null
+          updated_at: string | null
+          use_count: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          detected_niche?: string | null
+          expertise_tags?: string[] | null
+          extracted_text?: string | null
+          file_size_bytes?: number | null
+          file_type: string
+          filename: string
+          id?: string
+          is_active?: boolean | null
+          storage_path?: string | null
+          summary?: string | null
+          updated_at?: string | null
+          use_count?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          detected_niche?: string | null
+          expertise_tags?: string[] | null
+          extracted_text?: string | null
+          file_size_bytes?: number | null
+          file_type?: string
+          filename?: string
+          id?: string
+          is_active?: boolean | null
+          storage_path?: string | null
+          summary?: string | null
+          updated_at?: string | null
+          use_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_presence: {
         Row: {
           current_page: string | null
