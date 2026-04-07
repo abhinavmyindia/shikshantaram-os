@@ -801,11 +801,11 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
                     {tx.type === 'promo' ? '📢' : '🎁'}
                   </div>
                   <div style={s({ flex:1 })}>
-                    <p style={s({ fontFamily:'DM Sans', fontWeight:600, fontSize:13, color:'#374151', margin:0 })}>
-                      {tx.user_email || tx.user_id || '—'}
+                    <p style={s({ fontFamily:'DM Sans', fontWeight:700, fontSize:13, color:'#0f172a', margin:0 })}>
+                      {tx._user_name || tx.user_email || 'Unknown User'}
                     </p>
                     <p style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', margin:'2px 0 0' })}>
-                      {tx.description} · {fmtRel(tx.created_at)}
+                      {tx.user_email || ''}{tx.user_email && tx.description ? ' · ' : ''}{tx.description} · {fmtRel(tx.created_at)}
                     </p>
                   </div>
                   <span style={s({ fontFamily:'Sora', fontWeight:800, fontSize:15, color:'#059669' })}>+{tx.amount}</span>
@@ -860,10 +860,15 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
                       {tx.type==='topup'?'💳': tx.type==='deduction'?'⚡': tx.type==='shadow_deduction'?'👻':'🎁'}
                     </div>
 
-                    {/* User email */}
-                    <span style={s({ fontFamily:'DM Sans', fontSize:12, color:'#374151', overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
-                      {tx.user_email || '—'}
-                    </span>
+                    {/* User */}
+                    <div style={s({ overflow:'hidden' })}>
+                      <p style={s({ fontFamily:'DM Sans', fontWeight:700, fontSize:12, color:'#0f172a', margin:0, overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
+                        {tx._user_name || '—'}
+                      </p>
+                      <p style={s({ fontFamily:'DM Sans', fontSize:10, color:'#94a3b8', margin:0, overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
+                        {tx.user_email || ''}
+                      </p>
+                    </div>
 
                     {/* Description */}
                     <span style={s({ fontFamily:'DM Sans', fontSize:12, color:'#64748b', overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
