@@ -2196,6 +2196,7 @@ const Index = () => {
             {activePage === 'copy_suite' && <CopySuite onBack={() => navigateTo('dashboard')} />}
             {activePage === 'saved' && user && <MySavedPage userId={user.id} onNavigate={navigateTo} onSavedCountChange={setSavedCount} onBuildFunnel={(data: any) => { setFunnelPrefill(data); navigateTo('funnel'); }} />}
             {activePage === 'profile' && user && <ProfilePage user={user} profile={profile} onProfileUpdate={refreshProfile} onNavigateDashboard={() => setActivePage('dashboard')} />}
+            {activePage === 'knowledge_base' && <KnowledgeBasePage onNavigate={navigateTo} />}
           </main>
         </div>
       </div>
