@@ -1833,6 +1833,7 @@ export default function AdminPanel() {
   const [stats, setStats] = useState({ total: 0, basic: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
   const [adminToast, setAdminToast] = useState<{ message: string; type: string } | null>(null);
+  const [analyticsDateRange, setAnalyticsDateRange] = useState('30days');
 
   // Set default tab based on role
   useEffect(() => {
@@ -1965,7 +1966,7 @@ export default function AdminPanel() {
             {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
             {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
             {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
-            {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab />}
+            {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
             {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
             {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
           </>
