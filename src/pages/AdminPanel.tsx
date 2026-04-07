@@ -741,7 +741,7 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>Period:</span>
         {ranges.map(r => (
           <button key={r.id} onClick={() => handleRangeChange(r.id)} style={{
@@ -751,7 +751,56 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
           }}>{r.label}</button>
         ))}
         <div style={{ flex: 1 }} />
-        <button onClick={() => fetchAnalytics(dateRange)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b' }}>🔄 Refresh</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {lastRefreshed && (
+            <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#94a3b8' }}>
+              Updated {(() => {
+                const diff = Math.floor((Date.now() - lastRefreshed.getTime()) / 1000);
+                if (diff < 10) return 'just now';
+                if (diff < 60) return `${diff}s ago`;
+                return `${Math.floor(diff / 60)}m ago`;
+              })()}
+            </span>
+          )}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)',
+            borderRadius: 50, padding: '4px 10px',
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', animation: 'pulseDot 2s infinite' }} />
+            <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 10, color: '#059669' }}>LIVE · 60s</span>
+          </div>
+          <button onClick={() => fetchAnalytics(dateRange, false)} disabled={isRefreshing} style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0',
+            background: isRefreshing ? '#f8fafc' : 'white',
+            cursor: isRefreshing ? 'not-allowed' : 'pointer',
+            fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12, color: '#64748b',
+            transition: 'all 0.15s',
+          }}>
+            <span style={{ display: 'inline-block', fontSize: 12, animation: isRefreshing ? 'spinSlow 0.8s linear infinite' : 'none' }}>↻</span>
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Data quality warning */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+        borderRadius: 12, padding: '12px 16px', marginBottom: 16,
+      }}>
+        <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+        <div>
+          <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12, color: '#b45309', margin: '0 0 3px' }}>
+            AI cost figures are estimates — likely underreported
+          </p>
+          <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#92400e', margin: 0, lineHeight: 1.6 }}>
+            Usage is currently logged from the frontend after each call. Multi-section reports
+            (like Deep Research) may only log 1 of 10 calls. Token counts are directionally correct —
+            API costs are likely 3–8x higher than shown.
+          </p>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
