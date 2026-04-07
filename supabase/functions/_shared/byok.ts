@@ -320,3 +320,74 @@ export const logByokUsage = async (
     });
   } catch (_) { /* Never block AI call due to logging failure */ }
 };
+
+// ─── SERVER-SIDE USAGE LOGGING ──────────────────────────────────────────────
+// Centralized helper for Edge Functions to log AI usage. Fire-and-forget.
+
+const MODEL_PRICING_MAP: Record<string, { input: number; output: number }> = {
+  'claude-haiku-4-5-20251001':      { input: 0.80,  output: 4.00  },
+  'claude-sonnet-4-20250514':       { input: 3.00,  output: 15.00 },
+  'google/gemini-3-flash-preview':  { input: 0.10,  output: 0.40  },
+  'google/gemini-2.5-flash':        { input: 0.15,  output: 0.60  },
+  'google/gemini-2.5-flash-lite':   { input: 0.075, output: 0.30  },
+  'google/gemini-2.5-pro':          { input: 1.25,  output: 10.00 },
+  'google/gemini-3.1-pro-preview':  { input: 1.25,  output: 10.00 },
+  'openai/gpt-5':                   { input: 2.50,  output: 10.00 },
+  'openai/gpt-5-mini':              { input: 0.40,  output: 1.60  },
+  'openai/gpt-5-nano':              { input: 0.10,  output: 0.40  },
+  'default':                        { input: 0.50,  output: 2.00  },
+};
+
+export const logUsage = async ({
+  supabaseAdmin,
+  userId,
+  userEmail,
+  userName,
+  module,
+  callType,
+  model,
+  usage,
+  sessionId,
+  byok = false,
+}: {
+  supabaseAdmin: any;
+  userId?: string | null;
+  userEmail?: string | null;
+  userName?: string | null;
+  module: string;
+  callType: string;
+  model: string;
+  usage: { input_tokens?: number; output_tokens?: number; prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null;
+  sessionId?: string;
+  byok?: boolean;
+}): Promise<void> => {
+  try {
+    if (!usage) return;
+    const inputTokens = usage.input_tokens || usage.prompt_tokens || 0;
+    const outputTokens = usage.output_tokens || usage.completion_tokens || 0;
+    const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
+    const pricing = MODEL_PRICING_MAP[model] || MODEL_PRICING_MAP['default'];
+    const estimatedCostUsd = byok ? 0 : (
+      (inputTokens / 1_000_000 * pricing.input) +
+      (outputTokens / 1_000_000 * pricing.output)
+    );
+
+    await supabaseAdmin.from('ai_usage_logs').insert({
+      user_id: userId || null,
+      user_email: userEmail || 'anonymous',
+      user_name: userName || 'Unknown',
+      module,
+      call_type: callType,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      total_tokens: totalTokens,
+      estimated_cost_usd: estimatedCostUsd,
+      session_id: sessionId || 'server',
+      logged_from: 'edge_function',
+      byok,
+    });
+  } catch (err) {
+    console.warn('logUsage error (non-fatal):', err);
+  }
+};

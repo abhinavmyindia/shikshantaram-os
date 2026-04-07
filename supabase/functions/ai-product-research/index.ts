@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveAIKey, callWithBYOK, logByokUsage } from '../_shared/byok.ts';
+import { resolveAIKey, callWithBYOK, logByokUsage, logUsage } from '../_shared/byok.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -114,40 +114,7 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'openai/gpt-5-nano':              { input: 0.10, output: 0.40 },
 };
 
-async function logAiUsage(
-  supabaseAdmin: any,
-  userId: string | null,
-  userEmail: string | null,
-  userName: string | null,
-  module: string,
-  callType: string,
-  model: string,
-  usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | null
-) {
-  try {
-    if (!usage) return;
-    const inputTokens = usage.prompt_tokens || 0;
-    const outputTokens = usage.completion_tokens || 0;
-    const totalTokens = usage.total_tokens || (inputTokens + outputTokens);
-    const pricing = MODEL_PRICING[model] || { input: 0.50, output: 2.00 };
-    const estimatedCost = (inputTokens / 1_000_000 * pricing.input) + (outputTokens / 1_000_000 * pricing.output);
-
-    await supabaseAdmin.from('ai_usage_logs').insert({
-      user_id: userId,
-      user_email: userEmail || 'anonymous',
-      user_name: userName || 'Unknown',
-      module,
-      call_type: callType,
-      model,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      total_tokens: totalTokens,
-      estimated_cost_usd: estimatedCost,
-    });
-  } catch (err) {
-    console.warn('Usage logging failed:', err);
-  }
-}
+// logAiUsage replaced by shared logUsage from _shared/byok.ts
 
 // ─── PROMPTS ─────────────────────────────────────────────────
 
@@ -873,11 +840,11 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       console.warn(`${action} truncated (finish_reason=length), retrying with conciseness prompt...`);
       const concisePrompt = prompt + '\n\nCRITICAL: Your previous response was TRUNCATED because it was too long. Keep ALL text values SHORT and concise (1 sentence max per field). Use abbreviated descriptions. Prioritize completing the ENTIRE JSON structure over verbose descriptions. Return COMPLETE, VALID JSON.';
       aiResult = await callLovableAI(concisePrompt, model, Math.min(maxTokens + 4000, 32000));
-      logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_retry', model, aiResult.usage);
+      logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_retry', model, usage: aiResult.usage });
     }
 
     // Log usage (fire-and-forget)
-    logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType, model, aiResult.usage);
+    logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType, model, usage: aiResult.usage });
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
@@ -893,7 +860,7 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
         try {
           const recoveryPrompt = prompt + '\n\nCRITICAL JSON VALIDITY RULES: Return STRICT VALID JSON only. Keep each value short. Escape internal quotes. Do not include markdown or commentary.';
           const recovered = await callLovableAI(recoveryPrompt, model, Math.min(maxTokens, 22000));
-          logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_parse_recovery', model, recovered.usage);
+          logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_parse_recovery', model, usage: recovered.usage });
           const repairedParsed = parseJsonResponse(recovered.content);
           return new Response(JSON.stringify({ result: repairedParsed }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -916,7 +883,7 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
         console.warn(`${action} parse failed, retrying with strict JSON prompt...`);
         const recoveryPrompt = prompt + '\n\nCRITICAL: Return ONLY valid JSON. No markdown, no commentary. Keep values concise. Escape all quotes inside strings.';
         const recovered = await callLovableAI(recoveryPrompt, model, Math.min(maxTokens, 20000));
-        logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'product_navigator', callType + '_parse_recovery', model, recovered.usage);
+        logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_parse_recovery', model, usage: recovered.usage });
         const repairedParsed = parseJsonResponse(recovered.content);
         return new Response(JSON.stringify({ result: repairedParsed }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

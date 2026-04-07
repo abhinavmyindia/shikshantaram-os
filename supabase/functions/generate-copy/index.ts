@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { resolveAIKey, callWithBYOK, logByokUsage } from '../_shared/byok.ts';
+import { resolveAIKey, callWithBYOK, logByokUsage, logUsage } from '../_shared/byok.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,20 +20,7 @@ function extractUserFromAuth(authHeader: string | null) {
   } catch { return { userId: null, userEmail: null, userName: null }; }
 }
 
-async function logAiUsage(supabaseAdmin: any, userId: string | null, userEmail: string | null, userName: string | null, callType: string, model: string, usage: any) {
-  try {
-    if (!usage) return;
-    const inputTokens = usage.prompt_tokens || 0;
-    const outputTokens = usage.completion_tokens || 0;
-    const pricing = MODEL_PRICING[model] || { input: 0.15, output: 0.60 };
-    const estimatedCost = (inputTokens / 1_000_000 * pricing.input) + (outputTokens / 1_000_000 * pricing.output);
-    await supabaseAdmin.from('ai_usage_logs').insert({
-      user_id: userId, user_email: userEmail || 'anonymous', user_name: userName || 'Unknown',
-      module: 'copy_suite', call_type: callType, model, input_tokens: inputTokens, output_tokens: outputTokens,
-      total_tokens: usage.total_tokens || (inputTokens + outputTokens), estimated_cost_usd: estimatedCost,
-    });
-  } catch (err) { console.warn('Usage logging failed:', err); }
-}
+// logAiUsage replaced by shared logUsage from _shared/byok.ts
 
 interface AIResult { content: string; usage: any; }
 
@@ -251,7 +238,7 @@ Return ONLY a JSON object:
     const aiResult = await callLovableAI(prompt, system, model, 8000);
 
     // Log usage
-    logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, `generate_${copyTypeKey}`, model, aiResult.usage);
+    logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'copywriting_suite', callType: `generate_${copyTypeKey}`, model, usage: aiResult.usage });
 
     const parsed = parseJsonResponse(aiResult.content);
     return new Response(JSON.stringify({ ...parsed, usage: aiResult.usage, byok: false }), {

@@ -638,6 +638,10 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
       const totalCostUsd = l.reduce((s: number, x: any) => s + parseFloat(x.estimated_cost_usd || '0'), 0);
       const uniqueUsers = new Set(l.map((x: any) => x.user_id).filter(Boolean)).size;
 
+      // Data source split
+      const edgeFunctionLogs = l.filter((x: any) => x.logged_from === 'edge_function').length;
+      const frontendLogs = l.filter((x: any) => x.logged_from !== 'edge_function').length;
+
       const byModule: Record<string, any> = {};
       const byModel: Record<string, any> = {};
       const byUser: Record<string, any> = {};
@@ -666,7 +670,7 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
       l.forEach((x: any) => { const ct = x.call_type || 'unknown'; byCallType[ct] = (byCallType[ct] || 0) + 1; });
       const topCallTypes = Object.entries(byCallType).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-      setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes });
+      setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes, edgeFunctionLogs, frontendLogs });
       setLastRefreshed(new Date());
     } catch (err) {
       console.error('AI analytics fetch error:', err);
@@ -784,23 +788,26 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
         </div>
       </div>
 
-      {/* Data quality warning */}
+      {/* Data source split indicator */}
       <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: 10,
-        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
-        borderRadius: 12, padding: '12px 16px', marginBottom: 16,
+        display: 'flex', gap: 16, flexWrap: 'wrap',
+        padding: '10px 14px',
+        background: 'rgba(5,150,105,0.04)', border: '1px solid rgba(5,150,105,0.12)',
+        borderRadius: 10, marginBottom: 16,
       }}>
-        <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
-        <div>
-          <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12, color: '#b45309', margin: '0 0 3px' }}>
-            AI cost figures are estimates — likely underreported
-          </p>
-          <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#92400e', margin: 0, lineHeight: 1.6 }}>
-            Usage is currently logged from the frontend after each call. Multi-section reports
-            (like Deep Research) may only log 1 of 10 calls. Token counts are directionally correct —
-            API costs are likely 3–8x higher than shown.
-          </p>
-        </div>
+        {[
+          { label: 'Edge Function logs', value: analytics.edgeFunctionLogs || 0, color: '#059669', desc: 'Accurate — server-side' },
+          { label: 'Frontend logs', value: analytics.frontendLogs || 0, color: '#b45309', desc: 'Old format — may be incomplete' },
+        ].map(s => (
+          <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+            <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#64748b' }}>
+              <strong style={{ color: '#374151' }}>{s.value}</strong> {s.label}
+              {' '}
+              <span style={{ color: '#94a3b8' }}>· {s.desc}</span>
+            </span>
+          </div>
+        ))}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
