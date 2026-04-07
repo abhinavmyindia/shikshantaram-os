@@ -1769,7 +1769,7 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
               ) : (
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0, position: 'relative' }}>
                   <div style={{ position: 'relative' }}>
-                    <button ref={el => { if (el && rolePickerFor === member.user_id) { const r = el.getBoundingClientRect(); setRoleBtnRect({ top: r.bottom + 4, left: r.right - 200 }); } }} onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
+                    <button ref={roleBtnRef} onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
                       background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
                       fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151',
                     }}>Change Role ▾</button>
@@ -1778,8 +1778,8 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
                         <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }} />
                         <div style={{
                           position: 'fixed',
-                          top: roleBtnRect.top,
-                          left: roleBtnRect.left,
+                          top: (roleBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                          left: (roleBtnRef.current?.getBoundingClientRect().right ?? 200) - 200,
                           zIndex: 99999,
                           background: 'white',
                           borderRadius: 12,
