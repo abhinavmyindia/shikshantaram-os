@@ -1821,6 +1821,7 @@ function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; o
           {[
             { key: 'ai' as const, label: '🤖 AI Research' },
             { key: 'browse' as const, label: '📦 Browse 500+ Ideas' },
+            { key: 'expertise' as const, label: '🧠 From My Expertise' },
           ].map(tab => (
             <button key={tab.key} onClick={() => setResearchMode(tab.key)}
               style={{
