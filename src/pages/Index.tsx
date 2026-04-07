@@ -13,8 +13,11 @@ import { productCategories, ProductCategory } from '@/data/products';
 import { useAuth } from '@/hooks/useAuth';
 import { useTracking } from '@/hooks/useTracking';
 import BetaFeedback from '@/components/BetaFeedback';
-import ProfilePage, { AVATAR_COLORS } from '@/components/ProfilePage';
 import { supabase } from '@/integrations/supabase/client';
+import { autoSaveWork } from '@/utils/recentWork';
+import { fileToBase64, getFileType, extractTextFromTxt, extractTextFromDocx, validateFile } from '@/utils/documentExtract';
+import ProfilePage, { AVATAR_COLORS } from '@/components/ProfilePage';
+// supabase already imported above
 import { trackPageView } from '@/utils/activityTracker';
 
 /* ───────── seedRng ───────── */
@@ -1679,11 +1682,123 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
 
 /* ───────── Product Page ───────── */
 function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; onAction?: () => void; onBuildOffer?: (data: any) => void }) {
-  const [researchMode, setResearchMode] = useState<'ai' | 'browse'>('ai');
+  const [researchMode, setResearchMode] = useState<'ai' | 'browse' | 'expertise'>('ai');
   const [search, setSearch] = useState('');
   const [speed, setSpeed] = useState('All');
   const [price, setPrice] = useState('All');
   const [modal, setModal] = useState<{ product: string; cat: ProductCategory } | null>(null);
+
+  /* ── Expertise tab state ── */
+  const [expertiseFile, setExpertiseFile] = useState<File | null>(null);
+  const [expertiseDragOver, setExpertiseDragOver] = useState(false);
+  const [expertiseLoading, setExpertiseLoading] = useState(false);
+  const [expertiseStage, setExpertiseStage] = useState('');
+  const [expertiseProfile, setExpertiseProfile] = useState<any>(null);
+  const [expertiseIdeas, setExpertiseIdeas] = useState<any[]>([]);
+  const [expertiseError, setExpertiseError] = useState('');
+  const [savedDocs, setSavedDocs] = useState<any[]>([]);
+  const [selectedSavedDoc, setSelectedSavedDoc] = useState<any>(null);
+  const [showSavedDocs, setShowSavedDocs] = useState(false);
+
+  useEffect(() => {
+    const loadSavedDocs = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_knowledge_docs')
+        .select('id, filename, expertise_tags, detected_niche, summary, extracted_text, use_count, created_at')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      setSavedDocs(data || []);
+    };
+    loadSavedDocs();
+  }, []);
+
+  const handleExpertiseGenerate = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setExpertiseLoading(true);
+    setExpertiseError('');
+    setExpertiseProfile(null);
+    setExpertiseIdeas([]);
+
+    try {
+      let payload: any = { userId: user.id, userEmail: user.email, country: 'India' };
+
+      if (selectedSavedDoc) {
+        setExpertiseStage('Loading your knowledge base...');
+        payload.docId = selectedSavedDoc.id;
+        payload.extractedText = selectedSavedDoc.extracted_text || '';
+        if (!payload.extractedText) {
+          const { data: fullDoc } = await supabase
+            .from('user_knowledge_docs')
+            .select('extracted_text')
+            .eq('id', selectedSavedDoc.id)
+            .single();
+          payload.extractedText = fullDoc?.extracted_text || '';
+        }
+      } else if (expertiseFile) {
+        const fileType = getFileType(expertiseFile.name);
+        if (!fileType) { setExpertiseError('Unsupported file type.'); setExpertiseLoading(false); return; }
+        setExpertiseStage('Reading your document...');
+        if (fileType === 'pdf') {
+          payload.fileBase64 = await fileToBase64(expertiseFile);
+          payload.fileType = 'pdf';
+        } else if (fileType === 'docx') {
+          setExpertiseStage('Extracting text from document...');
+          const text = await extractTextFromDocx(expertiseFile);
+          payload.fileBase64 = btoa(unescape(encodeURIComponent(text)));
+          payload.fileType = 'txt';
+          payload.extractedText = text;
+        } else {
+          const text = await extractTextFromTxt(expertiseFile);
+          payload.fileBase64 = btoa(unescape(encodeURIComponent(text)));
+          payload.fileType = 'txt';
+          payload.extractedText = text;
+        }
+        payload.filename = expertiseFile.name;
+      } else {
+        setExpertiseError('Please upload a document or select one from your Knowledge Base.');
+        setExpertiseLoading(false);
+        return;
+      }
+
+      const stages = [
+        'Analysing your expertise...',
+        'Identifying your unique knowledge signals...',
+        'Finding product opportunities only you can create...',
+        'Generating personalised ideas...',
+      ];
+      let stageIdx = 0;
+      const stageInterval = setInterval(() => { stageIdx = (stageIdx + 1) % stages.length; setExpertiseStage(stages[stageIdx]); }, 4000);
+
+      const { data, error: fnError } = await supabase.functions.invoke('analyze-document-expertise', { body: payload });
+      clearInterval(stageInterval);
+      if (fnError || data?.error) throw new Error(data?.error || fnError?.message || 'Analysis failed');
+
+      setExpertiseProfile(data.expertiseProfile);
+      setExpertiseIdeas(data.ideas || []);
+
+      autoSaveWork({
+        userId: user.id, tool: 'product_navigator', callType: 'analyze_expertise',
+        title: `Expertise Analysis — ${data.expertiseProfile?.detectedNiche || 'Your Knowledge'}`,
+        subtitle: `${data.ideas?.length || 0} personalised product ideas`,
+        inputData: { filename: expertiseFile?.name || selectedSavedDoc?.filename, docId: selectedSavedDoc?.id },
+        outputData: { expertiseProfile: data.expertiseProfile, ideas: data.ideas },
+      });
+
+      const idemKey = crypto.randomUUID();
+      await supabase.functions.invoke('deduct-credits', {
+        body: { userId: user.id, toolModule: 'product_navigator', callType: 'analyze_expertise', idempotencyKey: idemKey },
+      });
+    } catch (err: any) {
+      setExpertiseError(err.message || 'Something went wrong. Please try again.');
+    }
+    setExpertiseStage('');
+    setExpertiseLoading(false);
+  };
 
   return (
     <div style={{ animation: 'fadeUp 0.4s ease' }}>
@@ -1706,6 +1821,7 @@ function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; o
           {[
             { key: 'ai' as const, label: '🤖 AI Research' },
             { key: 'browse' as const, label: '📦 Browse 500+ Ideas' },
+            { key: 'expertise' as const, label: '🧠 From My Expertise' },
           ].map(tab => (
             <button key={tab.key} onClick={() => setResearchMode(tab.key)}
               style={{
@@ -1721,9 +1837,11 @@ function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; o
         </div>
       </div>
 
-      {researchMode === 'ai' ? (
+      {researchMode === 'ai' && (
         <AIResearchEngine onBuildOffer={onBuildOffer} />
-      ) : (
+      )}
+
+      {researchMode === 'browse' && (
         <>
           <FilterBar search={search} onSearch={setSearch} accentColor="#ea580c"
             filters={[
@@ -1757,6 +1875,246 @@ function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; o
 
           {modal && <ProductModal product={modal.product} category={modal.cat} onClose={() => setModal(null)} />}
         </>
+      )}
+
+      {researchMode === 'expertise' && (
+        <div style={{ animation: 'fadeUp 0.4s ease' }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <h2 style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 6px' }}>
+              Build from Your Own Knowledge
+            </h2>
+            <p style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', lineHeight: 1.6, margin: 0, maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
+              Upload your notes, resume, or any document that captures what you know.
+              The AI reads what makes you different and generates product ideas only you could build.
+            </p>
+          </div>
+
+          {/* Results */}
+          {expertiseProfile && !expertiseLoading && (
+            <>
+              {/* Expertise Profile Card */}
+              <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20, border: '1px solid rgba(124,58,237,0.2)', boxShadow: '0 4px 20px rgba(124,58,237,0.08)', padding: 24, marginBottom: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 16, flexWrap: 'wrap' as const }}>
+                  <div style={{ flex: 1, minWidth: 240 }}>
+                    <div style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 6 }}>Your Expertise Profile</div>
+                    <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a', marginBottom: 6 }}>{expertiseProfile.detectedNiche || 'Your Knowledge Area'}</div>
+                    <p style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', lineHeight: 1.65, margin: 0 }}>{expertiseProfile.summary}</p>
+                  </div>
+                  <button onClick={() => { setExpertiseProfile(null); setExpertiseIdeas([]); setExpertiseFile(null); setSelectedSavedDoc(null); }}
+                    style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)', color: '#7c3aed', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                    ↩ New Analysis
+                  </button>
+                </div>
+
+                {/* Tags */}
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginBottom: 16 }}>
+                  {(expertiseProfile.tags || []).map((tag: string) => (
+                    <span key={tag} style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', color: '#7c3aed', padding: '4px 12px', borderRadius: 50, fontSize: 11, fontWeight: 600, fontFamily: 'DM Sans' }}>{tag}</span>
+                  ))}
+                </div>
+
+                {/* Strengths */}
+                {expertiseProfile.strengths?.length > 0 && (
+                  <div style={{ background: 'rgba(5,150,105,0.04)', border: '1px solid rgba(5,150,105,0.15)', borderRadius: 12, padding: 16 }}>
+                    <div style={{ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, color: '#059669', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 8 }}>Your Strengths</div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                      {expertiseProfile.strengths.map((s: string, i: number) => (
+                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                          <span style={{ color: '#059669', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>✓</span>
+                          <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{s}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Ideas header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a' }}>
+                  {expertiseIdeas.length} Product Ideas From Your Expertise
+                </div>
+                <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>Built specifically for you</span>
+              </div>
+
+              {/* Idea cards */}
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 16 }}>
+                {expertiseIdeas.map((idea: any, i: number) => (
+                  <div key={i} style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.05)', padding: 20, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>{idea.productName}</div>
+                        <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>{idea.tagline}</div>
+                        {idea.whyUnique && <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', fontStyle: 'italic', marginTop: 4 }}>{idea.whyUnique}</div>}
+                      </div>
+                      {idea.impulseTag && (
+                        <span style={{ background: 'rgba(234,88,12,0.08)', border: '1px solid rgba(234,88,12,0.18)', borderRadius: 50, padding: '4px 10px', fontSize: 10, fontWeight: 700, color: '#ea580c', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>{idea.impulseTag}</span>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, marginBottom: 10 }}>
+                      {idea.targetAudience && <span style={{ background: '#f1f5f9', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#475569', fontFamily: 'DM Sans' }}>🎯 {idea.targetAudience}</span>}
+                      {idea.priceRange && <span style={{ background: '#f1f5f9', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#475569', fontFamily: 'DM Sans' }}>💰 {idea.priceRange}</span>}
+                      {idea.buildTime && <span style={{ background: '#f1f5f9', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#475569', fontFamily: 'DM Sans' }}>⏱ {idea.buildTime}</span>}
+                      {idea.competitionLevel && <span style={{ background: '#f1f5f9', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#475569', fontFamily: 'DM Sans' }}>📊 {idea.competitionLevel} competition</span>}
+                      {idea.productCategory && <span style={{ background: '#f1f5f9', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 600, color: '#475569', fontFamily: 'DM Sans' }}>📦 {idea.productCategory}</span>}
+                    </div>
+
+                    {idea.primaryPain && <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', marginBottom: 6 }}>🔥 <strong>Pain:</strong> {idea.primaryPain}</div>}
+
+                    {/* whyThisPersonCanBuildIt strip */}
+                    {idea.whyThisPersonCanBuildIt && (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', background: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.15)', borderRadius: 10, padding: '10px 14px', marginTop: 10 }}>
+                        <span style={{ fontSize: 14, flexShrink: 0 }}>🎯</span>
+                        <span style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#059669', lineHeight: 1.55, fontWeight: 600 }}>
+                          {idea.whyThisPersonCanBuildIt}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Upload / Select — shown when no results */}
+          {!expertiseProfile && !expertiseLoading && (
+            <>
+              {/* Upload zone */}
+              <div
+                onDragOver={e => { e.preventDefault(); setExpertiseDragOver(true); }}
+                onDragLeave={() => setExpertiseDragOver(false)}
+                onDrop={e => {
+                  e.preventDefault(); setExpertiseDragOver(false);
+                  const file = e.dataTransfer.files[0];
+                  if (!file) return;
+                  const validation = validateFile(file);
+                  if (!validation.valid) { setExpertiseError(validation.error || ''); return; }
+                  setExpertiseFile(file); setExpertiseError(''); setSelectedSavedDoc(null);
+                }}
+                style={{
+                  border: `2px dashed ${expertiseDragOver ? '#7c3aed' : expertiseFile ? '#059669' : '#e2e8f0'}`,
+                  borderRadius: 20, padding: '40px 24px', textAlign: 'center' as const,
+                  cursor: 'pointer',
+                  background: expertiseDragOver ? 'rgba(124,58,237,0.04)' : expertiseFile ? 'rgba(5,150,105,0.04)' : 'rgba(255,255,255,0.6)',
+                  transition: 'all 0.2s', marginBottom: 16,
+                }}
+                onClick={() => document.getElementById('expertise-file-input')?.click()}
+              >
+                <input id="expertise-file-input" type="file" accept=".pdf,.docx,.txt" style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const validation = validateFile(file);
+                    if (!validation.valid) { setExpertiseError(validation.error || ''); return; }
+                    setExpertiseFile(file); setExpertiseError(''); setSelectedSavedDoc(null);
+                    e.target.value = '';
+                  }}
+                />
+
+                {expertiseFile ? (
+                  <div>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>{expertiseFile.name.endsWith('.pdf') ? '📄' : expertiseFile.name.endsWith('.docx') ? '📝' : '📃'}</div>
+                    <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 14, color: '#0f172a', marginBottom: 4 }}>{expertiseFile.name}</div>
+                    <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{(expertiseFile.size / 1024).toFixed(0)} KB · Ready to analyse</div>
+                    <button onClick={(e) => { e.stopPropagation(); setExpertiseFile(null); }}
+                      style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginTop: 8 }}>
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>📤</div>
+                    <div style={{ fontFamily: 'Sora', fontWeight: 700, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>Drop your document here</div>
+                    <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginBottom: 6 }}>Resume, course notes, training material, research — anything that shows what you know</div>
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' }}>PDF, DOCX, or TXT · Max 5MB</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Saved docs */}
+              {savedDocs.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <button onClick={() => setShowSavedDocs(!showSavedDocs)}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#374151', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    📚 Use a saved document from my Knowledge Base ({savedDocs.length})
+                    <span>{showSavedDocs ? '▲' : '▼'}</span>
+                  </button>
+
+                  {showSavedDocs && (
+                    <div style={{ border: '1.5px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+                      {savedDocs.map((doc: any, i: number) => (
+                        <div key={doc.id} onClick={() => { setSelectedSavedDoc(doc); setExpertiseFile(null); setExpertiseError(''); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+                            borderBottom: i < savedDocs.length - 1 ? '1px solid #f8fafc' : 'none',
+                            cursor: 'pointer',
+                            background: selectedSavedDoc?.id === doc.id ? 'rgba(124,58,237,0.06)' : 'white',
+                            transition: 'background 0.1s',
+                          }}>
+                          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(124,58,237,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>📄</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{doc.filename}</div>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' as const, marginTop: 2 }}>
+                              {(doc.expertise_tags || []).slice(0, 3).map((tag: string) => (
+                                <span key={tag} style={{ fontSize: 10, color: '#94a3b8', background: '#f8fafc', padding: '1px 6px', borderRadius: 4 }}>{tag}</span>
+                              ))}
+                            </div>
+                          </div>
+                          {selectedSavedDoc?.id === doc.id && (
+                            <span style={{ color: '#7c3aed', fontWeight: 700, fontSize: 16 }}>✓</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Error */}
+              {expertiseError && (
+                <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 12, padding: '10px 16px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#dc2626' }}>
+                  ❌ {expertiseError}
+                </div>
+              )}
+
+              {/* Generate button */}
+              <button onClick={handleExpertiseGenerate} disabled={!expertiseFile && !selectedSavedDoc}
+                style={{
+                  width: '100%', padding: '14px 24px', borderRadius: 14, border: 'none', cursor: (!expertiseFile && !selectedSavedDoc) ? 'not-allowed' : 'pointer',
+                  fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: 'white',
+                  background: (!expertiseFile && !selectedSavedDoc) ? '#cbd5e1' : 'linear-gradient(135deg,#7c3aed,#a855f7)',
+                  boxShadow: (!expertiseFile && !selectedSavedDoc) ? 'none' : '0 8px 24px rgba(124,58,237,0.3)',
+                  transition: 'all 0.2s', marginBottom: 8,
+                }}>
+                🧠 Analyse My Expertise & Generate Ideas
+              </button>
+              <p style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', textAlign: 'center' as const, margin: 0 }}>
+                Uses 20 credits · Powered by Claude Sonnet · Takes ~15–20 seconds
+              </p>
+            </>
+          )}
+
+          {/* Loading state */}
+          {expertiseLoading && (
+            <div style={{ textAlign: 'center' as const, padding: '48px 20px' }}>
+              <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 28px rgba(124,58,237,0.28)', animation: 'floatBounce 2s ease-in-out infinite' }}>
+                <span style={{ fontSize: 28 }}>🧠</span>
+              </div>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a', marginBottom: 6 }}>Reading your expertise...</div>
+              <div style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', marginBottom: 24 }}>{expertiseStage || 'Analysing your document...'}</div>
+              <div style={{ maxWidth: 360, margin: '0 auto' }}>
+                {['Reading your document content', 'Identifying your unique knowledge signals', 'Finding product gaps only you can fill', 'Generating personalised ideas for you'].map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 0' }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #e2e8f0', borderTopColor: '#7c3aed', animation: 'spinSlow 0.8s linear infinite', flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#475569' }}>{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
