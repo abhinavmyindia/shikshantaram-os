@@ -175,22 +175,17 @@ Return ONLY a JSON array of exactly 5 objects:
 
     // Log platform usage
     if (userId) {
-      try {
-        const supabase = createClient(
-          Deno.env.get('SUPABASE_URL')!,
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-          { auth: { persistSession: false } }
-        );
-        await supabase.from('ai_usage_logs').insert({
-          user_id: userId, user_email: userEmail,
-          module: 'niche_clarity', call_type: 'find_niche',
-          model: 'claude-sonnet-4-20250514',
-          input_tokens: data.usage?.input_tokens || 0,
-          output_tokens: data.usage?.output_tokens || 0,
-          total_tokens: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
-          estimated_cost_usd: ((data.usage?.input_tokens || 0) * 0.003 + (data.usage?.output_tokens || 0) * 0.015) / 1000,
-        });
-      } catch (_) { /* logging failure should never block */ }
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+        { auth: { persistSession: false } }
+      );
+      await logUsage({
+        supabaseAdmin, userId, userEmail,
+        module: 'niche_clarity', callType: 'find_niche',
+        model: 'claude-sonnet-4-20250514',
+        usage: data.usage,
+      });
     }
 
     return new Response(JSON.stringify({ niches, usage: data.usage, byok: false }), {
