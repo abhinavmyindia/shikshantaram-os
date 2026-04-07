@@ -671,7 +671,7 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
     } catch (err) {
       console.error('AI analytics fetch error:', err);
     }
-    if (!silent) setIsRefreshing(false);
+    if (!silent) { setIsRefreshing(false); setLoading(false); }
   };
 
   // Initial load + when date range changes
