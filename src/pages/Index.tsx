@@ -1679,11 +1679,123 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
 
 /* ───────── Product Page ───────── */
 function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; onAction?: () => void; onBuildOffer?: (data: any) => void }) {
-  const [researchMode, setResearchMode] = useState<'ai' | 'browse'>('ai');
+  const [researchMode, setResearchMode] = useState<'ai' | 'browse' | 'expertise'>('ai');
   const [search, setSearch] = useState('');
   const [speed, setSpeed] = useState('All');
   const [price, setPrice] = useState('All');
   const [modal, setModal] = useState<{ product: string; cat: ProductCategory } | null>(null);
+
+  /* ── Expertise tab state ── */
+  const [expertiseFile, setExpertiseFile] = useState<File | null>(null);
+  const [expertiseDragOver, setExpertiseDragOver] = useState(false);
+  const [expertiseLoading, setExpertiseLoading] = useState(false);
+  const [expertiseStage, setExpertiseStage] = useState('');
+  const [expertiseProfile, setExpertiseProfile] = useState<any>(null);
+  const [expertiseIdeas, setExpertiseIdeas] = useState<any[]>([]);
+  const [expertiseError, setExpertiseError] = useState('');
+  const [savedDocs, setSavedDocs] = useState<any[]>([]);
+  const [selectedSavedDoc, setSelectedSavedDoc] = useState<any>(null);
+  const [showSavedDocs, setShowSavedDocs] = useState(false);
+
+  useEffect(() => {
+    const loadSavedDocs = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_knowledge_docs')
+        .select('id, filename, expertise_tags, detected_niche, summary, extracted_text, use_count, created_at')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      setSavedDocs(data || []);
+    };
+    loadSavedDocs();
+  }, []);
+
+  const handleExpertiseGenerate = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setExpertiseLoading(true);
+    setExpertiseError('');
+    setExpertiseProfile(null);
+    setExpertiseIdeas([]);
+
+    try {
+      let payload: any = { userId: user.id, userEmail: user.email, country: 'India' };
+
+      if (selectedSavedDoc) {
+        setExpertiseStage('Loading your knowledge base...');
+        payload.docId = selectedSavedDoc.id;
+        payload.extractedText = selectedSavedDoc.extracted_text || '';
+        if (!payload.extractedText) {
+          const { data: fullDoc } = await supabase
+            .from('user_knowledge_docs')
+            .select('extracted_text')
+            .eq('id', selectedSavedDoc.id)
+            .single();
+          payload.extractedText = fullDoc?.extracted_text || '';
+        }
+      } else if (expertiseFile) {
+        const fileType = getFileType(expertiseFile.name);
+        if (!fileType) { setExpertiseError('Unsupported file type.'); setExpertiseLoading(false); return; }
+        setExpertiseStage('Reading your document...');
+        if (fileType === 'pdf') {
+          payload.fileBase64 = await fileToBase64(expertiseFile);
+          payload.fileType = 'pdf';
+        } else if (fileType === 'docx') {
+          setExpertiseStage('Extracting text from document...');
+          const text = await extractTextFromDocx(expertiseFile);
+          payload.fileBase64 = btoa(unescape(encodeURIComponent(text)));
+          payload.fileType = 'txt';
+          payload.extractedText = text;
+        } else {
+          const text = await extractTextFromTxt(expertiseFile);
+          payload.fileBase64 = btoa(unescape(encodeURIComponent(text)));
+          payload.fileType = 'txt';
+          payload.extractedText = text;
+        }
+        payload.filename = expertiseFile.name;
+      } else {
+        setExpertiseError('Please upload a document or select one from your Knowledge Base.');
+        setExpertiseLoading(false);
+        return;
+      }
+
+      const stages = [
+        'Analysing your expertise...',
+        'Identifying your unique knowledge signals...',
+        'Finding product opportunities only you can create...',
+        'Generating personalised ideas...',
+      ];
+      let stageIdx = 0;
+      const stageInterval = setInterval(() => { stageIdx = (stageIdx + 1) % stages.length; setExpertiseStage(stages[stageIdx]); }, 4000);
+
+      const { data, error: fnError } = await supabase.functions.invoke('analyze-document-expertise', { body: payload });
+      clearInterval(stageInterval);
+      if (fnError || data?.error) throw new Error(data?.error || fnError?.message || 'Analysis failed');
+
+      setExpertiseProfile(data.expertiseProfile);
+      setExpertiseIdeas(data.ideas || []);
+
+      autoSaveWork({
+        userId: user.id, tool: 'product_navigator', callType: 'analyze_expertise',
+        title: `Expertise Analysis — ${data.expertiseProfile?.detectedNiche || 'Your Knowledge'}`,
+        subtitle: `${data.ideas?.length || 0} personalised product ideas`,
+        inputData: { filename: expertiseFile?.name || selectedSavedDoc?.filename, docId: selectedSavedDoc?.id },
+        outputData: { expertiseProfile: data.expertiseProfile, ideas: data.ideas },
+      });
+
+      const idemKey = crypto.randomUUID();
+      await supabase.functions.invoke('deduct-credits', {
+        body: { userId: user.id, toolModule: 'product_navigator', callType: 'analyze_expertise', idempotencyKey: idemKey },
+      });
+    } catch (err: any) {
+      setExpertiseError(err.message || 'Something went wrong. Please try again.');
+    }
+    setExpertiseStage('');
+    setExpertiseLoading(false);
+  };
 
   return (
     <div style={{ animation: 'fadeUp 0.4s ease' }}>
