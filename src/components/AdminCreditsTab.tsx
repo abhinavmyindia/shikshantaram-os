@@ -244,11 +244,23 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   };
 
   const loadGiftHistory = async () => {
-    const { data } = await supabase
+    const { data: gifts } = await supabase
       .from('credit_transactions')
       .select('*').in('type',['gift','promo'])
       .order('created_at', { ascending:false }).limit(30);
-    setGiftHistory(data || []);
+
+    // Enrich with user names
+    const userIds = [...new Set((gifts || []).map((g: any) => g.user_id).filter(Boolean))];
+    const { data: profiles } = userIds.length > 0
+      ? await supabase.from('user_profiles').select('id, full_name').in('id', userIds)
+      : { data: [] };
+    const userMap: Record<string, string> = {};
+    (profiles || []).forEach((p: any) => { userMap[p.id] = p.full_name; });
+
+    setGiftHistory((gifts || []).map((g: any) => ({
+      ...g,
+      _user_name: userMap[g.user_id] || null,
+    })));
   };
 
   const loadTransactions = async () => {
@@ -259,7 +271,19 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
     else if (txFilter === 'gift') q = q.in('type', ['gift', 'promo']);
     else if (txFilter !== 'all') q = q.eq('type', txFilter);
     const { data } = await q;
-    setTransactions(data || []);
+
+    // Enrich transactions with user names
+    const userIds = [...new Set((data || []).map((t: any) => t.user_id).filter(Boolean))];
+    const { data: profiles } = userIds.length > 0
+      ? await supabase.from('user_profiles').select('id, full_name').in('id', userIds)
+      : { data: [] };
+    const userMap: Record<string, string> = {};
+    (profiles || []).forEach((p: any) => { userMap[p.id] = p.full_name; });
+
+    setTransactions((data || []).map((t: any) => ({
+      ...t,
+      _user_name: userMap[t.user_id] || null,
+    })));
     setTxLoading(false);
   };
 
@@ -777,11 +801,11 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
                     {tx.type === 'promo' ? '📢' : '🎁'}
                   </div>
                   <div style={s({ flex:1 })}>
-                    <p style={s({ fontFamily:'DM Sans', fontWeight:600, fontSize:13, color:'#374151', margin:0 })}>
-                      {tx.user_email || tx.user_id || '—'}
+                    <p style={s({ fontFamily:'DM Sans', fontWeight:700, fontSize:13, color:'#0f172a', margin:0 })}>
+                      {tx._user_name || tx.user_email || 'Unknown User'}
                     </p>
                     <p style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', margin:'2px 0 0' })}>
-                      {tx.description} · {fmtRel(tx.created_at)}
+                      {tx.user_email || ''}{tx.user_email && tx.description ? ' · ' : ''}{tx.description} · {fmtRel(tx.created_at)}
                     </p>
                   </div>
                   <span style={s({ fontFamily:'Sora', fontWeight:800, fontSize:15, color:'#059669' })}>+{tx.amount}</span>
@@ -836,10 +860,15 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
                       {tx.type==='topup'?'💳': tx.type==='deduction'?'⚡': tx.type==='shadow_deduction'?'👻':'🎁'}
                     </div>
 
-                    {/* User email */}
-                    <span style={s({ fontFamily:'DM Sans', fontSize:12, color:'#374151', overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
-                      {tx.user_email || '—'}
-                    </span>
+                    {/* User */}
+                    <div style={s({ overflow:'hidden' })}>
+                      <p style={s({ fontFamily:'DM Sans', fontWeight:700, fontSize:12, color:'#0f172a', margin:0, overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
+                        {tx._user_name || '—'}
+                      </p>
+                      <p style={s({ fontFamily:'DM Sans', fontSize:10, color:'#94a3b8', margin:0, overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
+                        {tx.user_email || ''}
+                      </p>
+                    </div>
 
                     {/* Description */}
                     <span style={s({ fontFamily:'DM Sans', fontSize:12, color:'#64748b', overflow:'hidden', textOverflow:'ellipsis' as const, whiteSpace:'nowrap' as const })}>
