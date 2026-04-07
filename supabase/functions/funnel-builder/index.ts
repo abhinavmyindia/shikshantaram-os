@@ -311,7 +311,7 @@ serve(async (req) => {
     const aiResult = await callLovableAI(prompt, model, maxTokens);
 
     // Log usage (fire-and-forget)
-    logAiUsage(supabaseAdmin, userInfo.userId, userInfo.userEmail, userInfo.userName, 'funnel_builder', callType, model, aiResult.usage);
+    logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'funnel_builder', callType, model, usage: aiResult.usage });
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
