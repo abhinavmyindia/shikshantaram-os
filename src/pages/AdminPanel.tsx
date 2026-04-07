@@ -1745,7 +1745,7 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
 
       {/* Current Team */}
       <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>Current Team ({teamMembers.length} members)</div>
-      <div style={{ ...glassCard, overflow: 'hidden', marginBottom: 20 }}>
+      <div style={{ ...glassCard, marginBottom: 20 }}>
         {teamMembers.map((member: any, i: number) => {
           const meta = roleMeta[member.role] || roleMeta.operator;
           const isOwnerRow = member.is_owner;
@@ -1774,7 +1774,7 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
                     {rolePickerFor === member.user_id && (
                       <>
                         <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
-                        <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 9999, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e2e8f0', padding: 6, marginTop: 4, minWidth: 180 }}>
+                        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 9999, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e2e8f0', padding: 6, minWidth: 180 }}>
                           {(['admin', 'manager', 'operator'] as const).map(r => (
                             <button key={r} onClick={() => changeRole(member.user_id, r)} disabled={member.role === r} style={{
                               display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '10px 14px', border: 'none', borderRadius: 8,
