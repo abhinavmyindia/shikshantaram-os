@@ -1767,34 +1767,48 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
               ) : (
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0, position: 'relative' }}>
                   <div style={{ position: 'relative' }}>
-                    <button onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
+                    <button id={`role-btn-${member.user_id}`} onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
                       background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
                       fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151',
                     }}>Change Role ▾</button>
-                    {rolePickerFor === member.user_id && (
-                      <>
-                        <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 9998 }} />
-                        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 9999, background: 'white', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.18)', border: '1px solid #e2e8f0', padding: 6, minWidth: 180 }}>
-                          {(['admin', 'manager', 'operator'] as const).map(r => {
-                            const isCurrent = member.role === r;
-                            return (
-                              <div key={r} onClick={() => { if (!isCurrent) { changeRole(member.user_id, r); setRolePickerFor(null); } }} style={{
-                                display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left' as const, padding: '10px 14px', borderRadius: 8,
-                                cursor: isCurrent ? 'default' : 'pointer',
-                                background: isCurrent ? (r === 'admin' ? 'rgba(124,58,237,0.08)' : r === 'manager' ? 'rgba(37,99,235,0.08)' : 'rgba(100,116,139,0.08)') : 'transparent',
-                                fontFamily: 'DM Sans', fontWeight: isCurrent ? 700 : 500, fontSize: 13,
-                                color: isCurrent ? (r === 'admin' ? '#7c3aed' : r === 'manager' ? '#2563eb' : '#64748b') : '#374151',
-                                opacity: 1,
-                              }}>
-                                <span style={{ fontSize: 16 }}>{r === 'admin' ? '🔧' : r === 'manager' ? '📋' : '⚙️'}</span>
-                                <span style={{ textTransform: 'capitalize' as const }}>{r}</span>
-                                {isCurrent && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
+                    {rolePickerFor === member.user_id && (() => {
+                      const btnEl = document.getElementById(`role-btn-${member.user_id}`);
+                      const rect = btnEl?.getBoundingClientRect();
+                      return (
+                        <>
+                          <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'transparent' }} />
+                          <div style={{
+                            position: 'fixed',
+                            top: rect ? rect.bottom + 4 : 0,
+                            left: rect ? rect.right - 200 : 0,
+                            zIndex: 9999,
+                            background: 'white',
+                            borderRadius: 12,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                            border: '1px solid #e2e8f0',
+                            padding: 6,
+                            width: 200,
+                          }}>
+                            {(['admin', 'manager', 'operator'] as const).map(r => {
+                              const isCurrent = member.role === r;
+                              return (
+                                <div key={r} onClick={() => { if (!isCurrent) { changeRole(member.user_id, r); setRolePickerFor(null); } }} style={{
+                                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left' as const, padding: '10px 14px', borderRadius: 8,
+                                  cursor: isCurrent ? 'default' : 'pointer',
+                                  background: isCurrent ? (r === 'admin' ? 'rgba(124,58,237,0.08)' : r === 'manager' ? 'rgba(37,99,235,0.08)' : 'rgba(100,116,139,0.08)') : 'transparent',
+                                  fontFamily: 'DM Sans', fontWeight: isCurrent ? 700 : 500, fontSize: 13,
+                                  color: isCurrent ? (r === 'admin' ? '#7c3aed' : r === 'manager' ? '#2563eb' : '#64748b') : '#374151',
+                                }}>
+                                  <span style={{ fontSize: 16 }}>{r === 'admin' ? '🔧' : r === 'manager' ? '📋' : '⚙️'}</span>
+                                  <span style={{ textTransform: 'capitalize' as const }}>{r}</span>
+                                  {isCurrent && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                   <button onClick={() => { if (confirm(`Remove ${member.display_name || member.email} from the team?`)) removeMember(member.user_id); }} style={{
                     background: 'rgba(239,68,68,0.08)', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
