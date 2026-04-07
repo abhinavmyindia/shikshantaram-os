@@ -2045,7 +2045,7 @@ export default function AdminPanel() {
           </div>
         ) : (
           <>
-            {tab === 'overview' && canDo.viewOverview(role) && <OverviewTab stats={stats} users={users} emailMap={emailMap} />}
+            {tab === 'overview' && canDo.viewOverview(role) && <OverviewTab stats={stats} users={users} emailMap={emailMap} setAdminTab={setTab} />}
             {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
             {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
             {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
