@@ -610,17 +610,18 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
 }
 
 // ─── AI ANALYTICS TAB ────────────────────────────────────────
-function AIAnalyticsTab() {
+function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; onDateRangeChange: (r: string) => void }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState('30days');
   const [showLogFeed, setShowLogFeed] = useState(false);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [, forceUpdate] = useState(0); // for "Xs ago" ticker
 
-  useEffect(() => { fetchAnalytics(dateRange); }, []);
-
-  const fetchAnalytics = async (range: string) => {
-    setLoading(true);
+  const fetchAnalytics = async (range: string, silent = false) => {
+    if (!silent) setIsRefreshing(true);
     try {
       const fromDate: Record<string, string> = {
         'today': new Date(new Date().setHours(0,0,0,0)).toISOString(),
@@ -666,13 +667,31 @@ function AIAnalyticsTab() {
       const topCallTypes = Object.entries(byCallType).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
       setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes });
+      setLastRefreshed(new Date());
     } catch (err) {
       console.error('AI analytics fetch error:', err);
     }
-    setLoading(false);
+    if (!silent) setIsRefreshing(false);
   };
 
-  const handleRangeChange = (r: string) => { setDateRange(r); fetchAnalytics(r); };
+  // Initial load + when date range changes
+  useEffect(() => { fetchAnalytics(dateRange, false); }, [dateRange]);
+
+  // Auto-refresh every 60 seconds (silent)
+  useEffect(() => {
+    refreshIntervalRef.current = setInterval(() => {
+      fetchAnalytics(dateRange, true);
+    }, 60000);
+    return () => { if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current); };
+  }, [dateRange]);
+
+  // Tick "Xs ago" every 10 seconds
+  useEffect(() => {
+    const ticker = setInterval(() => forceUpdate(n => n + 1), 10000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  const handleRangeChange = (r: string) => { onDateRangeChange(r); };
   const formatCallType = (ct: string) => ct.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed' };
   const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity' };
