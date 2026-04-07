@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -610,17 +610,18 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
 }
 
 // ─── AI ANALYTICS TAB ────────────────────────────────────────
-function AIAnalyticsTab() {
+function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; onDateRangeChange: (r: string) => void }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState('30days');
   const [showLogFeed, setShowLogFeed] = useState(false);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [, forceUpdate] = useState(0); // for "Xs ago" ticker
 
-  useEffect(() => { fetchAnalytics(dateRange); }, []);
-
-  const fetchAnalytics = async (range: string) => {
-    setLoading(true);
+  const fetchAnalytics = async (range: string, silent = false) => {
+    if (!silent) setIsRefreshing(true);
     try {
       const fromDate: Record<string, string> = {
         'today': new Date(new Date().setHours(0,0,0,0)).toISOString(),
@@ -666,18 +667,36 @@ function AIAnalyticsTab() {
       const topCallTypes = Object.entries(byCallType).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
       setAnalytics({ totalCalls, totalTokens, totalCostUsd, uniqueUsers, byModule, byModel, byUser, byDay, topCallTypes });
+      setLastRefreshed(new Date());
     } catch (err) {
       console.error('AI analytics fetch error:', err);
     }
-    setLoading(false);
+    if (!silent) { setIsRefreshing(false); setLoading(false); }
   };
 
-  const handleRangeChange = (r: string) => { setDateRange(r); fetchAnalytics(r); };
+  // Initial load + when date range changes
+  useEffect(() => { fetchAnalytics(dateRange, false); }, [dateRange]);
+
+  // Auto-refresh every 60 seconds (silent)
+  useEffect(() => {
+    refreshIntervalRef.current = setInterval(() => {
+      fetchAnalytics(dateRange, true);
+    }, 60000);
+    return () => { if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current); };
+  }, [dateRange]);
+
+  // Tick "Xs ago" every 10 seconds
+  useEffect(() => {
+    const ticker = setInterval(() => forceUpdate(n => n + 1), 10000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  const handleRangeChange = (r: string) => { onDateRangeChange(r); };
   const formatCallType = (ct: string) => ct.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed' };
   const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity' };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#06b6d4', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
+  if (loading && !analytics) return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#06b6d4', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
   if (!analytics || analytics.totalCalls === 0) {
     return (
       <div style={{ textAlign: 'center', padding: 60 }}>
@@ -722,7 +741,7 @@ function AIAnalyticsTab() {
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>Period:</span>
         {ranges.map(r => (
           <button key={r.id} onClick={() => handleRangeChange(r.id)} style={{
@@ -732,7 +751,56 @@ function AIAnalyticsTab() {
           }}>{r.label}</button>
         ))}
         <div style={{ flex: 1 }} />
-        <button onClick={() => fetchAnalytics(dateRange)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b' }}>🔄 Refresh</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {lastRefreshed && (
+            <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#94a3b8' }}>
+              Updated {(() => {
+                const diff = Math.floor((Date.now() - lastRefreshed.getTime()) / 1000);
+                if (diff < 10) return 'just now';
+                if (diff < 60) return `${diff}s ago`;
+                return `${Math.floor(diff / 60)}m ago`;
+              })()}
+            </span>
+          )}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)',
+            borderRadius: 50, padding: '4px 10px',
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', animation: 'pulseDot 2s infinite' }} />
+            <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 10, color: '#059669' }}>LIVE · 60s</span>
+          </div>
+          <button onClick={() => fetchAnalytics(dateRange, false)} disabled={isRefreshing} style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0',
+            background: isRefreshing ? '#f8fafc' : 'white',
+            cursor: isRefreshing ? 'not-allowed' : 'pointer',
+            fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12, color: '#64748b',
+            transition: 'all 0.15s',
+          }}>
+            <span style={{ display: 'inline-block', fontSize: 12, animation: isRefreshing ? 'spinSlow 0.8s linear infinite' : 'none' }}>↻</span>
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Data quality warning */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+        borderRadius: 12, padding: '12px 16px', marginBottom: 16,
+      }}>
+        <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+        <div>
+          <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12, color: '#b45309', margin: '0 0 3px' }}>
+            AI cost figures are estimates — likely underreported
+          </p>
+          <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#92400e', margin: 0, lineHeight: 1.6 }}>
+            Usage is currently logged from the frontend after each call. Multi-section reports
+            (like Deep Research) may only log 1 of 10 calls. Token counts are directionally correct —
+            API costs are likely 3–8x higher than shown.
+          </p>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
@@ -1814,6 +1882,7 @@ export default function AdminPanel() {
   const [stats, setStats] = useState({ total: 0, basic: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
   const [adminToast, setAdminToast] = useState<{ message: string; type: string } | null>(null);
+  const [analyticsDateRange, setAnalyticsDateRange] = useState('30days');
 
   // Set default tab based on role
   useEffect(() => {
@@ -1946,7 +2015,7 @@ export default function AdminPanel() {
             {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
             {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
             {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
-            {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab />}
+            {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
             {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
             {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
           </>
