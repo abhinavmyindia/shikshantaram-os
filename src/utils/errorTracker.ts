@@ -29,10 +29,10 @@ const getModuleFromUrl = (url: string): string => {
   if (path.includes('offer')) return 'offer_creation';
   if (path.includes('funnel')) return 'funnel_builder';
   if (path.includes('copy')) return 'copywriting_suite';
-  if (path.includes('ad')) return 'ai_ad_suite';
   if (path.includes('saved')) return 'my_saved';
   if (path.includes('profile')) return 'profile';
   if (path.includes('admin')) return 'admin';
+  if (path.includes('ad-suite') || path.includes('ads')) return 'ai_ad_suite';
   return 'dashboard';
 };
 
@@ -211,7 +211,12 @@ const NEVER_LOG_URLS = [
   'log-session',
   'end-session',
   'user_presence',
+  'upsert-presence',
+  'resolve-error',
+  'manage-team',
   'supabase.co/functions/v1/log-error',
+  'supabase.co/rest/v1/user_presence',
+  'supabase.co/rest/v1/error_logs',
   '/token',       // auth token refresh — never log
   '/auth/v1/',    // auth endpoints — lock contention noise
 ];
