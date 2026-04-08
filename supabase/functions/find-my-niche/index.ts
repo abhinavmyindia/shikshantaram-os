@@ -203,7 +203,7 @@ Return ONLY a JSON array of exactly 5 objects:
     let lastErr = '';
     for (let attempt = 0; attempt < 3; attempt++) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
+      const timeout = setTimeout(() => controller.abort(), 25000);
 
       try {
         response = await fetch('https://api.anthropic.com/v1/messages', {
