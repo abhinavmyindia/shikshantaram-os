@@ -66,7 +66,9 @@ serve(async (req) => {
     const userId = authData.user.id;
 
     // 2. Update the auto-created profile — access_tier comes directly from admin's selection
-    await adminClient.from('user_profiles').update({
+    // The handle_new_user trigger creates the row with defaults on auth.users INSERT.
+    // We must wait for it, then update with the admin's chosen tier.
+    const profileData = {
       full_name,
       phone: phone || '',
       access_tier: access_tier || 'basic',
@@ -75,7 +77,39 @@ serve(async (req) => {
       is_beta_user: is_beta_user || false,
       notes: notes || '',
       added_by: 'admin',
-    }).eq('id', userId);
+    };
+
+    // Try update first (trigger should have created the row)
+    let { data: updateData, error: updateError } = await adminClient
+      .from('user_profiles')
+      .update(profileData)
+      .eq('id', userId)
+      .select('access_tier')
+      .single();
+
+    // If update found no row (trigger hasn't fired yet), wait and retry
+    if (updateError || !updateData) {
+      await new Promise(r => setTimeout(r, 500));
+      const retry = await adminClient
+        .from('user_profiles')
+        .update(profileData)
+        .eq('id', userId)
+        .select('access_tier')
+        .single();
+
+      // If still no row, upsert as fallback
+      if (retry.error || !retry.data) {
+        await adminClient.from('user_profiles').upsert({
+          id: userId,
+          ...profileData,
+        });
+        console.log('[create-user] Used upsert fallback for', normalizedEmail, 'tier:', access_tier);
+      } else {
+        console.log('[create-user] Retry update succeeded for', normalizedEmail, 'tier:', retry.data.access_tier);
+      }
+    } else {
+      console.log('[create-user] Update succeeded for', normalizedEmail, 'tier:', updateData.access_tier);
+    }
 
     // 3. Send welcome email via Resend
     const tierLabel = access_tier === 'premium' ? 'Premium' : 'Basic';
