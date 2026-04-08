@@ -14,7 +14,6 @@ const PERSONAS = [
 
 const pickOne = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-// Sanitize user input — strip control chars and limit length
 const sanitize = (input: string | undefined, maxLen = 2000): string => {
   if (!input) return '';
   return String(input)
@@ -23,11 +22,169 @@ const sanitize = (input: string | undefined, maxLen = 2000): string => {
     .substring(0, maxLen);
 };
 
+interface PlatformAIResult {
+  text: string;
+  usage: any;
+  model: string;
+}
+
+const parseNichesResponse = (rawText: string): any[] => {
+  const cleanText = String(rawText || '')
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+
+  const firstBracket = cleanText.indexOf('[');
+  const lastBracket = cleanText.lastIndexOf(']');
+  const candidateText = firstBracket !== -1 && lastBracket > firstBracket
+    ? cleanText.slice(firstBracket, lastBracket + 1)
+    : cleanText;
+
+  const parsed = JSON.parse(candidateText);
+  const niches = Array.isArray(parsed)
+    ? parsed
+    : (Array.isArray(parsed?.niches) ? parsed.niches : null);
+
+  if (!niches?.length) {
+    throw new Error('AI returned empty or invalid niche data');
+  }
+
+  return niches.slice(0, 5);
+};
+
+const callLovableAI = async (
+  systemPrompt: string,
+  prompt: string,
+  model = 'google/gemini-2.5-flash',
+  maxTokens = 3200
+): Promise<PlatformAIResult> => {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured');
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) {
+      await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1500));
+    }
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        max_tokens: maxTokens,
+        temperature: 0.8,
+      }),
+    });
+
+    if (response.status === 402) {
+      await response.text();
+      throw new Error('AI service temporarily unavailable. Please try again shortly.');
+    }
+
+    if (response.status === 429 || response.status >= 500) {
+      const retryBody = await response.text();
+      console.warn(`[find-my-niche] Lovable AI attempt ${attempt + 1} failed (${response.status})`, retryBody.substring(0, 200));
+      if (attempt < 2) continue;
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`AI error: ${response.status} ${errorText.substring(0, 200)}`);
+    }
+
+    const data = await response.json();
+    return {
+      text: data.choices?.[0]?.message?.content || '',
+      usage: data.usage || null,
+      model,
+    };
+  }
+
+  throw new Error('AI is busy right now. Please try again in a moment.');
+};
+
+const callAnthropicPlatformAI = async (
+  systemPrompt: string,
+  prompt: string,
+  apiKey: string,
+): Promise<PlatformAIResult> => {
+  let response: Response | null = null;
+  let lastErr = '';
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 3200,
+          temperature: 0.8,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+    } catch (fetchErr: any) {
+      clearTimeout(timeout);
+      if (fetchErr.name === 'AbortError') {
+        if (attempt === 1) {
+          throw new Error('AI request timed out. Please try again with slightly shorter input.');
+        }
+        console.warn(`[find-my-niche] Timeout attempt ${attempt + 1}, retrying...`);
+        await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+        continue;
+      }
+      throw fetchErr;
+    }
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        text: data.content?.[0]?.text || '',
+        usage: data.usage || null,
+        model: 'claude-sonnet-4-20250514',
+      };
+    }
+
+    lastErr = await response.text();
+    const isRetryable =
+      response.status === 429 ||
+      response.status === 529 ||
+      response.status === 500 ||
+      response.status === 503 ||
+      lastErr.includes('overloaded');
+
+    if (!isRetryable || attempt === 1) {
+      throw new Error(`Anthropic API error: ${lastErr}`);
+    }
+
+    console.warn(`Anthropic attempt ${attempt + 1} failed (${response.status}), retrying...`);
+    await new Promise(r => setTimeout(r, (attempt + 1) * 1500));
+  }
+
+  throw new Error(lastErr || 'AI service temporarily unavailable.');
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    // ─── Request size guard ───
     const bodyText = await req.text();
     if (bodyText.length > 50000) {
       return new Response(
@@ -37,7 +194,6 @@ Deno.serve(async (req) => {
     }
     const body = JSON.parse(bodyText);
 
-    // ─── Auth ───
     const authHeader = req.headers.get('Authorization') || '';
     const token = authHeader.replace('Bearer ', '');
     const anonClient = createClient(
@@ -48,7 +204,6 @@ Deno.serve(async (req) => {
     const userId = user?.id || '';
     const userEmail = user?.email || '';
 
-    // ─── Check blocked users ───
     if (userId) {
       const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL')!,
@@ -60,6 +215,7 @@ Deno.serve(async (req) => {
         .select('access_tier')
         .eq('id', userId)
         .single();
+
       if (profile?.access_tier === 'revoked') {
         return new Response(
           JSON.stringify({ error: 'Your access has been revoked. Contact support.' }),
@@ -77,14 +233,12 @@ Deno.serve(async (req) => {
       country = 'India',
     } = body;
 
-    // ─── Sanitize inputs ───
     const background = sanitize(rawBg);
     const skills = sanitize(rawSkills);
     const passions = sanitize(rawPassions);
     const experience = sanitize(rawExp);
     const goals = sanitize(rawGoals);
 
-    // ─── Input validation ───
     const hasContent = [background, skills, passions, experience, goals]
       .some(f => f && f.trim().length >= 10);
 
@@ -95,10 +249,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ─── API key check ───
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!ANTHROPIC_API_KEY) {
-      console.error('[find-my-niche] CRITICAL: No ANTHROPIC_API_KEY found in secrets');
+    if (!LOVABLE_API_KEY && !ANTHROPIC_API_KEY) {
+      console.error('[find-my-niche] CRITICAL: No platform AI key found in secrets');
       return new Response(
         JSON.stringify({ error: 'AI service temporarily unavailable. Please try again later.' }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -151,7 +305,6 @@ Return ONLY a JSON array of exactly 5 objects:
   }
 ]`;
 
-    // ─── BYOK routing ───
     if (userId) {
       try {
         const resolved = await resolveAIKey(userId);
@@ -162,7 +315,7 @@ Return ONLY a JSON array of exactly 5 objects:
             model: resolved.model,
             system: systemPrompt,
             userMessage: prompt,
-            maxTokens: 5000,
+            maxTokens: 3200,
           });
 
           await logByokUsage(
@@ -171,13 +324,12 @@ Return ONLY a JSON array of exactly 5 objects:
             result.inputTokens, result.outputTokens, true
           );
 
-          const raw = result.text.replace(/```json|```/g, '').trim();
           let niches;
           try {
-            niches = JSON.parse(raw);
-            if (!Array.isArray(niches) || niches.length === 0) throw new Error('Empty array');
+            niches = parseNichesResponse(result.text);
           } catch (parseErr) {
             console.error('[find-my-niche] BYOK JSON parse failed:', (parseErr as Error).message);
+            console.error('[find-my-niche] BYOK raw AI text:', result.text.substring(0, 500));
             return new Response(
               JSON.stringify({ error: 'AI generated an unexpected format. Please try again.' }),
               { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -198,74 +350,23 @@ Return ONLY a JSON array of exactly 5 objects:
       }
     }
 
-    // ─── Platform path (Anthropic) with retry + timeout ───
-    let response: Response | null = null;
-    let lastErr = '';
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000);
+    const platformResult = LOVABLE_API_KEY
+      ? await callLovableAI(systemPrompt, prompt)
+      : await callAnthropicPlatformAI(systemPrompt, prompt, ANTHROPIC_API_KEY!);
 
-      try {
-        response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': ANTHROPIC_API_KEY,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 5000,
-            temperature: 0.9,
-            system: systemPrompt,
-            messages: [{ role: 'user', content: prompt }],
-          }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-      } catch (fetchErr: any) {
-        clearTimeout(timeout);
-        if (fetchErr.name === 'AbortError') {
-          if (attempt === 2) {
-            return new Response(
-              JSON.stringify({ error: 'AI request timed out. Please try again with shorter input.' }),
-              { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-          console.warn(`[find-my-niche] Timeout attempt ${attempt + 1}, retrying...`);
-          await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
-          continue;
-        }
-        throw fetchErr;
-      }
-
-      if (response.ok) break;
-
-      lastErr = await response.text();
-      const isRetryable = response.status === 429 || response.status === 529
-        || response.status === 500 || response.status === 503
-        || lastErr.includes('overloaded');
-      if (!isRetryable || attempt === 2) {
-        throw new Error(`Anthropic API error: ${lastErr}`);
-      }
-      console.warn(`Anthropic attempt ${attempt + 1} failed (${response.status}), retrying...`);
-      await new Promise(r => setTimeout(r, (attempt + 1) * 2000));
+    if (!platformResult.text?.trim()) {
+      return new Response(
+        JSON.stringify({ error: 'AI returned an empty response. Please try again.' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const data = await response!.json();
-    const rawText = data.content?.[0]?.text || '';
-
-    // ─── Safe JSON parse ───
     let niches;
     try {
-      const cleanText = rawText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      niches = JSON.parse(cleanText);
-      if (!Array.isArray(niches) || niches.length === 0) {
-        throw new Error('AI returned empty or non-array response');
-      }
+      niches = parseNichesResponse(platformResult.text);
     } catch (parseError) {
       console.error('[find-my-niche] JSON parse failed:', (parseError as Error).message);
-      console.error('[find-my-niche] Raw AI text:', rawText.substring(0, 500));
+      console.error('[find-my-niche] Raw AI text:', platformResult.text.substring(0, 500));
       return new Response(
         JSON.stringify({
           error: 'AI generated an unexpected format. Please try again — results may vary.',
@@ -274,7 +375,6 @@ Return ONLY a JSON array of exactly 5 objects:
       );
     }
 
-    // Log platform usage
     if (userId) {
       const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL')!,
@@ -282,14 +382,17 @@ Return ONLY a JSON array of exactly 5 objects:
         { auth: { persistSession: false } }
       );
       await logUsage({
-        supabaseAdmin, userId, userEmail,
-        module: 'niche_clarity', callType: 'find_niche',
-        model: 'claude-sonnet-4-20250514',
-        usage: data.usage,
+        supabaseAdmin,
+        userId,
+        userEmail,
+        module: 'niche_clarity',
+        callType: 'find_niche',
+        model: platformResult.model,
+        usage: platformResult.usage,
       });
     }
 
-    return new Response(JSON.stringify({ niches, usage: data.usage, byok: false }), {
+    return new Response(JSON.stringify({ niches, usage: platformResult.usage, byok: false }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
