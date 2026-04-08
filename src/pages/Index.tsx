@@ -1327,10 +1327,28 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
       return;
     }
 
+    const getFunctionErrorMessage = async (fnError: any): Promise<string> => {
+      const context = fnError?.context;
+      if (!context) return fnError?.message || '';
+
+      try {
+        const payload = await context.clone().json();
+        return payload?.error || payload?.message || fnError?.message || '';
+      } catch {
+        try {
+          const text = await context.text();
+          return text || fnError?.message || '';
+        } catch {
+          return fnError?.message || '';
+        }
+      }
+    };
+
     setNcLoading(true); setNcError(''); setNcResults([]);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('find-my-niche', {
+      const { invokeWithRetry } = await import('@/utils/retryFetch');
+      const { data, error: fnError } = await invokeWithRetry('find-my-niche', {
         body: {
           background: ncBackground,
           skills: ncSkills,
@@ -1341,9 +1359,16 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
         },
       });
 
-      if (fnError || data?.error) throw new Error(data?.error || fnError?.message);
+      if (fnError) {
+        const functionMessage = await getFunctionErrorMessage(fnError);
+        throw new Error(functionMessage || 'Niche generation failed. Please try again.');
+      }
+      if (data?.error) throw new Error(data.error);
+      if (!Array.isArray(data?.niches) || data.niches.length === 0) {
+        throw new Error('No niche suggestions were returned. Please try again.');
+      }
 
-      setNcResults(data.niches || []);
+      setNcResults(data.niches);
       setNcExpandedId(0);
 
       const { autoSaveWork } = await import('@/utils/recentWork');
@@ -1362,10 +1387,10 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
       await deductCredits(user.id, 'niche_clarity', 'ai_niche_finder', undefined, false, idemKey);
 
     } catch (err: any) {
-      setNcError(err.message || 'Something went wrong. Please try again.');
+      setNcError(err?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setNcLoading(false);
     }
-
-    setNcLoading(false);
   };
 
   const NC_QUESTIONS = [
