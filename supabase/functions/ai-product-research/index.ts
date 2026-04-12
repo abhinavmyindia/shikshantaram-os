@@ -993,6 +993,34 @@ Return ONLY a JSON array of exactly 5 objects:
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
+
+      // V2 response: split into categories
+      if (diversityMeta?._v2 && Array.isArray(parsed)) {
+        const CATEGORY_META = {
+          A: { label: 'Urgent Relief', color: '#dc2626', bg: 'rgba(220,38,38,0.08)', border: 'rgba(220,38,38,0.2)', emoji: '🔥', description: 'For buyers in active pain searching for an immediate fix' },
+          B: { label: 'Skill & Growth', color: '#ea580c', bg: 'rgba(234,88,12,0.08)', border: 'rgba(234,88,12,0.2)', emoji: '📈', description: 'For buyers who want systematic improvement over 30–90 days' },
+          C: { label: 'Transformation', color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.2)', emoji: '🎯', description: 'For buyers who want to fundamentally change their results' },
+        };
+        const byCategory = {
+          A: parsed.filter((i: any) => i.category === 'A'),
+          B: parsed.filter((i: any) => i.category === 'B'),
+          C: parsed.filter((i: any) => i.category === 'C'),
+        };
+        return new Response(JSON.stringify({
+          ideas: parsed,
+          byCategory,
+          categoryMeta: CATEGORY_META,
+          _meta: { model, totalIdeas: parsed.length, hasCreatorCtx: diversityMeta.hasCreatorCtx },
+          byok: false,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // generate-more-category response
+      if (action === 'generate-more-category' && Array.isArray(parsed)) {
+        return new Response(JSON.stringify({ ideas: parsed, category: body.category, byok: false }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       const responseBody: any = { result: parsed, byok: false };
       if (diversityMeta) responseBody._diversity = diversityMeta;
       return new Response(JSON.stringify(responseBody), {
