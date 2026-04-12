@@ -1274,6 +1274,7 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
 
   // Tab state
   const [ncTab, setNcTab] = useState<'ai_finder' | 'browse'>('ai_finder');
+  useEffect(() => { const el = document.getElementById('main-content-area'); if (el) el.scrollTop = 0; }, [ncTab]);
 
   // AI Niche Finder state
   const [ncBackground, setNcBackground] = useState('');
@@ -2353,6 +2354,11 @@ const Index = () => {
   const sessionStarted = useRef(false);
   const usagePopupShown = useRef(false);
 
+  const scrollToTop = useCallback(() => {
+    const el = document.getElementById('main-content-area');
+    if (el) el.scrollTop = 0;
+  }, []);
+
   const tier = profile?.access_tier || 'basic';
   const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
   const journeyDay = getJourneyDay(profile?.created_at);
@@ -2385,6 +2391,9 @@ const Index = () => {
     };
     fetchCount();
   }, [user, activePage]);
+
+  // Scroll to top on page navigation
+  useEffect(() => { scrollToTop(); }, [activePage, scrollToTop]);
 
   // Clear prefill when navigating away from offer
   useEffect(() => {
@@ -2610,7 +2619,7 @@ const Index = () => {
             )}
             <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} savedCount={savedCount} />
           </div>
-          <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '32px 16px' : '32px 36px', marginLeft: 0 }}>
+          <main id="main-content-area" style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '32px 16px' : '32px 36px', marginLeft: 0 }}>
             {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onNavigate={navigateTo} />}
             {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onBuildOffer={(data) => {

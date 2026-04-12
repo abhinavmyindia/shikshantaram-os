@@ -204,6 +204,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   const { saveItem, isSaved, isSaving } = useSaveItem();
   const credits = useCreditGate();
   const [funnelStep, setFunnelStep] = useState<FunnelStepId>('brief');
+  useEffect(() => { const el = document.getElementById('main-content-area'); if (el) el.scrollTop = 0; }, [funnelStep]);
   const [funnelBrief, setFunnelBrief] = useState<FunnelBrief>({ productName: '', offer: '', audience: '', goal: '', trafficSources: [] });
   const [funnelType, setFunnelType] = useState<string | null>(null);
   const [funnelData, setFunnelData] = useState<FunnelData | null>(null);

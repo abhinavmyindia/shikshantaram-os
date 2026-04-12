@@ -528,6 +528,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
   const { saveItem, isSaved, isSaving } = useSaveItem();
   const credits = useCreditGate();
   const [aiStep, setAiStep] = useState<'input' | 'loading-ideas' | 'results' | 'loading-report' | 'report'>('input');
+  useEffect(() => { const el = document.getElementById('main-content-area'); if (el) el.scrollTop = 0; }, [aiStep]);
   const [loadingStartTime, setLoadingStartTime] = useState<number>(Date.now());
   const [inputData, setInputData] = useState(() => {
     const prefill = sessionStorage.getItem('prefillNiche');
