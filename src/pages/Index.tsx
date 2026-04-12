@@ -2353,6 +2353,11 @@ const Index = () => {
   const sessionStarted = useRef(false);
   const usagePopupShown = useRef(false);
 
+  const scrollToTop = useCallback(() => {
+    const el = document.getElementById('main-content-area');
+    if (el) el.scrollTop = 0;
+  }, []);
+
   const tier = profile?.access_tier || 'basic';
   const userName = profile?.full_name || user?.user_metadata?.full_name || 'User';
   const journeyDay = getJourneyDay(profile?.created_at);
