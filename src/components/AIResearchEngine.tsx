@@ -729,6 +729,39 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
 
   const gatedGenerateIdeas = () => credits.gateAction('product_navigator', 'generate_30_ideas', generateIdeas);
 
+  /* ── Generate More per Category ── */
+  const handleGenerateMoreCategory = async (category: 'A' | 'B' | 'C') => {
+    const currentIdeas = category === 'A' ? ideasA : category === 'B' ? ideasB : ideasC;
+    const setLoading = category === 'A' ? setGeneratingMoreA : category === 'B' ? setGeneratingMoreB : setGeneratingMoreC;
+    const setIdeas = category === 'A' ? setIdeasA : category === 'B' ? setIdeasB : setIdeasC;
+    setLoading(true);
+    try {
+      const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
+        body: {
+          action: 'generate-more-category',
+          niche: inputData.niche,
+          country: inputData.country,
+          productType: inputData.productType,
+          category,
+          existingProductNames: currentIdeas.map((i: any) => i.productName),
+          userId: credits.currentUser?.id,
+          userEmail: credits.currentUser?.email,
+          creatorContext: creatorContext || null,
+        },
+      });
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+      const newIdeas = data.ideas || [];
+      setIdeas((prev: any[]) => [...prev, ...newIdeas]);
+      setProductIdeas((prev: any[]) => [...prev, ...newIdeas.map((i: any) => ({ ...i, sourceMode: 'niche' }))]);
+      credits.deductAfterSuccess('product_navigator', 'generate_more_category', data?.byok, data?.provider);
+    } catch (err: any) {
+      console.error('Generate more category failed:', err);
+      setError(err.message || 'Could not generate more ideas.');
+    }
+    setLoading(false);
+  };
+
   const runIdeaAnalysis = async () => {
     setError('');
     setRawIdeaStep('analyzing');
