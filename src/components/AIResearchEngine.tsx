@@ -673,27 +673,52 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     setError('');
     setLoadingStartTime(Date.now());
     setAiStep('loading-ideas');
+    // Clear v2 state
+    setIdeasA([]); setIdeasB([]); setIdeasC([]);
     try {
       const { data, error: fnError } = await invokeWithRetry('ai-product-research', {
-        body: { action: 'generate-ideas', niche: inputData.niche, country: inputData.country, productType: inputData.productType, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email },
+        body: {
+          action: 'generate-ideas-v2',
+          niche: inputData.niche,
+          country: inputData.country,
+          productType: inputData.productType,
+          userId: credits.currentUser?.id,
+          userEmail: credits.currentUser?.email,
+          creatorContext: creatorContext || null,
+        },
       });
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
-      const ideas = data.result.map((idea: any) => ({ ...idea, sourceMode: 'niche' }));
-      setProductIdeas(ideas);
-      setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
+
+      // V2 response has byCategory
+      if (data?.byCategory) {
+        setIdeasA(data.byCategory.A || []);
+        setIdeasB(data.byCategory.B || []);
+        setIdeasC(data.byCategory.C || []);
+        setCategoryMeta(data.categoryMeta || {});
+        // Also set productIdeas for backward compat (deep research, restore, etc)
+        const allIdeas = [...(data.byCategory.A || []), ...(data.byCategory.B || []), ...(data.byCategory.C || [])];
+        setProductIdeas(allIdeas.map((idea: any) => ({ ...idea, sourceMode: 'niche' })));
+        setIdeaBatches([{ batchId: 1, count: allIdeas.length, label: 'Original Research', ideas: allIdeas }]);
+      } else {
+        // Fallback to old format
+        const ideas = (data.result || data.ideas || []).map((idea: any) => ({ ...idea, sourceMode: 'niche' }));
+        setProductIdeas(ideas);
+        setIdeaBatches([{ batchId: 1, count: ideas.length, label: 'Original Research', ideas }]);
+      }
+
       setAiStep('results');
       credits.deductAfterSuccess('product_navigator', 'generate_30_ideas', data?.byok, data?.provider);
-      // Auto-save (fire and forget)
+      // Auto-save
       if (credits.currentUser?.id) {
         autoSaveWork({
           userId: credits.currentUser.id,
           tool: 'product_navigator',
           callType: 'generate_ideas',
-          title: `30 Ideas — ${inputData.niche}`,
-          subtitle: `${inputData.country} · ${inputData.productType}`,
+          title: `Product Research — ${inputData.niche}`,
+          subtitle: `${data?.byCategory ? (data.byCategory.A?.length + data.byCategory.B?.length + data.byCategory.C?.length) + ' qualified opportunities' : '30 ideas'} · ${inputData.country}`,
           inputData: { niche: inputData.niche, country: inputData.country, productType: inputData.productType },
-          outputData: { ideas },
+          outputData: data?.byCategory ? { ideasA: data.byCategory.A, ideasB: data.byCategory.B, ideasC: data.byCategory.C } : { ideas: data.result },
         });
       }
     } catch (err: any) {
