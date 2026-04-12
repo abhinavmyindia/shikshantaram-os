@@ -1935,6 +1935,7 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const { role, isOwner, displayName, loading: roleLoading } = useAdminRole();
   const [tab, setTab] = useState('');
+  useEffect(() => { const el = document.getElementById('main-content-area'); if (el) el.scrollTop = 0; }, [tab]);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [emailMap, setEmailMap] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({ total: 0, basic: 0, premium: 0 });

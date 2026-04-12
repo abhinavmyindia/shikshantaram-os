@@ -1274,6 +1274,7 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
 
   // Tab state
   const [ncTab, setNcTab] = useState<'ai_finder' | 'browse'>('ai_finder');
+  useEffect(() => { const el = document.getElementById('main-content-area'); if (el) el.scrollTop = 0; }, [ncTab]);
 
   // AI Niche Finder state
   const [ncBackground, setNcBackground] = useState('');

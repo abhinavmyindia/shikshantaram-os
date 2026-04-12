@@ -216,6 +216,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
   const { saveItem, isSaved, isSaving } = useSaveItem();
   const credits = useCreditGate();
   const [offerStep, setOfferStep] = useState<OfferStep>('brief');
+  useEffect(() => { const el = document.getElementById('main-content-area'); if (el) el.scrollTop = 0; }, [offerStep]);
   const [offerBrief, setOfferBrief] = useState<OfferBrief>({ productName: '', audience: '', beforeState: '', afterState: '', priceRange: '', platforms: [], currency: 'inr' });
   const [showPrefillBanner, setShowPrefillBanner] = useState(false);
   const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
