@@ -2391,9 +2391,8 @@ const Index = () => {
     fetchCount();
   }, [user, activePage]);
 
-  // Scroll to top on page/tab navigation
+  // Scroll to top on page navigation
   useEffect(() => { scrollToTop(); }, [activePage, scrollToTop]);
-  useEffect(() => { scrollToTop(); }, [ncTab, scrollToTop]);
 
   // Clear prefill when navigating away from offer
   useEffect(() => {
