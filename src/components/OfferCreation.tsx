@@ -372,7 +372,9 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
   };
 
   const totalPerceivedValue = offerData?.valueStack.reduce((sum, v) => {
-    const num = parseInt(v.perceivedValue.replace(/[^\d]/g, '')) || 0;
+    const raw = v.perceivedValue;
+    const str = typeof raw === 'number' ? String(raw) : String(raw || '');
+    const num = parseInt(str.replace(/[^\d]/g, '')) || 0;
     return sum + num;
   }, 0) || 0;
 
