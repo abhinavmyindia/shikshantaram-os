@@ -2610,7 +2610,7 @@ const Index = () => {
             )}
             <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} savedCount={savedCount} />
           </div>
-          <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '32px 16px' : '32px 36px', marginLeft: 0 }}>
+          <main id="main-content-area" style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '32px 16px' : '32px 36px', marginLeft: 0 }}>
             {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onNavigate={navigateTo} />}
             {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onBuildOffer={(data) => {
