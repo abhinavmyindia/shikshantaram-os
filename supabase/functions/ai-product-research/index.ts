@@ -784,6 +784,151 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
       model = "google/gemini-3-flash-preview";
       maxTokens = Math.max(4000, Math.ceil(moreCount * 800));
       callType = "generate_more_ideas";
+    } else if (action === "generate-ideas-v2") {
+      // ── NEW: 3-category buyer-suffering framework, 20 ideas ──
+      const { niche, country, productType, creatorContext } = body;
+      if (!niche?.trim()) throw new Error('Niche is required.');
+
+      const V2_PERSONAS = [
+        `You are a senior product strategist who spent 12 years launching digital products across Indian markets. You design backwards from pain to solution, never forwards from topic to features. You have zero tolerance for generic ideas. Always respond with valid JSON only. No markdown, no preamble.`,
+        `You are a buyer psychology researcher who has interviewed over 5,000 Indian digital product buyers. You think in trigger moments — the specific event that happened today that made someone search for a solution. Always respond with valid JSON only. No markdown, no preamble.`,
+        `You are a market gap analyst who finds the exact intersection of high buyer pain and low competition. You never suggest "another course on X" — you find the specific angle nobody has built yet. Always respond with valid JSON only. No markdown, no preamble.`,
+        `You are India's most sought-after digital product launch consultant. You know the difference between products that sell easily via a WhatsApp message and products that need a 10-page sales page. Always respond with valid JSON only. No markdown, no preamble.`,
+      ];
+
+      const creatorBlock = creatorContext
+        ? `\n━━━ CREATOR CONTEXT ━━━\nBackground: ${creatorContext.background || 'Not provided'}\nSkills: ${creatorContext.skills || 'Not provided'}\nPassions: ${creatorContext.passions || 'Not provided'}\nExperience: ${creatorContext.experience || 'Not provided'}\nGoals: ${creatorContext.goals || 'Not provided'}\nWhen a product idea leverages something specific from their background, give it a high creatorFit score (8-10). When it requires expertise they haven't mentioned, give it a lower creatorFit (3-5).\n`
+        : '';
+
+      const ptInstruction = productType && productType !== 'Any'
+        ? `\nProduct Format Preference: ${productType}\n` : '';
+
+      prompt = `You are generating 20 qualified digital product opportunities for the niche: ${niche}
+Target Market: ${country}${ptInstruction}${creatorBlock}
+
+━━━ RESEARCH PHASE ━━━
+Before generating, think through:
+1. WHO SUFFERS: 3 specific types of people experiencing pain in ${niche}.
+2. URGENT PROBLEMS (Category A): Problems where someone is losing money/clients/reputation RIGHT NOW.
+3. GROWTH GAPS (Category B): Where practitioners know they're falling behind but aren't in crisis.
+4. TRANSFORMATION (Category C): Big outcomes the best practitioners achieve that beginners want.
+
+━━━ GENERATE 20 IDEAS ━━━
+
+CATEGORY A — URGENT RELIEF (exactly 8 ideas):
+- Active urgent problem RIGHT NOW. Buyer purchases within 48 hours.
+- Formats: audit template, diagnosis framework, checklist, calculator, swipe file, emergency playbook
+- Price: ₹299–₹1,999. Build: 1–2 weeks.
+- impulseScore: MUST be 8, 9, or 10.
+
+CATEGORY B — SKILL & GROWTH (exactly 8 ideas):
+- Systematic improvement. Buyer compares options before buying.
+- Formats: course, 30-day program, playbook, workshop, community
+- Price: ₹1,499–₹5,999. Build: 2–6 weeks.
+- impulseScore: MUST be 5, 6, or 7.
+
+CATEGORY C — TRANSFORMATION (exactly 4 ideas):
+- Big ambition, serious investment, long consideration cycle.
+- Formats: coaching program, done-with-you system, mastermind, academy
+- Price: ₹6,000–₹25,000. Build: 4–12 weeks.
+- impulseScore: MUST be 2, 3, or 4.
+
+━━━ NAME RULES ━━━
+Every name must make the EXACT right buyer think "this was written for me."
+Must contain who it's for AND what problem it solves. Reject generic names.
+
+Return ONLY a JSON array of exactly 20 objects (8 A, 8 B, 4 C):
+{
+  "productName": "Specific name",
+  "tagline": "Outcome line under 12 words",
+  "category": "A" | "B" | "C",
+  "categoryLabel": "Urgent Relief" | "Skill & Growth" | "Transformation",
+  "buyerAvatar": "Specific person: role, situation, what they've tried",
+  "triggerMoment": "Exact event that made them search today",
+  "coreProblem": "Real painful problem with real consequences",
+  "transformation": "Specific before→after measurable outcome",
+  "positioningAngle": "What makes this different from the generic version",
+  "marketEvidence": "Why real demand exists",
+  "whyBuyNow": "The urgency signal",
+  "firstSale": "Fastest path to first paying customer in ${country}",
+  "format": "Specific product format",
+  "buildTime": "X-Y weeks",
+  "priceRange": "₹XXX–₹X,XXX",
+  "demandScore": <1-10>,
+  "competitionLevel": "Low" | "Medium" | "High",
+  "competitionNote": "One sentence about competition for this angle",
+  "impulseScore": <number>,
+  "impulseTag": "🔥 Urgent Fix" | "⚡ Quick Win" | "🎯 High Demand" | "💎 Premium" | "🌟 Evergreen",
+  "creatorFit": <1-10>,
+  "whyUnique": "One sentence on the specific angle nobody else has built",
+  "searchKeyword": "Exact search term buyer uses"
+}`;
+
+      systemPrompt = pickOne(V2_PERSONAS);
+      temperature = 0.85;
+      model = "google/gemini-2.5-flash";
+      maxTokens = 16000;
+      callType = "generate_30_ideas";
+      // Mark as v2 for custom response handling
+      diversityMeta = { _v2: true, hasCreatorCtx: !!creatorContext };
+
+    } else if (action === "generate-more-category") {
+      // ── NEW: Generate 5 more ideas for a specific category ──
+      const { niche, country, productType, category, existingProductNames, creatorContext: ctx } = body;
+      if (!niche?.trim()) throw new Error('Niche is required.');
+      if (!['A','B','C'].includes(category)) throw new Error('Category must be A, B, or C.');
+
+      const CATS: Record<string, { label: string; desc: string; format: string; price: string; build: string; impulse: string }> = {
+        A: { label: 'Urgent Relief', desc: 'Active pain, immediate fix needed', format: 'audit template, diagnosis framework, checklist, calculator, swipe file', price: '₹299–₹1,999', build: '1–2 weeks', impulse: 'impulseScore MUST be 8, 9, or 10' },
+        B: { label: 'Skill & Growth', desc: 'Systematic improvement over 30–90 days', format: 'structured course, 30-day program, playbook, workshop, community', price: '₹1,499–₹5,999', build: '2–6 weeks', impulse: 'impulseScore MUST be 5, 6, or 7' },
+        C: { label: 'Transformation', desc: 'Big ambition, long consideration, deep trust', format: 'coaching program, done-with-you system, mastermind, academy', price: '₹6,000–₹25,000', build: '4–12 weeks', impulse: 'impulseScore MUST be 2, 3, or 4' },
+      };
+      const cfg = CATS[category];
+      const existing = (existingProductNames || []).length > 0 ? `\nDo NOT repeat:\n${existingProductNames.join('\n')}\n` : '';
+      const ctxBlock = ctx ? `\nCREATOR: Background: ${ctx.background || ''}, Skills: ${ctx.skills || ''}, Passions: ${ctx.passions || ''}\n` : '';
+
+      prompt = `Generate exactly 5 MORE digital product ideas for niche: ${niche}
+Market: ${country}
+${productType && productType !== 'Any' ? `Format preference: ${productType}\n` : ''}
+CATEGORY: ${cfg.label} — ${cfg.desc}
+Formats: ${cfg.format}. Price: ${cfg.price}. Build: ${cfg.build}. ${cfg.impulse}.
+${ctxBlock}${existing}
+Find NEW angles, sub-segments, formats within this category.
+Every product name must be specific enough that only the right buyer recognizes themselves.
+
+Return ONLY a JSON array of exactly 5 objects:
+{
+  "productName": "Specific name",
+  "tagline": "Outcome line under 12 words",
+  "category": "${category}",
+  "categoryLabel": "${cfg.label}",
+  "buyerAvatar": "Specific person: role, situation",
+  "triggerMoment": "Event that made them search today",
+  "coreProblem": "Real painful problem",
+  "transformation": "Before→after outcome",
+  "positioningAngle": "What makes this different",
+  "marketEvidence": "Why demand exists",
+  "whyBuyNow": "Urgency signal",
+  "firstSale": "Fastest path to first customer",
+  "format": "Specific format",
+  "buildTime": "${cfg.build}",
+  "priceRange": "${cfg.price}",
+  "demandScore": <1-10>,
+  "competitionLevel": "Low" | "Medium" | "High",
+  "competitionNote": "One sentence",
+  "impulseScore": <number>,
+  "impulseTag": "🔥 Urgent Fix" | "⚡ Quick Win" | "🎯 High Demand" | "💎 Premium" | "🌟 Evergreen",
+  "creatorFit": <1-10>,
+  "whyUnique": "One sentence",
+  "searchKeyword": "Exact search term"
+}`;
+
+      systemPrompt = `You are a market gap analyst obsessed with buyer specificity. Every idea starts from a specific person's specific suffering. Always respond with valid JSON only. No markdown, no preamble.`;
+      temperature = 0.9;
+      model = "google/gemini-2.5-flash";
+      maxTokens = 6000;
+      callType = "generate_more_category";
+
     } else if (action === "deep-research") {
       const { product, inputData } = body;
       deepResearchContext = { product, inputData };
@@ -848,6 +993,34 @@ Return ONLY a valid JSON array of exactly ${moreCount} objects. No preamble. No 
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
+
+      // V2 response: split into categories
+      if (diversityMeta?._v2 && Array.isArray(parsed)) {
+        const CATEGORY_META = {
+          A: { label: 'Urgent Relief', color: '#dc2626', bg: 'rgba(220,38,38,0.08)', border: 'rgba(220,38,38,0.2)', emoji: '🔥', description: 'For buyers in active pain searching for an immediate fix' },
+          B: { label: 'Skill & Growth', color: '#ea580c', bg: 'rgba(234,88,12,0.08)', border: 'rgba(234,88,12,0.2)', emoji: '📈', description: 'For buyers who want systematic improvement over 30–90 days' },
+          C: { label: 'Transformation', color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.2)', emoji: '🎯', description: 'For buyers who want to fundamentally change their results' },
+        };
+        const byCategory = {
+          A: parsed.filter((i: any) => i.category === 'A'),
+          B: parsed.filter((i: any) => i.category === 'B'),
+          C: parsed.filter((i: any) => i.category === 'C'),
+        };
+        return new Response(JSON.stringify({
+          ideas: parsed,
+          byCategory,
+          categoryMeta: CATEGORY_META,
+          _meta: { model, totalIdeas: parsed.length, hasCreatorCtx: diversityMeta.hasCreatorCtx },
+          byok: false,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // generate-more-category response
+      if (action === 'generate-more-category' && Array.isArray(parsed)) {
+        return new Response(JSON.stringify({ ideas: parsed, category: body.category, byok: false }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       const responseBody: any = { result: parsed, byok: false };
       if (diversityMeta) responseBody._diversity = diversityMeta;
       return new Response(JSON.stringify(responseBody), {

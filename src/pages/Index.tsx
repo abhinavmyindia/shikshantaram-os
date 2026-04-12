@@ -1557,7 +1557,7 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
                           </div>
                         )}
                         <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' as const }}>
-                          <button onClick={() => { if (onNavigate) { sessionStorage.setItem('prefillNiche', niche.nicheName); onNavigate('product'); } }}
+                          <button onClick={() => { if (onNavigate) { sessionStorage.setItem('prefillNiche', niche.nicheName); if (ncBackground || ncSkills || ncPassions || ncExperience || ncGoals) { sessionStorage.setItem('creatorContext', JSON.stringify({ background: ncBackground || '', skills: ncSkills || '', passions: ncPassions || '', experience: ncExperience || '', goals: ncGoals || '' })); } onNavigate('product'); } }}
                             style={{ flex:2, padding:'11px 16px', borderRadius:'12px', border:'none', background:'linear-gradient(135deg,#7c3aed,#a855f7)', color:'white', cursor:'pointer', fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
                             🧭 Research Products in This Niche →
                           </button>
