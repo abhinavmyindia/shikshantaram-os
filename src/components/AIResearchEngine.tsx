@@ -1679,8 +1679,110 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     );
   }
 
-  /* ═══════════════════ STEP 2: 30 IDEAS ═══════════════════ */
-  if (aiStep === 'results') {
+  /* ═══════════════════ STEP 2: RESULTS ═══════════════════ */
+  if (aiStep === 'results' && isV2Mode) {
+    /* ── V2: 3-Category Layout ── */
+    const renderCategorySection = (ideas: any[], catKey: 'A' | 'B' | 'C', loading: boolean, onMore: () => void) => {
+      if (ideas.length === 0) return null;
+      const meta: Record<string, any> = {
+        A: { emoji: '🔥', label: 'Urgent Relief Products', desc: 'Buyers in active pain searching for an immediate fix — impulse buy territory', color: '#dc2626', bg: 'rgba(220,38,38,0.08)', border: 'rgba(220,38,38,0.2)', btnLabel: '🔥 Generate 5 More Urgent Relief Products · 5 credits' },
+        B: { emoji: '📈', label: 'Skill & Growth Products', desc: 'Buyers who want systematic improvement over 30–90 days', color: '#ea580c', bg: 'rgba(234,88,12,0.08)', border: 'rgba(234,88,12,0.2)', btnLabel: '📈 Generate 5 More Growth Products · 5 credits' },
+        C: { emoji: '🎯', label: 'Transformation Products', desc: 'High-value programs for buyers with big ambitions who trust the creator', color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.2)', btnLabel: '🎯 Generate 5 More Transformation Products · 5 credits' },
+      };
+      const m = meta[catKey];
+      return (
+        <div key={catKey} style={s({ marginBottom: 32, animation: 'fadeUp 0.4s ease' })}>
+          <div style={s({ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 })}>
+            <div style={s({ fontSize: 28 })}>{m.emoji}</div>
+            <div>
+              <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+                <h3 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: 0 })}>{m.label}</h3>
+                <span style={s({ fontSize: 10, fontWeight: 800, background: m.bg, color: m.color, padding: '2px 10px', borderRadius: 50 })}>{ideas.length} ideas</span>
+              </div>
+              <p style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', margin: '2px 0 0' })}>{m.desc}</p>
+            </div>
+          </div>
+          <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 })}>
+            {ideas.map((idea: any, i: number) => {
+              const cardId = `${catKey}-${i}`;
+              const isExpanded = expandedCardId === cardId;
+              const demandBg = (idea.demandScore || 5) >= 8 ? '#dcfce7' : (idea.demandScore || 5) >= 5 ? '#fef9c3' : '#fee2e2';
+              const demandTx = (idea.demandScore || 5) >= 8 ? '#166534' : (idea.demandScore || 5) >= 5 ? '#92400e' : '#991b1b';
+              return (
+                <div key={cardId} style={s({ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', borderRadius: 18, border: `1px solid ${m.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.06)', overflow: 'hidden', animation: `fadeUp 0.4s ease ${i * 0.04}s both`, transition: 'all 0.2s' })}>
+                  <div style={s({ height: 4, background: `linear-gradient(90deg, ${m.color}, ${m.color}88)`, width: `${((idea.demandScore || 5) / 10) * 100}%` })} />
+                  <div style={s({ padding: '16px 18px' })}>
+                    <div style={s({ display: 'flex', gap: 10, alignItems: 'flex-start' })}>
+                      <div style={s({ width: 24, height: 24, borderRadius: '50%', background: m.bg, color: m.color, fontFamily: 'Sora', fontWeight: 800, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 })}>{m.emoji}</div>
+                      <div style={s({ flex: 1, minWidth: 0 })}>
+                        <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a', lineHeight: 1.3, marginBottom: 3 })}>{idea.productName}</div>
+                        <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', lineHeight: 1.5, marginBottom: 4 })}>{idea.tagline}</div>
+                        <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginBottom: 8 })}>👤 {idea.buyerAvatar}</div>
+                        <div style={s({ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 })}>
+                          <span style={s({ padding: '3px 8px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, background: demandBg, color: demandTx })}>🔍 Demand {idea.demandScore}/10</span>
+                          <span style={s({ padding: '3px 8px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, background: '#f0f9ff', color: '#0891b2' })}>🛠 {idea.buildTime}</span>
+                          <span style={s({ padding: '3px 8px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, background: '#f8fafc', color: '#64748b' })}>{idea.priceRange}</span>
+                          <span style={s({ padding: '3px 8px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, background: idea.competitionLevel === 'Low' ? '#dcfce7' : '#fef9c3', color: idea.competitionLevel === 'Low' ? '#059669' : '#92400e' })}>{idea.competitionLevel} Comp</span>
+                          <span style={s({ padding: '3px 8px', borderRadius: 50, fontFamily: 'DM Sans', fontSize: 9, fontWeight: 700, background: m.bg, color: m.color })}>{idea.impulseTag}</span>
+                        </div>
+                        {idea.whyUnique && <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', fontStyle: 'italic', marginBottom: 8 })}>💡 {idea.whyUnique}</div>}
+                      </div>
+                      <button onClick={() => setExpandedCardId(isExpanded ? null : cardId)} style={s({ background: '#f8fafc', border: '1px solid #f1f5f9', color: '#64748b', width: 28, height: 28, borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, flexShrink: 0 })}>{isExpanded ? '▲' : '▼'}</button>
+                    </div>
+                    {/* Action row */}
+                    <div style={s({ display: 'flex', gap: 8, marginTop: 8 })}>
+                      <button onClick={() => generateReport(idea)} style={s({ flex: 1, padding: '8px 12px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg,${m.color},${m.color}cc)`, color: 'white', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 })}>🔬 Deep Research →</button>
+                      <button onClick={(e) => { e.stopPropagation(); saveItem({ tool: 'product_navigator', item_type: 'product_idea', title: idea.productName, summary: idea.tagline, full_data: idea }); }} style={s({ padding: '8px 12px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12 })}>🔖</button>
+                    </div>
+                    {/* Expanded detail */}
+                    {isExpanded && (
+                      <div style={s({ marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9' })}>
+                        {idea.triggerMoment && <div style={s({ marginBottom: 10 })}><div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 })}>What triggered them to search today</div><div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>{idea.triggerMoment}</div></div>}
+                        {idea.coreProblem && <div style={s({ marginBottom: 10 })}><div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 })}>The real problem</div><div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>{idea.coreProblem}</div></div>}
+                        {idea.transformation && <div style={s({ marginBottom: 10 })}><div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 })}>The transformation</div><div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#334155', lineHeight: 1.6 })}>{idea.transformation}</div></div>}
+                        <div style={s({ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 })}>
+                          {idea.positioningAngle && <div><div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 })}>Your positioning angle</div><div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#475569', lineHeight: 1.5 })}>{idea.positioningAngle}</div></div>}
+                          {idea.marketEvidence && <div><div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 })}>Market evidence</div><div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#475569', lineHeight: 1.5 })}>{idea.marketEvidence}</div></div>}
+                        </div>
+                        {idea.firstSale && <div style={s({ display: 'flex', gap: 8, alignItems: 'flex-start', background: 'rgba(5,150,105,0.04)', borderRadius: 10, padding: '10px 12px', marginBottom: 10 })}><span>💰</span><div><div style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#059669', marginBottom: 2 })}>Fastest path to first sale</div><div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#334155', lineHeight: 1.5 })}>{idea.firstSale}</div></div></div>}
+                        {idea.whyBuyNow && <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#475569', marginBottom: 6 })}>⚡ <strong>Why now:</strong> {idea.whyBuyNow}</div>}
+                        {idea.competitionNote && <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>📊 {idea.competitionNote}</div>}
+                        {idea.creatorFit && <div style={s({ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 })}><span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, color: '#94a3b8' })}>Creator Fit:</span><span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: idea.creatorFit >= 8 ? '#059669' : idea.creatorFit >= 5 ? '#ea580c' : '#dc2626' })}>{idea.creatorFit}/10</span></div>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button onClick={onMore} disabled={loading} style={s({ width: '100%', marginTop: 12, padding: 11, borderRadius: 12, border: `1.5px dashed ${m.border}`, background: m.bg, color: m.color, cursor: loading ? 'wait' : 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 })}>{loading ? '⏳ Generating...' : m.btnLabel}</button>
+        </div>
+      );
+    };
+
+    const totalIdeas = ideasA.length + ideasB.length + ideasC.length;
+    return (
+      <div style={s({ animation: 'fadeUp 0.4s ease' })}>
+        <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 24 })}>
+          <div>
+            <div style={s({ display: 'flex', alignItems: 'center', gap: 8 })}>
+              <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', margin: 0 })}>{totalIdeas} Qualified Opportunities</h2>
+              {hasCreatorCtx && <span style={s({ fontSize: 10, fontWeight: 700, background: 'rgba(124,58,237,0.08)', color: '#7c3aed', padding: '3px 10px', borderRadius: 50 })}>🧠 Personalised to your background</span>}
+            </div>
+            <p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginTop: 3 })}>{inputData.niche} · {inputData.country} · Sorted by buyer urgency</p>
+          </div>
+          <button onClick={() => { setAiStep('input'); setProductIdeas([]); setIdeasA([]); setIdeasB([]); setIdeasC([]); setResearchReport(null); }} style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#64748b', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '8px 16px', cursor: 'pointer' })}>↩ New Search</button>
+        </div>
+        {error && <div style={s({ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 12, padding: '12px 16px', marginBottom: 16 })}><span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#991b1b' })}>{error}</span></div>}
+        {renderCategorySection(ideasA, 'A', generatingMoreA, () => handleGenerateMoreCategory('A'))}
+        {renderCategorySection(ideasB, 'B', generatingMoreB, () => handleGenerateMoreCategory('B'))}
+        {renderCategorySection(ideasC, 'C', generatingMoreC, () => handleGenerateMoreCategory('C'))}
+        {credits.showTopUp && <TopUpModal onClose={() => credits.setShowTopUp(false)} />}
+      </div>
+    );
+  }
+
+  if (aiStep === 'results' && !isV2Mode) {
     return (
       <div style={s({ animation: 'fadeUp 0.4s ease' })}>
         {/* Header */}
