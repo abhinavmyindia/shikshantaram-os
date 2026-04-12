@@ -534,6 +534,19 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     if (prefill) { sessionStorage.removeItem('prefillNiche'); return { niche: prefill, country: '', productType: '' }; }
     return { niche: '', country: '', productType: '' };
   });
+
+  /* ── V2: Category-based state ── */
+  const [ideasA, setIdeasA] = useState<any[]>([]);
+  const [ideasB, setIdeasB] = useState<any[]>([]);
+  const [ideasC, setIdeasC] = useState<any[]>([]);
+  const [categoryMeta, setCategoryMeta] = useState<any>({});
+  const [generatingMoreA, setGeneratingMoreA] = useState(false);
+  const [generatingMoreB, setGeneratingMoreB] = useState(false);
+  const [generatingMoreC, setGeneratingMoreC] = useState(false);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  const [creatorContext, setCreatorContext] = useState<any>(null);
+  const [hasCreatorCtx, setHasCreatorCtx] = useState(false);
+  const isV2Mode = ideasA.length > 0 || ideasB.length > 0 || ideasC.length > 0;
   const [productIdeas, setProductIdeas] = useState<ProductIdea[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductIdea | null>(null);
   const [researchReport, setResearchReport] = useState<ResearchReport | null>(null);
