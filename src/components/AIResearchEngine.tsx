@@ -1777,7 +1777,7 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
         {renderCategorySection(ideasA, 'A', generatingMoreA, () => handleGenerateMoreCategory('A'))}
         {renderCategorySection(ideasB, 'B', generatingMoreB, () => handleGenerateMoreCategory('B'))}
         {renderCategorySection(ideasC, 'C', generatingMoreC, () => handleGenerateMoreCategory('C'))}
-        {credits.showTopUp && <TopUpModal onClose={() => credits.setShowTopUp(false)} />}
+        {credits.showTopUp && credits.currentUser && <TopUpModal userId={credits.currentUser.id} userEmail={credits.currentUser.email || ''} userName={credits.currentUser.user_metadata?.full_name || ''} currentBalance={credits.userBalance} onClose={() => credits.setShowTopUp(false)} onSuccess={(nb) => credits.setUserBalance(nb)} />}
       </div>
     );
   }
