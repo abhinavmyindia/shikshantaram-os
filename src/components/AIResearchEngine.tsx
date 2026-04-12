@@ -602,7 +602,19 @@ export default function AIResearchEngine({ onBuildOffer }: { onBuildOffer?: (dat
     }
   }, []);
 
-  // Check for recent work on mount
+  // Read creator context from Niche Clarity
+  useEffect(() => {
+    const ctxRaw = sessionStorage.getItem('creatorContext');
+    if (ctxRaw) {
+      try {
+        const ctx = JSON.parse(ctxRaw);
+        setCreatorContext(ctx);
+        setHasCreatorCtx(true);
+        sessionStorage.removeItem('creatorContext');
+      } catch (_) {}
+    }
+  }, []);
+
   useEffect(() => {
     const checkRecent = async () => {
       if (!credits.currentUser?.id) return;
