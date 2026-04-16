@@ -21,6 +21,8 @@ serve(async (req) => {
   const tierColor = access_tier === "premium" ? "#7c3aed" : access_tier === "beta" ? "#ec4899" : "#059669";
   const toolsLine = access_tier === "basic"
     ? "You currently have access to Niche Clarity and Product Navigator."
+    : access_tier === "beta"
+    ? "You have full Beta access to all tools — including early previews."
     : "You have full access to all unlocked tools in Shikshantaram OS.";
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:'DM Sans',Arial,sans-serif;background:#f5f3ff;padding:40px 20px;">
