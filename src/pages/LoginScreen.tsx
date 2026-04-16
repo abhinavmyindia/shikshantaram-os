@@ -278,24 +278,7 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
         return;
       }
 
-      // Check if email already submitted
-      const { data: existing } = await supabase
-        .from('signup_requests')
-        .select('id, status')
-        .eq('email', email.toLowerCase().trim())
-        .maybeSingle();
-
-      if (existing) {
-        if ((existing as any).status === 'pending') {
-          setSubmitError('This email has already been registered. We will contact you once verified.');
-        } else if ((existing as any).status === 'approved') {
-          setSubmitError('This email already has access. Please log in instead.');
-          setTimeout(() => onSwitchToLogin(), 2000);
-        }
-        return;
-      }
-
-      // Insert
+      // Insert directly — handle duplicate via unique constraint error
       const { error } = await supabase
         .from('signup_requests')
         .insert({
@@ -306,7 +289,15 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
           status: 'pending',
         });
 
-      if (error) throw error;
+      if (error) {
+        // Unique constraint on email — means they already signed up
+        if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+          setSubmitError('This email has already been registered. We will contact you once your access is verified.');
+          return;
+        }
+        throw error;
+      }
+
       setSubmitSuccess(true);
     } catch (err: any) {
       setSubmitError('Something went wrong. Please try again or contact support.');
