@@ -6,6 +6,53 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+async function sendTeamInviteEmail(email: string, role: string, invitedByName: string) {
+  const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+  if (!RESEND_API_KEY) {
+    console.warn('[manage-team] RESEND_API_KEY not set, skipping invite email');
+    return;
+  }
+
+  const APP_URL = Deno.env.get('APP_URL') || 'https://os.shikshantaram.in';
+  const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
+  const roleColor = role === 'admin' ? '#0284c7' : role === 'manager' ? '#059669' : '#d97706';
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:'DM Sans',Arial,sans-serif;background:#f5f3ff;padding:40px 20px;">
+<div style="max-width:480px;margin:0 auto;background:white;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+<div style="background:linear-gradient(135deg,${roleColor},#7c3aed);padding:32px 28px;text-align:center;">
+<div style="font-family:Sora,sans-serif;font-weight:900;font-size:20px;color:white;">Shikshantaram OS</div>
+</div>
+<div style="padding:28px;">
+<div style="display:inline-block;background:${roleColor};color:white;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-bottom:16px;">Team Invitation</div>
+<h2 style="font-family:Sora,sans-serif;font-weight:800;font-size:22px;color:#0f172a;margin:0 0 12px;">You're Invited to Join the Team! 🎉</h2>
+<p style="font-size:14px;color:#64748b;line-height:1.7;"><strong>${invitedByName}</strong> has invited you to join the <strong>Shikshantaram OS</strong> admin team as <strong>${roleLabel}</strong>.</p>
+<div style="background:#f8fafc;border-radius:10px;padding:14px;margin:16px 0;">
+<div style="font-size:13px;color:#64748b;margin-bottom:6px;"><strong>Role:</strong> ${roleLabel}</div>
+<div style="font-size:13px;color:#64748b;"><strong>Invited by:</strong> ${invitedByName}</div>
+</div>
+<p style="font-size:14px;color:#64748b;line-height:1.7;">To accept this invitation, please sign up or log in with this email address (<strong>${email}</strong>) on Shikshantaram OS. Your team access will be activated automatically.</p>
+<a href="${APP_URL}" style="display:block;text-align:center;background:linear-gradient(135deg,${roleColor},#7c3aed);color:white;padding:14px;border-radius:12px;text-decoration:none;font-weight:700;font-size:14px;margin-top:16px;">🚀 Go to Shikshantaram OS →</a>
+</div>
+</div></body></html>`;
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Shikshantaram OS <auth@shikshantaram.in>',
+        to: [email],
+        subject: `🎉 You've been invited to Shikshantaram OS as ${roleLabel}`,
+        html,
+      }),
+    });
+    const data = await res.json();
+    console.log('[manage-team] Invite email sent:', res.ok, data);
+  } catch (err) {
+    console.error('[manage-team] Failed to send invite email:', err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -28,7 +75,7 @@ Deno.serve(async (req) => {
 
     const { data: callerRecord } = await supabase
       .from('admin_users')
-      .select('role, is_owner')
+      .select('role, is_owner, display_name, email')
       .eq('user_id', callerUser.id)
       .single();
 
@@ -39,6 +86,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    const ownerName = callerRecord.display_name || callerRecord.email || 'Owner';
     const { action, ...payload } = await req.json();
 
     if (action === 'add_member') {
@@ -54,12 +102,16 @@ Deno.serve(async (req) => {
         await supabase.from('team_invitations').insert({
           email, role,
           invited_by: callerUser.id,
-          invited_by_name: 'Owner',
+          invited_by_name: ownerName,
           status: 'pending',
         });
+
+        // Send invitation email
+        await sendTeamInviteEmail(email, role, ownerName);
+
         return new Response(JSON.stringify({
           success: true, type: 'invitation_sent',
-          message: `Invitation created for ${email}. They need an account first.`
+          message: `Invitation sent to ${email}. They will receive an email with instructions.`
         }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
@@ -78,9 +130,12 @@ Deno.serve(async (req) => {
         email,
       });
 
+      // Send welcome-to-team email for existing users too
+      await sendTeamInviteEmail(email, role, ownerName);
+
       return new Response(JSON.stringify({
         success: true, type: 'member_added',
-        message: `${email} added as ${role} successfully.`
+        message: `${email} added as ${role} successfully. They've been notified by email.`
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
