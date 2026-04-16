@@ -239,7 +239,7 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
 /* ─── SIGNUP FORM ─── */
 function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
   const [capReached, setCapReached] = useState(false);
-  const [spotsLeft, setSpotsLeft] = useState(100);
+  const [spotsLeft, setSpotsLeft] = useState(250);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -259,8 +259,8 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
     setLoading(true);
     const { data } = await supabase.rpc('get_signup_count');
     const count = (data as number) || 0;
-    if (count >= 100) setCapReached(true);
-    setSpotsLeft(100 - count);
+    if (count >= 250) setCapReached(true);
+    setSpotsLeft(250 - count);
     setLoading(false);
   };
 
@@ -273,7 +273,7 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
     try {
       // Re-check cap
       const { data: countData } = await supabase.rpc('get_signup_count');
-      if ((countData as number) >= 100) {
+      if ((countData as number) >= 250) {
         setCapReached(true);
         return;
       }
@@ -346,7 +346,7 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
           fontFamily: 'DM Sans', fontSize: 11.5, fontWeight: 700,
           color: spotsLeft <= 10 ? '#ef4444' : '#ea580c',
         }}>
-          {spotsLeft <= 10 ? '⚠' : '🔥'} {spotsLeft <= 10 ? `Only ${spotsLeft} spots left!` : `${spotsLeft} spots remaining out of 100`}
+          {spotsLeft <= 10 ? '⚠' : '🔥'} {spotsLeft <= 10 ? `Only ${spotsLeft} spots left!` : `${spotsLeft} spots remaining out of 250`}
         </span>
       </div>
 
@@ -536,7 +536,7 @@ function CapReachedScreen({ onSwitchToLogin }: { onSwitchToLogin: () => void }) 
       <div style={{ fontSize: 56, animation: 'float 3s ease-in-out infinite' }}>🔒</div>
       <div style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', marginTop: 16 }}>Registration Closed</div>
       <div style={{ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginTop: 8, lineHeight: 1.7 }}>
-        All 100 founding member spots have been claimed.
+        All 250 founding member spots have been claimed.
       </div>
 
       <div style={{
