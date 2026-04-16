@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Anon can check existing signup by email" ON public.signup_requests;
