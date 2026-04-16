@@ -112,9 +112,11 @@ serve(async (req) => {
     }
 
     // 3. Send welcome email via Resend
-    const tierLabel = access_tier === 'premium' ? 'Premium' : 'Basic';
+    const tierLabel = access_tier === 'premium' ? 'Premium' : access_tier === 'beta' ? 'Beta' : 'Basic';
     const toolsLine = access_tier === 'basic'
       ? 'You have access to Niche Clarity and Product Navigator.'
+      : access_tier === 'beta'
+      ? 'You have full Beta access to all tools — including early previews.'
       : 'You have full Premium access to all tools as they unlock.';
     const appUrl = Deno.env.get('APP_URL') || 'https://os.shikshantaram.in';
 

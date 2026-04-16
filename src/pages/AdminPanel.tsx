@@ -517,7 +517,7 @@ function SecurityProfileModal({ userId, userEmail, userName, onClose, adminId, s
 function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivity }: {
   request: SignupRow; onClose: () => void; onApproved: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
-  const defaultTier = request.payment_type === 'full' ? 'premium' : 'basic';
+  const defaultTier = request.payment_type === 'full' ? 'premium' : request.payment_type === 'beta' ? 'beta' : 'basic';
   const [selectedTier, setSelectedTier] = useState(defaultTier);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [approvalNotes, setApprovalNotes] = useState('');
