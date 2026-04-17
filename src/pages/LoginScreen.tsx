@@ -371,9 +371,8 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
             value={countryCode}
             onChange={e => setCountryCode(e.target.value)}
             style={{ ...inputStyle, padding: '11px 8px', cursor: 'pointer', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'><path fill=\'%2364748b\' d=\'M0 0l5 6 5-6z\'/></svg>")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: 24 }}
-            onFocus={focusInput}
-            onBlur={blurInput}
-          >
+            onFocus={e => { e.target.style.borderColor = '#7c3aed'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.12)'; }}
+            onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
             <option value="+91">🇮🇳 +91</option>
             <option value="+1">🇺🇸 +1</option>
             <option value="+44">🇬🇧 +44</option>
