@@ -67,8 +67,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Insert audit transaction
-      await supabase.from('credit_transactions').insert({
+      // Insert audit transaction so the user sees the reset in their history
+      const { error: txErr } = await supabase.from('credit_transactions').insert({
         user_id: u.user_id,
         type: 'admin_reset',
         amount: delta,
@@ -76,6 +76,10 @@ Deno.serve(async (req) => {
         description: `Admin bulk reset to ${targetBalance} — ${reason}`,
         gifted_by: adminUser.id,
       });
+      if (txErr) {
+        // Don't silently swallow — surface so we never repeat the constraint bug
+        errors.push(`tx ${u.user_id}: ${txErr.message}`);
+      }
 
       affected++;
     }
