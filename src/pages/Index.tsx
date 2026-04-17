@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { autoSaveWork } from '@/utils/recentWork';
 import { fileToBase64, getFileType, extractTextFromTxt, extractTextFromDocx, validateFile } from '@/utils/documentExtract';
 import ProfilePage, { AVATAR_COLORS } from '@/components/ProfilePage';
+import CreditBalance from '@/components/CreditBalance';
 // supabase already imported above
 import { trackPageView } from '@/utils/activityTracker';
 
