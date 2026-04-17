@@ -322,12 +322,20 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
         {error && <div style={s({ padding: '0 24px', marginBottom: 12 })}><p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#ef4444', fontWeight: 600 })}>❌ {error}</p></div>}
 
         <div style={s({ padding: '0 24px 20px' })}>
-          <button onClick={handleTopUp} disabled={loading} style={s({
-            width: '100%', padding: 16, borderRadius: 16, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-            background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', fontFamily: 'Sora', fontWeight: 900, fontSize: 16,
-            boxShadow: '0 4px 20px rgba(124,58,237,0.35)', opacity: loading ? 0.7 : 1, transition: 'all 0.15s',
+          <button onClick={handleTopUp} disabled={loading || !canPay} style={s({
+            width: '100%', padding: 16, borderRadius: 16, border: 'none',
+            cursor: (loading || !canPay) ? 'not-allowed' : 'pointer',
+            background: !canPay ? '#e2e8f0' : 'linear-gradient(135deg,#7c3aed,#a855f7)',
+            color: !canPay ? '#94a3b8' : 'white',
+            fontFamily: 'Sora', fontWeight: 900, fontSize: 16,
+            boxShadow: !canPay ? 'none' : '0 4px 20px rgba(124,58,237,0.35)',
+            opacity: loading ? 0.7 : 1, transition: 'all 0.15s',
           })}>
-            {loading ? 'Opening payment...' : `Pay ₹${PACKS[selectedPack].amountInr.toLocaleString('en-IN')} via UPI / Card`}
+            {loading
+              ? 'Opening payment...'
+              : !canPay
+                ? `Enter at least ₹${TOPUP_CONFIG.MIN_CUSTOM_AMOUNT} to continue`
+                : `Pay ₹${activeAmount.toLocaleString('en-IN')} via UPI / Card`}
           </button>
           <p style={s({ textAlign: 'center', fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 10 })}>
             Secured by Razorpay · Credits never expire · Instant activation
