@@ -47,6 +47,8 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
         handler: async (_response: any) => {
           setLoading(true);
           setError('');
+          setConfirming(true);
+          setPollAttempt(0);
 
           // Poll user_credits until webhook updates balance (typ. 2-8s, max 24s)
           let attempts = 0;
@@ -54,6 +56,7 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
 
           const pollBalance = async (): Promise<void> => {
             attempts++;
+            setPollAttempt(attempts);
             try {
               const { data } = await supabase
                 .from('user_credits')
@@ -62,13 +65,19 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
                 .single();
 
               if (data && data.balance >= expectedBalance) {
+                toast.success(`✅ ${orderData.totalCredits} credits added to your account!`);
                 onSuccess(data.balance);
+                setConfirming(false);
                 onClose();
                 return;
               }
 
-              if (attempts >= 12) {
+              if (attempts >= MAX_ATTEMPTS) {
+                toast.info('Payment received — credits will appear shortly. Refresh in a moment if you don\'t see them.', {
+                  duration: 6000,
+                });
                 onSuccess(data?.balance ?? expectedBalance);
+                setConfirming(false);
                 onClose();
                 return;
               }
@@ -76,6 +85,7 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
               await new Promise(r => setTimeout(r, 2000));
               return pollBalance();
             } catch {
+              setConfirming(false);
               onClose();
             }
           };
