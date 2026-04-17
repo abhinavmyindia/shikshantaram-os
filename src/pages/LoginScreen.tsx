@@ -286,7 +286,7 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
         .insert({
           full_name: fullName.trim(),
           email: email.toLowerCase().trim(),
-          phone: phone.trim(),
+          phone: `${countryCode} ${phoneDigits}`.trim(),
           payment_type: paymentType as string,
           status: 'pending',
         });
