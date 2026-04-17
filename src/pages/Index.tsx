@@ -2402,6 +2402,13 @@ const Index = () => {
     return () => window.removeEventListener('navigateToProfile', handler);
   }, []);
 
+  // Low-balance toast: triggers when credits drop below 20.
+  useLowBalanceToast(user?.id, () => {
+    sessionStorage.setItem('profile_initial_tab', 'credits');
+    setActivePage('profile');
+    window.dispatchEvent(new CustomEvent('navigateToProfile', { detail: { tab: 'credits' } }));
+  });
+
   // Fetch saved items count
   useEffect(() => {
     if (!user) return;
