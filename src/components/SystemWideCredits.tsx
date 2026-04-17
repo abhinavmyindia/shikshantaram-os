@@ -32,6 +32,20 @@ const SystemWideCredits = ({ isOwner, showToast }: { isOwner: boolean; showToast
   const [confirmText, setConfirmText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Lock page scroll while modal is open (prevents background drift, keeps modal truly centered)
+  useEffect(() => {
+    if (!showModal) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
+    };
+  }, [showModal]);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -223,8 +237,8 @@ const SystemWideCredits = ({ isOwner, showToast }: { isOwner: boolean; showToast
 
       {/* Reset Modal */}
       {showModal && (
-        <div onClick={() => !submitting && setShowModal(false)} style={s({ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.6)', backdropFilter: 'blur(8px)', zIndex: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 })}>
-          <div onClick={e => e.stopPropagation()} style={s({ background: 'white', borderRadius: 20, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.2)' })}>
+        <div onClick={() => !submitting && setShowModal(false)} style={s({ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.6)', backdropFilter: 'blur(8px)', zIndex: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflowY: 'auto' })}>
+          <div onClick={e => e.stopPropagation()} style={s({ background: 'white', borderRadius: 20, padding: 28, maxWidth: 460, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.2)', margin: 'auto' })}>
             <div style={s({ fontSize: 36, marginBottom: 8, textAlign: 'center' })}>⚠️</div>
             <div style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 20, color: '#0f172a', textAlign: 'center', marginBottom: 6 })}>
               Reset All User Balances
