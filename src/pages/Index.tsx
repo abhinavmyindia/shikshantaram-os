@@ -234,10 +234,17 @@ const TOOL_CARDS = [
 ];
 
 /* ───────── Navbar ───────── */
-function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatarColor = '#7c3aed' }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void; avatarColor?: string }) {
+function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatarColor = '#7c3aed', userId }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void; avatarColor?: string; userId?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
+
+  const goToCreditsTab = () => {
+    sessionStorage.setItem('profile_initial_tab', 'credits');
+    onProfileClick();
+    // Also fire event so an already-mounted ProfilePage switches tabs.
+    window.dispatchEvent(new CustomEvent('navigateToProfile', { detail: { tab: 'credits' } }));
+  };
 
   return (
     <div style={{
@@ -257,6 +264,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatar
         <span style={{ fontSize: 10, color: '#94a3b8', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '1px 6px', borderRadius: 4 }}>⌘K</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+        {userId && <CreditBalance userId={userId} onTopUp={goToCreditsTab} />}
         <div style={{ position: 'relative', cursor: 'pointer' }}>
           <BellIcon />
           <div style={{ position: 'absolute', top: 0, right: 0, width: 6, height: 6, borderRadius: '50%', background: '#ea580c' }} />
