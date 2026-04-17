@@ -1,6 +1,8 @@
-import { useState, useEffect, CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { TOPUP_CONFIG } from '@/config/topup';
+import { getCustomAmountMessage } from '@/utils/topupMessages';
 
 interface RecentTx {
   id: string;
