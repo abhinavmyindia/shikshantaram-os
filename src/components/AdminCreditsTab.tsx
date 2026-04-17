@@ -59,8 +59,8 @@ const ShadowModeControl = ({ onToggle }: { onToggle: () => void }) => {
       </button>
 
       {showConfirm && (
-        <div onClick={() => setShowConfirm(false)} style={s({ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.5)', backdropFilter: 'blur(8px)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
-          <div onClick={e => e.stopPropagation()} style={s({ background: 'white', borderRadius: 20, padding: 28, maxWidth: 400, width: '90%', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.15)' })}>
+        <div onClick={() => setShowConfirm(false)} style={s({ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.5)', backdropFilter: 'blur(8px)', zIndex: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflowY: 'auto' })}>
+          <div onClick={e => e.stopPropagation()} style={s({ background: 'white', borderRadius: 20, padding: 28, maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.15)', margin: 'auto' })}>
             <div style={s({ fontSize: 36, marginBottom: 8 })}>{isShadow ? '🚀' : '👻'}</div>
             <div style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 18, color: '#0f172a', marginBottom: 8 })}>
               {isShadow ? 'Enable Credit Enforcement?' : 'Switch to Shadow Mode?'}
