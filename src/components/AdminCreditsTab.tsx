@@ -11,6 +11,7 @@ const ShadowModeControl = ({ onToggle }: { onToggle: () => void }) => {
   const [mode, setMode] = useState<'shadow' | 'enforced'>('shadow');
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  useBodyScrollLock(showConfirm);
 
   useEffect(() => {
     supabase.from('global_settings')
