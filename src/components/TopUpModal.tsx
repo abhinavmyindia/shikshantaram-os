@@ -34,7 +34,19 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [pollAttempt, setPollAttempt] = useState(0);
+  const [recentTxs, setRecentTxs] = useState<RecentTx[]>([]);
   const MAX_ATTEMPTS = 12;
+
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from('razorpay_orders')
+      .select('id, amount_inr, credits_to_add, bonus_credits, status, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(3)
+      .then(({ data }) => { if (data) setRecentTxs(data as RecentTx[]); });
+  }, [userId]);
 
   const handleTopUp = async () => {
     setLoading(true); setError('');
