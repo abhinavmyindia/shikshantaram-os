@@ -87,6 +87,7 @@ const ShadowModeControl = ({ onToggle }: { onToggle: () => void }) => {
 export default function AdminCreditsTab({ showToast }: { showToast: (msg: string, type?: string) => void }) {
   // Sub-tab
   const [subTab, setSubTab] = useState<'revenue'|'pricing'|'gift'|'transactions'>('revenue');
+  const { isOwner } = useAdminRole();
 
   // Revenue
   const [revenueData, setRevenueData] = useState<any>(null);
