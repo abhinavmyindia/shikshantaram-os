@@ -1416,6 +1416,42 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
           }}>{f}</button>
         ))}
         <span style={{ fontSize: 12, color: '#94a3b8' }}>Showing {filtered.length} of {users.length}</span>
+        <button
+          onClick={() => {
+            const escape = (v: any) => {
+              const s = v === null || v === undefined ? '' : String(v);
+              return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+            };
+            const headers = ['Name', 'Email', 'Phone', 'Tier', 'Paid (INR)', 'Joined'];
+            const rows = filtered.map(u => [
+              u.full_name || '',
+              emailMap[u.id] || '',
+              u.phone || '',
+              (u.access_tier || '').charAt(0).toUpperCase() + (u.access_tier || '').slice(1),
+              u.payment_amount ?? 0,
+              u.created_at ? new Date(u.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+            ]);
+            const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\n');
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const ts = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `users-${filter.toLowerCase()}-${ts}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`📥 Exported ${filtered.length} user${filtered.length === 1 ? '' : 's'} to CSV`, 'success');
+          }}
+          style={{
+            padding: '7px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: 'white',
+            cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#0f172a', fontFamily: 'DM Sans,sans-serif',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}
+        >
+          📥 Export CSV
+        </button>
       </div>
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
