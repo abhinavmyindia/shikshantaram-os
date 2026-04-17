@@ -265,7 +265,8 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
     setLoading(false);
   };
 
-  const isFormValid = fullName.trim().length >= 2 && email.trim().length > 0 && phone.trim().length >= 10 && paymentType !== '' && agreed;
+  const phoneDigits = phone.replace(/\D/g, '');
+  const isFormValid = fullName.trim().length >= 2 && email.trim().length > 0 && phoneDigits.length >= 7 && phoneDigits.length <= 15 && countryCode.trim().length >= 2 && paymentType !== '' && agreed;
 
   const handleSignup = async () => {
     setSubmitting(true);
