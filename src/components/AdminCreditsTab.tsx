@@ -126,6 +126,14 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   useEffect(() => { if (subTab === 'revenue') loadRevenue(); }, [revenueRange]);
   useEffect(() => { loadTransactions(); }, [txFilter]);
 
+  // Live auto-refresh: while the Revenue sub-tab is open, poll every 30s
+  // so newly captured payments and balance resets show up without a page refresh.
+  useEffect(() => {
+    if (subTab !== 'revenue') return;
+    const interval = setInterval(() => { loadRevenue(); }, 30_000);
+    return () => clearInterval(interval);
+  }, [subTab, revenueRange]);
+
   /* ─── Data loaders ────────────────────────────────────────────────────── */
   const loadAll = async () => {
     await Promise.all([loadRevenue(), loadPricing(), loadGiftHistory(), loadTransactions()]);
