@@ -32,6 +32,20 @@ const SystemWideCredits = ({ isOwner, showToast }: { isOwner: boolean; showToast
   const [confirmText, setConfirmText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Lock page scroll while modal is open (prevents background drift, keeps modal truly centered)
+  useEffect(() => {
+    if (!showModal) return;
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
+    };
+  }, [showModal]);
+
   const load = async () => {
     setLoading(true);
     try {
