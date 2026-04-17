@@ -270,17 +270,6 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
             ))}
           </div>
         </div>
-          <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 })}>
-            {[
-              { label: `${Math.floor((PACKS[selectedPack].credits + PACKS[selectedPack].bonus) / 15)} deep researches`, icon: '🔬' },
-              { label: `${Math.floor((PACKS[selectedPack].credits + PACKS[selectedPack].bonus) / 5)} idea sets`, icon: '💡' },
-              { label: `${Math.floor((PACKS[selectedPack].credits + PACKS[selectedPack].bonus) / 12)} full offers`, icon: '🎁' },
-              { label: `${Math.floor((PACKS[selectedPack].credits + PACKS[selectedPack].bonus) / 8)} copy sets`, icon: '✍️' },
-            ].map(item => (
-              <div key={item.label} style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#475569' })}>{item.icon} {item.label}</div>
-            ))}
-          </div>
-        </div>
 
         {/* Recent Transactions */}
         {recentTxs.length > 0 && (
