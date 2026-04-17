@@ -1,6 +1,15 @@
-import { useState, CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+interface RecentTx {
+  id: string;
+  amount_inr: number;
+  credits_to_add: number;
+  bonus_credits: number | null;
+  status: string | null;
+  created_at: string | null;
+}
 
 const s = (styles: CSSProperties): CSSProperties => styles;
 
