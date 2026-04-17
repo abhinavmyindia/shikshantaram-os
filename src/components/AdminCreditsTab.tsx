@@ -2,6 +2,7 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import SystemWideCredits from './SystemWideCredits';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const s = (styles: CSSProperties): CSSProperties => styles;
 
