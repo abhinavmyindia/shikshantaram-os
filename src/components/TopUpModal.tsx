@@ -31,13 +31,35 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
   currentBalance: number; requiredCredits?: number;
   onClose: () => void; onSuccess: (newBalance: number) => void;
 }) => {
-  const [selectedPack, setSelectedPack] = useState(1);
+  const [selectedPack, setSelectedPack] = useState<number>(1);
+  const [mode, setMode] = useState<'tier' | 'custom'>('tier');
+  const [customAmount, setCustomAmount] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [pollAttempt, setPollAttempt] = useState(0);
   const [recentTxs, setRecentTxs] = useState<RecentTx[]>([]);
   const MAX_ATTEMPTS = 12;
+
+  // Derived active state — drives preview block + Pay button
+  const customAmountNumber = parseInt(customAmount, 10) || 0;
+  const clampedCustom = Math.min(customAmountNumber, TOPUP_CONFIG.MAX_CUSTOM_AMOUNT);
+  const isCustomValid = mode === 'custom'
+    && customAmountNumber >= TOPUP_CONFIG.MIN_CUSTOM_AMOUNT
+    && customAmountNumber <= TOPUP_CONFIG.MAX_CUSTOM_AMOUNT;
+
+  const activeAmount = mode === 'custom'
+    ? clampedCustom
+    : PACKS[selectedPack].amountInr;
+  const activeCredits = mode === 'custom'
+    ? clampedCustom * TOPUP_CONFIG.CUSTOM_CREDIT_RATIO
+    : PACKS[selectedPack].credits + PACKS[selectedPack].bonus;
+  const canPay = mode === 'tier' || isCustomValid;
+
+  const customMsg = useMemo(
+    () => mode === 'custom' ? getCustomAmountMessage(customAmountNumber, customAmountNumber * TOPUP_CONFIG.CUSTOM_CREDIT_RATIO) : null,
+    [mode, customAmountNumber]
+  );
 
   useEffect(() => {
     if (!userId) return;
