@@ -109,7 +109,7 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
         <div style={s({ background: 'white', borderRadius: 24, padding: 36, maxWidth: 420, width: '92%', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.25)' })}>
           <div style={s({ fontSize: 48, marginBottom: 12 })}>⏳</div>
           <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', margin: '0 0 8px' })}>Confirming payment…</h2>
-          <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
+          <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 })}>
             Waiting for Razorpay to confirm and credit your account. This typically takes 5–10 seconds.
           </p>
           <div style={s({ height: 8, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden', marginBottom: 12 })}>
