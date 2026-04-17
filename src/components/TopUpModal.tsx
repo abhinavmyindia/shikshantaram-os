@@ -73,10 +73,15 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
   }, [userId]);
 
   const handleTopUp = async () => {
+    if (!canPay) return;
     setLoading(true); setError('');
     try {
+      const payload = mode === 'custom'
+        ? { userId, userEmail, customAmount: clampedCustom }
+        : { userId, userEmail, packIndex: selectedPack };
+
       const { data: orderData, error: orderErr } = await supabase.functions.invoke('create-razorpay-order', {
-        body: { userId, userEmail, packIndex: selectedPack },
+        body: payload,
       });
       if (orderErr || !orderData?.success) throw new Error(orderData?.error || 'Failed to create order');
 
