@@ -193,9 +193,9 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
         <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, padding: '20px 24px' })}>
           {PACKS.map(pack => {
             const total = pack.credits + pack.bonus;
-            const sel = selectedPack === pack.index;
+            const sel = mode === 'tier' && selectedPack === pack.index;
             return (
-              <div key={pack.index} onClick={() => setSelectedPack(pack.index)} style={s({
+              <div key={pack.index} onClick={() => { setSelectedPack(pack.index); setMode('tier'); setCustomAmount(''); }} style={s({
                 border: sel ? '2px solid #7c3aed' : '1.5px solid #e2e8f0', borderRadius: 16, padding: 16,
                 cursor: 'pointer', position: 'relative', background: sel ? 'rgba(124,58,237,0.04)' : 'white', transition: 'all 0.15s',
               })}>
@@ -209,11 +209,67 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
           })}
         </div>
 
-        {/* What you get */}
-        <div style={s({ padding: '0 24px 16px' })}>
-          <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8 })}>
-            What {(PACKS[selectedPack].credits + PACKS[selectedPack].bonus).toLocaleString('en-IN')} credits gets you:
+        {/* Custom Amount */}
+        <div style={s({ padding: '0 24px 4px' })}>
+          <div style={s({
+            border: mode === 'custom' ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
+            borderRadius: 16, padding: 14, background: mode === 'custom' ? 'rgba(124,58,237,0.04)' : 'white', transition: 'all 0.15s',
+          })}>
+            <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#475569', marginBottom: 8 })}>
+              💰 Or enter your own amount
+            </div>
+            <div style={s({
+              display: 'flex', alignItems: 'center', background: 'white',
+              border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '10px 12px',
+            })}>
+              <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#7c3aed', marginRight: 8 })}>₹</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder={`Enter amount (min ₹${TOPUP_CONFIG.MIN_CUSTOM_AMOUNT})`}
+                value={customAmount}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 7);
+                  setCustomAmount(digits);
+                  if (digits) setMode('custom');
+                  else if (mode === 'custom') setMode('tier');
+                }}
+                onFocus={() => { if (customAmount) setMode('custom'); }}
+                style={s({
+                  flex: 1, border: 'none', outline: 'none', background: 'transparent',
+                  fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a',
+                })}
+              />
+            </div>
+            {customMsg && (
+              <p style={s({
+                fontFamily: 'DM Sans', fontStyle: 'italic', fontSize: 12, marginTop: 8, marginBottom: 0,
+                color: customMsg.type === 'alert' ? '#d97706' : customMsg.type === 'cap' ? '#475569' : '#7c3aed',
+                transition: 'opacity 0.15s ease',
+              })}>
+                {customMsg.text}
+              </p>
+            )}
           </div>
+        </div>
+
+        {/* What you get */}
+        <div style={s({ padding: '16px 24px 16px' })}>
+          <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8 })}>
+            What {activeCredits.toLocaleString('en-IN')} credits gets you:
+          </div>
+          <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 })}>
+            {[
+              { label: `${Math.floor(activeCredits / TOPUP_CONFIG.CREDIT_COST.DEEP_RESEARCH)} deep researches`, icon: '🔬' },
+              { label: `${Math.floor(activeCredits / TOPUP_CONFIG.CREDIT_COST.IDEA_SET)} idea sets`, icon: '💡' },
+              { label: `${Math.floor(activeCredits / TOPUP_CONFIG.CREDIT_COST.FULL_OFFER)} full offers`, icon: '🎁' },
+              { label: `${Math.floor(activeCredits / TOPUP_CONFIG.CREDIT_COST.COPY_SET)} copy sets`, icon: '✍️' },
+            ].map(item => (
+              <div key={item.label} style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#475569' })}>{item.icon} {item.label}</div>
+            ))}
+          </div>
+        </div>
           <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 })}>
             {[
               { label: `${Math.floor((PACKS[selectedPack].credits + PACKS[selectedPack].bonus) / 15)} deep researches`, icon: '🔬' },
