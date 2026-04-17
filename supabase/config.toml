@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.update-credit-pricing]
 verify_jwt = false
+
+[functions.admin-bulk-reset-credits]
+verify_jwt = false
