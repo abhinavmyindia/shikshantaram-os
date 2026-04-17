@@ -247,6 +247,7 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
   const [phone, setPhone] = useState('');
   const [paymentType, setPaymentType] = useState<'reserve' | 'full' | ''>('');
   const [agreed, setAgreed] = useState(false);
