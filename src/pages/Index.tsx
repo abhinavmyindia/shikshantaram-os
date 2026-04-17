@@ -20,6 +20,7 @@ import ProfilePage, { AVATAR_COLORS } from '@/components/ProfilePage';
 import CreditBalance from '@/components/CreditBalance';
 // supabase already imported above
 import { trackPageView } from '@/utils/activityTracker';
+import { useLowBalanceToast } from '@/hooks/useLowBalanceToast';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
