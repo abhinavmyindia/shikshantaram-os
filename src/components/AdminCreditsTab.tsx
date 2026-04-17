@@ -126,6 +126,14 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   useEffect(() => { if (subTab === 'revenue') loadRevenue(); }, [revenueRange]);
   useEffect(() => { loadTransactions(); }, [txFilter]);
 
+  // Live auto-refresh: while the Revenue sub-tab is open, poll every 30s
+  // so newly captured payments and balance resets show up without a page refresh.
+  useEffect(() => {
+    if (subTab !== 'revenue') return;
+    const interval = setInterval(() => { loadRevenue(); }, 30_000);
+    return () => clearInterval(interval);
+  }, [subTab, revenueRange]);
+
   /* ─── Data loaders ────────────────────────────────────────────────────── */
   const loadAll = async () => {
     await Promise.all([loadRevenue(), loadPricing(), loadGiftHistory(), loadTransactions()]);
@@ -416,8 +424,22 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
           {/* System-Wide Credits + Bulk Reset */}
           <SystemWideCredits isOwner={isOwner} showToast={showToast} />
 
-          {/* Range selector */}
-          <div style={s({ display:'flex', gap:6, justifyContent:'flex-end' })}>
+          {/* Range selector + Refresh */}
+          <div style={s({ display:'flex', gap:6, justifyContent:'flex-end', alignItems:'center' })}>
+            <button
+              onClick={() => loadRevenue()}
+              disabled={revenueLoading}
+              title="Refresh now"
+              style={s({
+                padding:'6px 14px', borderRadius:50, border:'1.5px solid #e2e8f0',
+                cursor: revenueLoading ? 'wait' : 'pointer', fontSize:12,
+                background:'white', color:'#64748b', fontFamily:'DM Sans', fontWeight:700,
+                display:'flex', alignItems:'center', gap:6, transition:'all 0.15s',
+              })}
+            >
+              <span style={s({ display:'inline-block', animation: revenueLoading ? 'spin 0.8s linear infinite' : 'none' })}>↻</span>
+              {revenueLoading ? 'Refreshing…' : 'Refresh'}
+            </button>
             {([['7d','7 Days'],['30d','30 Days'],['all','All Time']] as const).map(([v,l]) => (
               <button key={v} onClick={() => setRevenueRange(v)} style={s({
                 padding:'6px 16px', borderRadius:50, border:'none', cursor:'pointer', fontSize:12,
@@ -427,6 +449,9 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
               })}>{l}</button>
             ))}
           </div>
+          <p style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', textAlign:'right' as const, margin:'-8px 0 0' })}>
+            Auto-refreshes every 30s · Live data
+          </p>
 
           {revenueLoading ? (
             <div style={s({ display:'flex', justifyContent:'center', padding:48 })}>

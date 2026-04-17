@@ -295,8 +295,13 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
             <div style={s({ display: 'flex', flexDirection: 'column', gap: 6 })}>
               {recentTxs.map(tx => {
                 const total = tx.credits_to_add + (tx.bonus_credits || 0);
+                // Treat orders that have been 'created' for >60s without paying as Failed in the UI.
+                // The Razorpay session is effectively dead at that point; keeping them as Pending
+                // confuses users and clutters the recent-tx list.
+                const ageMs = tx.created_at ? Date.now() - new Date(tx.created_at).getTime() : 0;
+                const stale = tx.status === 'created' && ageMs > 60_000;
                 const isPaid = tx.status === 'paid';
-                const isFailed = tx.status === 'failed' || tx.status === 'cancelled';
+                const isFailed = tx.status === 'failed' || tx.status === 'cancelled' || stale;
                 const badgeBg = isPaid ? '#dcfce7' : isFailed ? '#fee2e2' : '#fef3c7';
                 const badgeFg = isPaid ? '#15803d' : isFailed ? '#991b1b' : '#92400e';
                 const badgeLabel = isPaid ? '✓ Paid' : isFailed ? '✕ Failed' : '⏳ Pending';

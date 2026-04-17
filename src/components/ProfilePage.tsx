@@ -144,6 +144,21 @@ export default function ProfilePage({
     return 'profile';
   });
 
+  // Listen for in-page tab navigation requests (e.g. "View all transactions" from TopUpModal)
+  useEffect(() => {
+    const handler = (e: any) => {
+      const tab = e?.detail?.tab;
+      if (tab && ['profile','activity','security','credits','settings','apikeys'].includes(tab)) {
+        setActiveTab(tab);
+        // Scroll the main content area to top so the user lands on the tab header.
+        const main = document.getElementById('main-content-area');
+        if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+    window.addEventListener('navigateToProfile', handler);
+    return () => window.removeEventListener('navigateToProfile', handler);
+  }, []);
+
   // Tab 1 — Profile
   const [editName, setEditName] = useState('');
   const [editBio, setEditBio] = useState('');
