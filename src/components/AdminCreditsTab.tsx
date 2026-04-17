@@ -1,5 +1,7 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import SystemWideCredits from './SystemWideCredits';
+import { useAdminRole } from '@/hooks/useAdminRole';
 
 const s = (styles: CSSProperties): CSSProperties => styles;
 
@@ -85,6 +87,7 @@ const ShadowModeControl = ({ onToggle }: { onToggle: () => void }) => {
 export default function AdminCreditsTab({ showToast }: { showToast: (msg: string, type?: string) => void }) {
   // Sub-tab
   const [subTab, setSubTab] = useState<'revenue'|'pricing'|'gift'|'transactions'>('revenue');
+  const { isOwner } = useAdminRole();
 
   // Revenue
   const [revenueData, setRevenueData] = useState<any>(null);
@@ -407,6 +410,9 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
       {/* ══════════════════════════════════════ */}
       {subTab === 'revenue' && (
         <div style={s({ display:'flex', flexDirection:'column', gap:16 })}>
+
+          {/* System-Wide Credits + Bulk Reset */}
+          <SystemWideCredits isOwner={isOwner} showToast={showToast} />
 
           {/* Range selector */}
           <div style={s({ display:'flex', gap:6, justifyContent:'flex-end' })}>
