@@ -1,5 +1,6 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const s = (styles: CSSProperties): CSSProperties => styles;
 
