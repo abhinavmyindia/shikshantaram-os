@@ -20,6 +20,7 @@ import ProfilePage, { AVATAR_COLORS } from '@/components/ProfilePage';
 import CreditBalance from '@/components/CreditBalance';
 // supabase already imported above
 import { trackPageView } from '@/utils/activityTracker';
+import { useLowBalanceToast } from '@/hooks/useLowBalanceToast';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
@@ -2400,6 +2401,13 @@ const Index = () => {
     window.addEventListener('navigateToProfile', handler);
     return () => window.removeEventListener('navigateToProfile', handler);
   }, []);
+
+  // Low-balance toast: triggers when credits drop below 20.
+  useLowBalanceToast(user?.id, () => {
+    sessionStorage.setItem('profile_initial_tab', 'credits');
+    setActivePage('profile');
+    window.dispatchEvent(new CustomEvent('navigateToProfile', { detail: { tab: 'credits' } }));
+  });
 
   // Fetch saved items count
   useEffect(() => {
