@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         amount: pack.amountInr * 100,
         currency: 'INR',
-        receipt: `credits_${userId}_${Date.now()}`,
+        receipt: `cr_${String(userId).replace(/-/g, '').slice(0, 16)}_${Date.now()}`.slice(0, 40),
         notes: { user_id: userId, pack_label: pack.label, credits: totalCredits.toString() },
       }),
     });
