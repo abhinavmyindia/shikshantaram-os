@@ -411,6 +411,9 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
       {subTab === 'revenue' && (
         <div style={s({ display:'flex', flexDirection:'column', gap:16 })}>
 
+          {/* System-Wide Credits + Bulk Reset */}
+          <SystemWideCredits isOwner={isOwner} showToast={showToast} />
+
           {/* Range selector */}
           <div style={s({ display:'flex', gap:6, justifyContent:'flex-end' })}>
             {([['7d','7 Days'],['30d','30 Days'],['all','All Time']] as const).map(([v,l]) => (
