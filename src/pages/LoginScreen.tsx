@@ -266,9 +266,21 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
   };
 
   const phoneDigits = phone.replace(/\D/g, '');
-  const isFormValid = fullName.trim().length >= 2 && email.trim().length > 0 && phoneDigits.length >= 7 && phoneDigits.length <= 15 && countryCode.trim().length >= 2 && paymentType !== '' && agreed;
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const nameValid = fullName.trim().length >= 2;
+  const phoneValid = phoneDigits.length >= 7 && phoneDigits.length <= 15;
+  const countryValid = countryCode.trim().length >= 2;
+  const isFormValid = nameValid && emailValid && phoneValid && countryValid && paymentType !== '' && agreed;
 
   const handleSignup = async () => {
+    // Belt-and-suspenders: enforce every field server-side too
+    if (!nameValid) { setSubmitError('Please enter your full name (at least 2 characters).'); return; }
+    if (!emailValid) { setSubmitError('Please enter a valid email address.'); return; }
+    if (!countryValid) { setSubmitError('Please select your country code.'); return; }
+    if (!phoneValid) { setSubmitError('Please enter a valid phone number (7–15 digits).'); return; }
+    if (paymentType === '') { setSubmitError('Please select what you have paid for.'); return; }
+    if (!agreed) { setSubmitError('Please confirm payment and agree to the terms.'); return; }
+
     setSubmitting(true);
     setSubmitError('');
 
