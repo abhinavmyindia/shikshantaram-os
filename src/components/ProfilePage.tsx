@@ -135,7 +135,14 @@ export default function ProfilePage({
   const [sessions, setSessions] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'profile' | 'activity' | 'security' | 'credits' | 'settings' | 'apikeys'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'activity' | 'security' | 'credits' | 'settings' | 'apikeys'>(() => {
+    const stored = typeof window !== 'undefined' ? sessionStorage.getItem('profile_initial_tab') : null;
+    if (stored && ['profile','activity','security','credits','settings','apikeys'].includes(stored)) {
+      sessionStorage.removeItem('profile_initial_tab');
+      return stored as any;
+    }
+    return 'profile';
+  });
 
   // Tab 1 — Profile
   const [editName, setEditName] = useState('');

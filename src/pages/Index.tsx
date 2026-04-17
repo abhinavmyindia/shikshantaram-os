@@ -2382,6 +2382,16 @@ const Index = () => {
     return () => window.removeEventListener('avatarColorChanged', handler);
   }, []);
 
+  // Listen for navigation to profile (e.g. "View all transactions" from TopUpModal)
+  useEffect(() => {
+    const handler = (e: any) => {
+      if (e.detail?.tab) sessionStorage.setItem('profile_initial_tab', e.detail.tab);
+      setActivePage('profile');
+    };
+    window.addEventListener('navigateToProfile', handler);
+    return () => window.removeEventListener('navigateToProfile', handler);
+  }, []);
+
   // Fetch saved items count
   useEffect(() => {
     if (!user) return;

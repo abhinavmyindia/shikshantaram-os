@@ -200,8 +200,23 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
         {/* Recent Transactions */}
         {recentTxs.length > 0 && (
           <div style={s({ padding: '0 24px 16px' })}>
-            <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8 })}>
-              Recent top-ups
+            <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 })}>
+              <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#94a3b8' })}>
+                Recent top-ups
+              </div>
+              <button
+                onClick={() => {
+                  sessionStorage.setItem('profile_initial_tab', 'credits');
+                  window.dispatchEvent(new CustomEvent('navigateToProfile', { detail: { tab: 'credits' } }));
+                  onClose();
+                }}
+                style={s({
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#7c3aed',
+                })}
+              >
+                View all transactions →
+              </button>
             </div>
             <div style={s({ display: 'flex', flexDirection: 'column', gap: 6 })}>
               {recentTxs.map(tx => {
