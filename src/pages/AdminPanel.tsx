@@ -1475,11 +1475,11 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{u.full_name || 'Unknown'}</td>
                   <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{emailMap[u.id] || '—'}</td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, color: u.phone ? '#0f172a' : '#cbd5e1', fontFamily: u.phone ? 'monospace' : 'DM Sans', fontWeight: u.phone ? 600 : 400 }}>{u.phone || '—'}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, fontFamily: 'DM Sans,sans-serif', color: u.phone ? '#0f172a' : '#cbd5e1', fontWeight: u.phone ? 600 : 400 }}>{u.phone || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
                   </td>
-                  <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: (u.payment_amount || 0) > 0 ? '#059669' : '#cbd5e1' }}>
+                  <td style={{ padding: '10px 16px', fontSize: 12, fontFamily: 'DM Sans,sans-serif', fontWeight: 700, color: (u.payment_amount || 0) > 0 ? '#059669' : '#cbd5e1' }}>
                     {(u.payment_amount || 0) > 0 ? `₹${(u.payment_amount || 0).toLocaleString('en-IN')}` : '—'}
                   </td>
                   <td style={{ padding: '10px 16px' }}>
