@@ -247,7 +247,14 @@ export default function ProfilePage({
       const { data: sess } = await supabase.from('login_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
       setSessions(sess || []);
 
-      const { data: tx } = await supabase.from('credit_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20);
+      // Hide zero-amount shadow deductions — they're internal tracking, not real balance changes
+      const { data: tx } = await supabase
+        .from('credit_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .neq('type', 'shadow_deduction')
+        .order('created_at', { ascending: false })
+        .limit(30);
       setTransactions(tx || []);
 
       // Activity stats + BYOK logs
