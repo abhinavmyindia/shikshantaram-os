@@ -40,10 +40,43 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
         description: `${orderData.totalCredits} AI Credits`,
         prefill: { name: userName, email: userEmail },
         theme: { color: '#7c3aed' },
-        handler: async () => {
-          await new Promise(r => setTimeout(r, 1500));
-          onSuccess(currentBalance + orderData.totalCredits);
-          onClose();
+        handler: async (_response: any) => {
+          setLoading(true);
+          setError('');
+
+          // Poll user_credits until webhook updates balance (typ. 2-8s, max 24s)
+          let attempts = 0;
+          const expectedBalance = currentBalance + orderData.totalCredits;
+
+          const pollBalance = async (): Promise<void> => {
+            attempts++;
+            try {
+              const { data } = await supabase
+                .from('user_credits')
+                .select('balance')
+                .eq('user_id', userId)
+                .single();
+
+              if (data && data.balance >= expectedBalance) {
+                onSuccess(data.balance);
+                onClose();
+                return;
+              }
+
+              if (attempts >= 12) {
+                onSuccess(data?.balance ?? expectedBalance);
+                onClose();
+                return;
+              }
+
+              await new Promise(r => setTimeout(r, 2000));
+              return pollBalance();
+            } catch {
+              onClose();
+            }
+          };
+
+          await pollBalance();
         },
         modal: { ondismiss: () => setLoading(false) },
       });
