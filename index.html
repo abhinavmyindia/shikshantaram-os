@@ -25,6 +25,19 @@
     <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e3b31ca6-1a8c-49d4-8e1f-bdeb1420c99a/id-preview-64ed1a5b--e60b4515-0315-47e7-9680-161ad848c745.lovable.app-1772881517364.png">
   </head>
   <body>
+    <script>
+      // Temporary redirect: os.shikshantaram.in -> abhinavmyindia.com
+      // Auto-expires on: 2026-04-19T00:00:00 IST (24h from 2026-04-18 deploy)
+      (function () {
+        try {
+          var EXPIRY = new Date('2026-04-19T00:00:00+05:30').getTime();
+          var host = window.location.hostname;
+          if (host === 'os.shikshantaram.in' && Date.now() < EXPIRY) {
+            window.location.replace('https://abhinavmyindia.com/');
+          }
+        } catch (e) { /* fail-open */ }
+      })();
+    </script>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <div id="root"></div>
