@@ -1,5 +1,6 @@
 import { useState, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const s = (styles: CSSProperties): CSSProperties => styles;
 
@@ -22,6 +23,9 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
   const [selectedPack, setSelectedPack] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
+  const MAX_ATTEMPTS = 12;
 
   const handleTopUp = async () => {
     setLoading(true); setError('');
@@ -43,6 +47,8 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
         handler: async (_response: any) => {
           setLoading(true);
           setError('');
+          setConfirming(true);
+          setPollAttempt(0);
 
           // Poll user_credits until webhook updates balance (typ. 2-8s, max 24s)
           let attempts = 0;
@@ -50,6 +56,7 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
 
           const pollBalance = async (): Promise<void> => {
             attempts++;
+            setPollAttempt(attempts);
             try {
               const { data } = await supabase
                 .from('user_credits')
@@ -58,13 +65,19 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
                 .single();
 
               if (data && data.balance >= expectedBalance) {
+                toast.success(`✅ ${orderData.totalCredits} credits added to your account!`);
                 onSuccess(data.balance);
+                setConfirming(false);
                 onClose();
                 return;
               }
 
-              if (attempts >= 12) {
+              if (attempts >= MAX_ATTEMPTS) {
+                toast.info('Payment received — credits will appear shortly. Refresh in a moment if you don\'t see them.', {
+                  duration: 6000,
+                });
                 onSuccess(data?.balance ?? expectedBalance);
+                setConfirming(false);
                 onClose();
                 return;
               }
@@ -72,6 +85,7 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
               await new Promise(r => setTimeout(r, 2000));
               return pollBalance();
             } catch {
+              setConfirming(false);
               onClose();
             }
           };
@@ -86,6 +100,31 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
       setLoading(false);
     }
   };
+
+  if (confirming) {
+    const pct = Math.min(100, Math.round((pollAttempt / MAX_ATTEMPTS) * 100));
+    const secsElapsed = pollAttempt * 2;
+    return (
+      <div style={s({ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.7)', backdropFilter: 'blur(14px)', zIndex: 950, display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
+        <div style={s({ background: 'white', borderRadius: 24, padding: 36, maxWidth: 420, width: '92%', textAlign: 'center', boxShadow: '0 32px 80px rgba(0,0,0,0.25)' })}>
+          <div style={s({ fontSize: 48, marginBottom: 12 })}>⏳</div>
+          <h2 style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', margin: '0 0 8px' })}>Confirming payment…</h2>
+          <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 })}>
+            Waiting for Razorpay to confirm and credit your account. This typically takes 5–10 seconds.
+          </p>
+          <div style={s({ height: 8, background: '#f1f5f9', borderRadius: 999, overflow: 'hidden', marginBottom: 12 })}>
+            <div style={s({ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg,#7c3aed,#a855f7)', borderRadius: 999, transition: 'width 0.4s ease' })} />
+          </div>
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8', fontWeight: 600 })}>
+            Attempt {pollAttempt} of {MAX_ATTEMPTS} · {secsElapsed}s elapsed
+          </div>
+          <p style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#cbd5e1', marginTop: 16 })}>
+            Please don't close this window
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div onClick={onClose} style={s({ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.6)', backdropFilter: 'blur(12px)', zIndex: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
