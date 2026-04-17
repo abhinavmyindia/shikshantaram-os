@@ -247,6 +247,7 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
   const [phone, setPhone] = useState('');
   const [paymentType, setPaymentType] = useState<'reserve' | 'full' | ''>('');
   const [agreed, setAgreed] = useState(false);
@@ -264,7 +265,8 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
     setLoading(false);
   };
 
-  const isFormValid = fullName.trim().length >= 2 && email.trim().length > 0 && phone.trim().length >= 10 && paymentType !== '' && agreed;
+  const phoneDigits = phone.replace(/\D/g, '');
+  const isFormValid = fullName.trim().length >= 2 && email.trim().length > 0 && phoneDigits.length >= 7 && phoneDigits.length <= 15 && countryCode.trim().length >= 2 && paymentType !== '' && agreed;
 
   const handleSignup = async () => {
     setSubmitting(true);
@@ -284,7 +286,7 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
         .insert({
           full_name: fullName.trim(),
           email: email.toLowerCase().trim(),
-          phone: phone.trim(),
+          phone: `${countryCode} ${phoneDigits}`.trim(),
           payment_type: paymentType as string,
           status: 'pending',
         });
@@ -364,8 +366,68 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
 
       <div style={{ marginBottom: 16 }}>
         <label style={labelStyle}>Phone Number *</label>
-        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required
-          style={inputStyle} placeholder="+91 98765 43210" onFocus={focusInput} onBlur={blurInput} />
+        <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 8 }}>
+          <select
+            value={countryCode}
+            onChange={e => setCountryCode(e.target.value)}
+            style={{ ...inputStyle, padding: '11px 8px', cursor: 'pointer', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'6\' viewBox=\'0 0 10 6\'><path fill=\'%2364748b\' d=\'M0 0l5 6 5-6z\'/></svg>")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: 24 }}
+            onFocus={e => { e.target.style.borderColor = '#7c3aed'; e.target.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.12)'; }}
+            onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none'; }}
+          >
+            <option value="+91">🇮🇳 +91</option>
+            <option value="+1">🇺🇸 +1</option>
+            <option value="+44">🇬🇧 +44</option>
+            <option value="+61">🇦🇺 +61</option>
+            <option value="+971">🇦🇪 +971</option>
+            <option value="+966">🇸🇦 +966</option>
+            <option value="+65">🇸🇬 +65</option>
+            <option value="+60">🇲🇾 +60</option>
+            <option value="+64">🇳🇿 +64</option>
+            <option value="+27">🇿🇦 +27</option>
+            <option value="+49">🇩🇪 +49</option>
+            <option value="+33">🇫🇷 +33</option>
+            <option value="+39">🇮🇹 +39</option>
+            <option value="+34">🇪🇸 +34</option>
+            <option value="+31">🇳🇱 +31</option>
+            <option value="+46">🇸🇪 +46</option>
+            <option value="+41">🇨🇭 +41</option>
+            <option value="+353">🇮🇪 +353</option>
+            <option value="+7">🇷🇺 +7</option>
+            <option value="+86">🇨🇳 +86</option>
+            <option value="+81">🇯🇵 +81</option>
+            <option value="+82">🇰🇷 +82</option>
+            <option value="+852">🇭🇰 +852</option>
+            <option value="+62">🇮🇩 +62</option>
+            <option value="+63">🇵🇭 +63</option>
+            <option value="+66">🇹🇭 +66</option>
+            <option value="+84">🇻🇳 +84</option>
+            <option value="+880">🇧🇩 +880</option>
+            <option value="+92">🇵🇰 +92</option>
+            <option value="+94">🇱🇰 +94</option>
+            <option value="+977">🇳🇵 +977</option>
+            <option value="+93">🇦🇫 +93</option>
+            <option value="+90">🇹🇷 +90</option>
+            <option value="+20">🇪🇬 +20</option>
+            <option value="+234">🇳🇬 +234</option>
+            <option value="+254">🇰🇪 +254</option>
+            <option value="+55">🇧🇷 +55</option>
+            <option value="+52">🇲🇽 +52</option>
+            <option value="+54">🇦🇷 +54</option>
+            <option value="+56">🇨🇱 +56</option>
+            <option value="+57">🇨🇴 +57</option>
+          </select>
+          <input
+            type="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value.replace(/[^\d\s-]/g, ''))}
+            required
+            style={inputStyle}
+            placeholder="98765 43210"
+            onFocus={focusInput}
+            onBlur={blurInput}
+          />
+        </div>
+        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>Pick your country code, then enter your number without the code.</div>
       </div>
 
       {/* Payment Type */}
