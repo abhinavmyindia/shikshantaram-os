@@ -1,5 +1,6 @@
 import { useState, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const s = (styles: CSSProperties): CSSProperties => styles;
 
