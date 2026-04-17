@@ -1,6 +1,15 @@
-import { useState, CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+interface RecentTx {
+  id: string;
+  amount_inr: number;
+  credits_to_add: number;
+  bonus_credits: number | null;
+  status: string | null;
+  created_at: string | null;
+}
 
 const s = (styles: CSSProperties): CSSProperties => styles;
 
@@ -25,7 +34,19 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [pollAttempt, setPollAttempt] = useState(0);
+  const [recentTxs, setRecentTxs] = useState<RecentTx[]>([]);
   const MAX_ATTEMPTS = 12;
+
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from('razorpay_orders')
+      .select('id, amount_inr, credits_to_add, bonus_credits, status, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(3)
+      .then(({ data }) => { if (data) setRecentTxs(data as RecentTx[]); });
+  }, [userId]);
 
   const handleTopUp = async () => {
     setLoading(true); setError('');
@@ -175,6 +196,39 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
             ))}
           </div>
         </div>
+
+        {/* Recent Transactions */}
+        {recentTxs.length > 0 && (
+          <div style={s({ padding: '0 24px 16px' })}>
+            <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8 })}>
+              Recent top-ups
+            </div>
+            <div style={s({ display: 'flex', flexDirection: 'column', gap: 6 })}>
+              {recentTxs.map(tx => {
+                const total = tx.credits_to_add + (tx.bonus_credits || 0);
+                const isPaid = tx.status === 'paid';
+                const isFailed = tx.status === 'failed' || tx.status === 'cancelled';
+                const badgeBg = isPaid ? '#dcfce7' : isFailed ? '#fee2e2' : '#fef3c7';
+                const badgeFg = isPaid ? '#15803d' : isFailed ? '#991b1b' : '#92400e';
+                const badgeLabel = isPaid ? '✓ Paid' : isFailed ? '✕ Failed' : '⏳ Pending';
+                const dateStr = tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
+                return (
+                  <div key={tx.id} style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', borderRadius: 10, padding: '8px 12px' })}>
+                    <div>
+                      <div style={s({ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a' })}>
+                        ₹{tx.amount_inr.toLocaleString('en-IN')} · {total.toLocaleString('en-IN')} credits
+                      </div>
+                      <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>{dateStr}</div>
+                    </div>
+                    <span style={s({ fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10, padding: '3px 8px', borderRadius: 50, background: badgeBg, color: badgeFg })}>
+                      {badgeLabel}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {error && <div style={s({ padding: '0 24px', marginBottom: 12 })}><p style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#ef4444', fontWeight: 600 })}>❌ {error}</p></div>}
 
