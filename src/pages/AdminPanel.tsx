@@ -1422,7 +1422,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
-              {['Avatar', 'Name', 'Email', 'Tier', 'BYOK', 'Joined', 'Actions'].map(h => (
+              {['Avatar', 'Name', 'Email', 'Phone', 'Tier', 'Paid (₹)', 'BYOK', 'Joined', 'Actions'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
               ))}
             </tr>
@@ -1439,8 +1439,12 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{u.full_name || 'Unknown'}</td>
                   <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{emailMap[u.id] || '—'}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, color: u.phone ? '#0f172a' : '#cbd5e1', fontFamily: u.phone ? 'monospace' : 'DM Sans', fontWeight: u.phone ? 600 : 400 }}>{u.phone || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
+                  </td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: (u.payment_amount || 0) > 0 ? '#059669' : '#cbd5e1' }}>
+                    {(u.payment_amount || 0) > 0 ? `₹${(u.payment_amount || 0).toLocaleString('en-IN')}` : '—'}
                   </td>
                   <td style={{ padding: '10px 16px' }}>
                     {(() => {
@@ -1464,7 +1468,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
             )}
           </tbody>
         </table>
