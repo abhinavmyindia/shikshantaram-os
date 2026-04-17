@@ -23,6 +23,9 @@ const TopUpModal = ({ userId, userEmail, userName, currentBalance, requiredCredi
   const [selectedPack, setSelectedPack] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [pollAttempt, setPollAttempt] = useState(0);
+  const MAX_ATTEMPTS = 12;
 
   const handleTopUp = async () => {
     setLoading(true); setError('');
