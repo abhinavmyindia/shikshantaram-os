@@ -30,6 +30,7 @@ export function useLowBalanceToast(userId: string | undefined, onTopUp: () => vo
     if (!userId) return;
 
     const maybeNotify = (balance: number, prev: number | null) => {
+      const LOW_THRESHOLD = getLowBalanceThreshold();
       if (balance >= LOW_THRESHOLD) return;
 
       // Only fire when crossing downward, OR on initial load (prev === null).
