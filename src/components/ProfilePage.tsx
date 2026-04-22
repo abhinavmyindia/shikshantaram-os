@@ -2,6 +2,7 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import TopUpModal from '@/components/TopUpModal';
+import { useLowBalanceThreshold, useReducedMotion } from '@/hooks/useUserPrefs';
 
 /* ───────── Avatar Colors ───────── */
 const AVATAR_COLORS = [
