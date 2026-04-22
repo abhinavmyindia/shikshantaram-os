@@ -680,6 +680,27 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
               </div>
             ))}
           </div>
+          {retryStatus && (
+            <div style={s({
+              marginTop: 24, maxWidth: 380, margin: '24px auto 0',
+              background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(249,115,22,0.06))',
+              border: '1px solid rgba(245,158,11,0.25)',
+              borderRadius: 12, padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: 10,
+              fontFamily: 'DM Sans', fontSize: 12.5, color: '#92400e',
+              animation: 'fadeUp 0.3s ease',
+            })}>
+              <span style={s({ fontSize: 16, animation: 'spin 1.4s linear infinite', display: 'inline-block' })}>⟳</span>
+              <div style={s({ textAlign: 'left' })}>
+                <div style={s({ fontWeight: 700, color: '#78350f' })}>
+                  Network hiccup — retrying ({retryStatus.attempt} of {retryStatus.max})
+                </div>
+                <div style={s({ fontSize: 11.5, color: '#a16207', marginTop: 2 })}>
+                  Hold on, we're auto-retrying so you don't have to.
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
