@@ -144,6 +144,23 @@ Deno.serve(async (req) => {
       ? 'warning'
       : (isCritical ? 'critical' : severity);
 
+    // ─── AUTO-RESOLVE TRANSIENT ERRORS ───
+    // These errors are logged for tracking/trend analysis but auto-marked resolved
+    // so they don't clog the admin "unresolved" queue. They're already handled by:
+    //   • Client-side retry/dampening (retryFetch.ts, errorTracker.ts)
+    //   • Server-side AI gateway retry loop (ai-api-resilience)
+    // and represent transient infrastructure noise, not real bugs.
+    const isTransientGatewayTimeout =
+      msgLower.includes('http 502') ||
+      msgLower.includes('http 503') ||
+      msgLower.includes('http 504') ||
+      msgLower.includes('gateway time') ||
+      msgLower.includes('timed out');
+
+    const autoResolveTransient =
+      !isCritical &&
+      (isTransientNetwork || (errorType === 'api_error' && isTransientGatewayTimeout));
+
     // Generate fingerprint for deduplication
     const fingerprintRaw = `${errorType}::${String(message).substring(0, 100)}::${module}`;
     const hashBuffer = await crypto.subtle.digest(
