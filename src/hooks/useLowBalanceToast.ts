@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getBalance } from '@/utils/creditGate';
+import { getLowBalanceThreshold } from '@/hooks/useUserPrefs';
 
-const LOW_THRESHOLD = 20;
 const EMPTY_THRESHOLD = 5;
 const SESSION_KEY = 'lowBalanceToastShownAt';
 const SHOW_AGAIN_AFTER_MS = 10 * 60 * 1000; // re-show at most every 10 min per session
@@ -30,6 +30,7 @@ export function useLowBalanceToast(userId: string | undefined, onTopUp: () => vo
     if (!userId) return;
 
     const maybeNotify = (balance: number, prev: number | null) => {
+      const LOW_THRESHOLD = getLowBalanceThreshold();
       if (balance >= LOW_THRESHOLD) return;
 
       // Only fire when crossing downward, OR on initial load (prev === null).

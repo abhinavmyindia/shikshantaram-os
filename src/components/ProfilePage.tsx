@@ -2,6 +2,7 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import TopUpModal from '@/components/TopUpModal';
+import { useLowBalanceThreshold, useReducedMotion } from '@/hooks/useUserPrefs';
 
 /* ───────── Avatar Colors ───────── */
 const AVATAR_COLORS = [
@@ -200,6 +201,8 @@ export default function ProfilePage({
   const [deleteInput, setDeleteInput] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deletionRequested, setDeletionRequested] = useState(false);
+  const [lowBalanceThreshold, setLowBalanceThresholdPref] = useLowBalanceThreshold();
+  const [reducedMotion, setReducedMotionPref] = useReducedMotion();
 
   // Tab 6 — API Keys (BYOK)
   const [byokStatus, setByokStatus] = useState<any[]>([]);
@@ -1044,6 +1047,154 @@ export default function ProfilePage({
             {savingNotif && (
               <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:'8px 0 0', textAlign:'right' }}>Saving...</p>
             )}
+          </div>
+
+          {/* Default AI Provider */}
+          <div style={cardStyle}>
+            <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 4px' }}>🤖 Default AI Provider</h3>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:'0 0 16px' }}>
+              Choose which AI engine powers your generations. Using your own key skips credit deductions.
+            </p>
+
+            <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+              {/* Platform credits option */}
+              <div
+                onClick={() => byokPreferred && handleSetPreferred(null)}
+                style={{
+                  display:'flex', alignItems:'center', gap:'12px', padding:'14px',
+                  borderRadius:'12px', cursor: byokPreferred ? 'pointer' : 'default',
+                  border: !byokPreferred ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
+                  background: !byokPreferred ? 'rgba(124,58,237,0.04)' : 'white',
+                  transition:'border-color 0.15s, background 0.15s',
+                }}
+              >
+                <div style={{
+                  width:'18px', height:'18px', borderRadius:'50%', flexShrink:0,
+                  border: !byokPreferred ? '5px solid #7c3aed' : '2px solid #cbd5e1',
+                  background: !byokPreferred ? 'white' : 'transparent',
+                  boxSizing:'border-box',
+                }} />
+                <div style={{ flex:1 }}>
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'14px', color:'#0f172a', margin:'0 0 2px' }}>⚡ Platform Credits</p>
+                  <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#94a3b8', margin:0 }}>
+                    Use Shikshantaram OS credits — managed billing, instant access.
+                  </p>
+                </div>
+              </div>
+
+              {/* BYOK provider options */}
+              {PROVIDERS.map(p => {
+                const status = byokStatus.find((s: any) => s.provider === p.id);
+                const connected = status?.connected && status?.isValid;
+                const isPreferred = byokPreferred === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => connected && !isPreferred && handleSetPreferred(p.id)}
+                    style={{
+                      display:'flex', alignItems:'center', gap:'12px', padding:'14px',
+                      borderRadius:'12px',
+                      cursor: connected && !isPreferred ? 'pointer' : connected ? 'default' : 'not-allowed',
+                      border: isPreferred ? `2px solid ${p.color}` : '1.5px solid #e2e8f0',
+                      background: isPreferred ? p.bg : connected ? 'white' : '#f8fafc',
+                      opacity: connected ? 1 : 0.6,
+                      transition:'border-color 0.15s, background 0.15s',
+                    }}
+                  >
+                    <div style={{
+                      width:'18px', height:'18px', borderRadius:'50%', flexShrink:0,
+                      border: isPreferred ? `5px solid ${p.color}` : '2px solid #cbd5e1',
+                      background: isPreferred ? 'white' : 'transparent',
+                      boxSizing:'border-box',
+                    }} />
+                    <div style={{ flex:1 }}>
+                      <p style={{ fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'14px', color:'#0f172a', margin:'0 0 2px' }}>
+                        {p.icon} {p.name}
+                      </p>
+                      <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'12px', color:'#94a3b8', margin:0 }}>
+                        {connected ? 'Connected — using your own key, no credits deducted.' : 'Not connected — add a key in API Keys to enable.'}
+                      </p>
+                    </div>
+                    {!connected && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setActiveTab('apikeys'); }}
+                        style={{
+                          background: p.bg, border:`1px solid ${p.border}`, color: p.color,
+                          padding:'6px 12px', borderRadius:'8px', cursor:'pointer',
+                          fontFamily:'DM Sans,sans-serif', fontWeight:700, fontSize:'12px', whiteSpace:'nowrap',
+                        }}
+                      >
+                        Connect →
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Low-balance alert threshold */}
+          <div style={cardStyle}>
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'12px', marginBottom:'4px' }}>
+              <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:0 }}>⚡ Low-Balance Alert</h3>
+              <span style={{
+                fontFamily:'Sora,sans-serif', fontWeight:900, fontSize:'15px', color:'#7c3aed',
+                background:'rgba(124,58,237,0.08)', padding:'4px 12px', borderRadius:'50px',
+              }}>
+                {lowBalanceThreshold} credits
+              </span>
+            </div>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:'0 0 16px' }}>
+              Show a top-up reminder when your balance falls below this threshold.
+            </p>
+
+            <input
+              type="range"
+              min={5}
+              max={100}
+              step={5}
+              value={lowBalanceThreshold}
+              onChange={(e) => setLowBalanceThresholdPref(parseInt(e.target.value, 10))}
+              style={{
+                width:'100%', accentColor:'#7c3aed', cursor:'pointer', height:'6px',
+              }}
+            />
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:'6px' }}>
+              <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8' }}>5</span>
+              <span style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8' }}>100</span>
+            </div>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:'10px 0 0' }}>
+              Saved per device. We&rsquo;ll quietly remind you in-app — no extra emails unless you also enabled the email alert above.
+            </p>
+          </div>
+
+          {/* Reduced motion */}
+          <div style={cardStyle}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
+              <div style={{ flex:1 }}>
+                <h3 style={{ fontFamily:'Sora,sans-serif', fontWeight:800, fontSize:'16px', color:'#0f172a', margin:'0 0 4px' }}>🎬 Reduced Motion</h3>
+                <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', color:'#64748b', margin:0 }}>
+                  Minimize animations and transitions across the app. Helpful if motion makes you dizzy or you prefer a snappier feel.
+                </p>
+              </div>
+              <div
+                onClick={() => setReducedMotionPref(!reducedMotion)}
+                style={{
+                  width:'44px', height:'24px', borderRadius:'50px', flexShrink:0, cursor:'pointer',
+                  background: reducedMotion ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#e2e8f0',
+                  position:'relative', transition:'background 0.2s',
+                }}
+              >
+                <div style={{
+                  position:'absolute', top:'3px', left: reducedMotion ? '23px' : '3px',
+                  width:'18px', height:'18px', borderRadius:'50%', background:'white',
+                  boxShadow:'0 1px 4px rgba(0,0,0,0.2)', transition:'left 0.2s',
+                }} />
+              </div>
+            </div>
+            <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'#94a3b8', margin:'10px 0 0' }}>
+              Saved per device. Applies immediately and persists across sessions.
+            </p>
           </div>
 
           {/* Danger zone */}
