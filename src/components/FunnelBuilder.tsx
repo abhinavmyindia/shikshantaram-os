@@ -215,6 +215,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   const [generatingEmails, setGeneratingEmails] = useState(false);
   const [loadingSteps, setLoadingSteps] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [retryStatus, setRetryStatus] = useState<{ attempt: number; max: number } | null>(null);
   const [showAddStep, setShowAddStep] = useState(false);
   const [newStepName, setNewStepName] = useState('');
   const [newStepType, setNewStepType] = useState('');
@@ -286,13 +287,46 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     'Preparing copy frameworks...',
   ];
 
+  /* ───── Friendly error mapping ─────
+   * Converts raw infrastructure errors (504/503/502/timeout/network) into
+   * human-readable messages with a clear retry suggestion. Keeps real bugs
+   * (validation, auth, app errors) untouched so we don't hide them.
+   */
+  const friendlyError = (rawMsg: string, action: 'funnel' | 'copy' | 'emails'): string => {
+    const msg = String(rawMsg || '').toLowerCase();
+    const subject =
+      action === 'funnel' ? 'funnel architecture'
+      : action === 'copy' ? 'step copy'
+      : 'email sequence';
+
+    if (msg.includes('504') || msg.includes('gateway time') || msg.includes('timed out') || msg.includes('timeout')) {
+      return `⏱ The AI took too long to design your ${subject}. This usually clears in ~30 seconds — please tap "Try Again". Tip: shorter offer descriptions generate faster.`;
+    }
+    if (msg.includes('502') || msg.includes('503')) {
+      return `🔄 The AI service is briefly unavailable. Please tap "Try Again" in a moment — your draft is safe.`;
+    }
+    if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed')) {
+      return `📡 We couldn't reach the AI. Check your connection and tap "Try Again".`;
+    }
+    if (msg.includes('429') || msg.includes('rate limit')) {
+      return `🚦 The AI is rate-limited right now. Please wait ~20 seconds and tap "Try Again".`;
+    }
+    if (msg.includes('insufficient') || msg.includes('credit')) {
+      return rawMsg; // Real credit messages are already friendly
+    }
+    return rawMsg || `Could not generate ${subject}. Please try again.`;
+  };
+
   /* ───── API Calls ───── */
   const generateFunnel = async () => {
     setFunnelStep('generating');
     setError(null);
+    setRetryStatus(null);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-funnel', brief: funnelBrief, funnelType: { name: chosenType!.name, stepCount: chosenType!.stepCount }, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
+      }, {
+        onAttempt: (info) => setRetryStatus({ attempt: info.attempt, max: info.maxAttempts }),
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
@@ -312,43 +346,53 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
         });
       }
     } catch (err: any) {
-      setError(err.message || 'Could not generate funnel. Please try again.');
+      setError(friendlyError(err?.message, 'funnel'));
       setFunnelStep('brief');
+    } finally {
+      setRetryStatus(null);
     }
   };
 
   const generateStepCopy = async (step: FunnelStep) => {
     setGeneratingCopy(step.stepId);
+    setRetryStatus(null);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-step-copy', step, brief: funnelBrief, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
+      }, {
+        onAttempt: (info) => setRetryStatus({ attempt: info.attempt, max: info.maxAttempts }),
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setStepCopy(prev => ({ ...prev, [step.stepId]: data.result }));
       credits.deductAfterSuccess('funnel_builder', 'generate_step_copy', data?.byok, data?.provider);
     } catch (err: any) {
-      setError(err.message || 'Could not generate copy.');
+      setError(friendlyError(err?.message, 'copy'));
     } finally {
       setGeneratingCopy(null);
+      setRetryStatus(null);
     }
   };
 
   const generateEmails = async () => {
     setGeneratingEmails(true);
     setError(null);
+    setRetryStatus(null);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-emails', brief: funnelBrief, funnelData, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
+      }, {
+        onAttempt: (info) => setRetryStatus({ attempt: info.attempt, max: info.maxAttempts }),
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setEmailSequence(data.result);
       credits.deductAfterSuccess('funnel_builder', 'generate_email_sequence', data?.byok, data?.provider);
     } catch (err: any) {
-      setError(err.message || 'Could not generate emails.');
+      setError(friendlyError(err?.message, 'emails'));
     } finally {
       setGeneratingEmails(false);
+      setRetryStatus(null);
     }
   };
 
@@ -636,6 +680,27 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
               </div>
             ))}
           </div>
+          {retryStatus && (
+            <div style={s({
+              marginTop: 24, maxWidth: 380, margin: '24px auto 0',
+              background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(249,115,22,0.06))',
+              border: '1px solid rgba(245,158,11,0.25)',
+              borderRadius: 12, padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: 10,
+              fontFamily: 'DM Sans', fontSize: 12.5, color: '#92400e',
+              animation: 'fadeUp 0.3s ease',
+            })}>
+              <span style={s({ fontSize: 16, animation: 'spin 1.4s linear infinite', display: 'inline-block' })}>⟳</span>
+              <div style={s({ textAlign: 'left' })}>
+                <div style={s({ fontWeight: 700, color: '#78350f' })}>
+                  Network hiccup — retrying ({retryStatus.attempt} of {retryStatus.max})
+                </div>
+                <div style={s({ fontSize: 11.5, color: '#a16207', marginTop: 2 })}>
+                  Hold on, we're auto-retrying so you don't have to.
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -768,6 +833,19 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
             <span style={s({ fontSize: 56, display: 'block', animation: 'float 2s ease-in-out infinite' })}>📧</span>
             <h2 style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginTop: 20 })}>Writing your emails...</h2>
             <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginTop: 8 })}>Crafting 8 conversion-optimized emails...</p>
+            {retryStatus && (
+              <div style={s({
+                marginTop: 20, maxWidth: 380, margin: '20px auto 0',
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(249,115,22,0.06))',
+                border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: 12, padding: '10px 14px',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                fontFamily: 'DM Sans', fontSize: 12, color: '#92400e', fontWeight: 700,
+              })}>
+                <span style={s({ animation: 'spin 1.4s linear infinite', display: 'inline-block' })}>⟳</span>
+                Network hiccup — retrying ({retryStatus.attempt} of {retryStatus.max})
+              </div>
+            )}
           </div>
         )}
 

@@ -144,6 +144,23 @@ Deno.serve(async (req) => {
       ? 'warning'
       : (isCritical ? 'critical' : severity);
 
+    // ─── AUTO-RESOLVE TRANSIENT ERRORS ───
+    // These errors are logged for tracking/trend analysis but auto-marked resolved
+    // so they don't clog the admin "unresolved" queue. They're already handled by:
+    //   • Client-side retry/dampening (retryFetch.ts, errorTracker.ts)
+    //   • Server-side AI gateway retry loop (ai-api-resilience)
+    // and represent transient infrastructure noise, not real bugs.
+    const isTransientGatewayTimeout =
+      msgLower.includes('http 502') ||
+      msgLower.includes('http 503') ||
+      msgLower.includes('http 504') ||
+      msgLower.includes('gateway time') ||
+      msgLower.includes('timed out');
+
+    const autoResolveTransient =
+      !isCritical &&
+      (isTransientNetwork || (errorType === 'api_error' && isTransientGatewayTimeout));
+
     // Generate fingerprint for deduplication
     const fingerprintRaw = `${errorType}::${String(message).substring(0, 100)}::${module}`;
     const hashBuffer = await crypto.subtle.digest(
@@ -199,13 +216,18 @@ Deno.serve(async (req) => {
         browser,
         os,
         device_type: deviceType,
-        additional_data: additionalData,
-        is_resolved: false,
+        additional_data: autoResolveTransient
+          ? { ...additionalData, auto_resolved_reason: 'transient_infrastructure' }
+          : additionalData,
+        is_resolved: autoResolveTransient,
+        resolved_at: autoResolveTransient ? new Date().toISOString() : null,
         fingerprint,
         occurrence_count: 1,
         first_seen_at: new Date().toISOString(),
         last_seen_at: new Date().toISOString(),
-        auto_diagnosis: diagnosis,
+        auto_diagnosis: autoResolveTransient
+          ? `${diagnosis} — auto-resolved (handled by retry / dampening layer)`
+          : diagnosis,
         suggested_fix: fix,
       })
       .select('id')
