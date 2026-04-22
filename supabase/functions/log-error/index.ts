@@ -216,13 +216,18 @@ Deno.serve(async (req) => {
         browser,
         os,
         device_type: deviceType,
-        additional_data: additionalData,
-        is_resolved: false,
+        additional_data: autoResolveTransient
+          ? { ...additionalData, auto_resolved_reason: 'transient_infrastructure' }
+          : additionalData,
+        is_resolved: autoResolveTransient,
+        resolved_at: autoResolveTransient ? new Date().toISOString() : null,
         fingerprint,
         occurrence_count: 1,
         first_seen_at: new Date().toISOString(),
         last_seen_at: new Date().toISOString(),
-        auto_diagnosis: diagnosis,
+        auto_diagnosis: autoResolveTransient
+          ? `${diagnosis} — auto-resolved (handled by retry / dampening layer)`
+          : diagnosis,
         suggested_fix: fix,
       })
       .select('id')
