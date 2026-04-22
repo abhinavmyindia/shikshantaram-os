@@ -833,6 +833,19 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
             <span style={s({ fontSize: 56, display: 'block', animation: 'float 2s ease-in-out infinite' })}>📧</span>
             <h2 style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginTop: 20 })}>Writing your emails...</h2>
             <p style={s({ fontFamily: 'DM Sans', fontSize: 14, color: '#64748b', marginTop: 8 })}>Crafting 8 conversion-optimized emails...</p>
+            {retryStatus && (
+              <div style={s({
+                marginTop: 20, maxWidth: 380, margin: '20px auto 0',
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(249,115,22,0.06))',
+                border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: 12, padding: '10px 14px',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                fontFamily: 'DM Sans', fontSize: 12, color: '#92400e', fontWeight: 700,
+              })}>
+                <span style={s({ animation: 'spin 1.4s linear infinite', display: 'inline-block' })}>⟳</span>
+                Network hiccup — retrying ({retryStatus.attempt} of {retryStatus.max})
+              </div>
+            )}
           </div>
         )}
 
