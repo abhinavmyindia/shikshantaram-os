@@ -201,6 +201,8 @@ export default function ProfilePage({
   const [deleteInput, setDeleteInput] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deletionRequested, setDeletionRequested] = useState(false);
+  const [lowBalanceThreshold, setLowBalanceThresholdPref] = useLowBalanceThreshold();
+  const [reducedMotion, setReducedMotionPref] = useReducedMotion();
 
   // Tab 6 — API Keys (BYOK)
   const [byokStatus, setByokStatus] = useState<any[]>([]);
