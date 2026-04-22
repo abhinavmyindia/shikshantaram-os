@@ -215,6 +215,7 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
   const [generatingEmails, setGeneratingEmails] = useState(false);
   const [loadingSteps, setLoadingSteps] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [retryStatus, setRetryStatus] = useState<{ attempt: number; max: number } | null>(null);
   const [showAddStep, setShowAddStep] = useState(false);
   const [newStepName, setNewStepName] = useState('');
   const [newStepType, setNewStepType] = useState('');
