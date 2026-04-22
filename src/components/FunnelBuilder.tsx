@@ -287,13 +287,46 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
     'Preparing copy frameworks...',
   ];
 
+  /* ───── Friendly error mapping ─────
+   * Converts raw infrastructure errors (504/503/502/timeout/network) into
+   * human-readable messages with a clear retry suggestion. Keeps real bugs
+   * (validation, auth, app errors) untouched so we don't hide them.
+   */
+  const friendlyError = (rawMsg: string, action: 'funnel' | 'copy' | 'emails'): string => {
+    const msg = String(rawMsg || '').toLowerCase();
+    const subject =
+      action === 'funnel' ? 'funnel architecture'
+      : action === 'copy' ? 'step copy'
+      : 'email sequence';
+
+    if (msg.includes('504') || msg.includes('gateway time') || msg.includes('timed out') || msg.includes('timeout')) {
+      return `⏱ The AI took too long to design your ${subject}. This usually clears in ~30 seconds — please tap "Try Again". Tip: shorter offer descriptions generate faster.`;
+    }
+    if (msg.includes('502') || msg.includes('503')) {
+      return `🔄 The AI service is briefly unavailable. Please tap "Try Again" in a moment — your draft is safe.`;
+    }
+    if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed')) {
+      return `📡 We couldn't reach the AI. Check your connection and tap "Try Again".`;
+    }
+    if (msg.includes('429') || msg.includes('rate limit')) {
+      return `🚦 The AI is rate-limited right now. Please wait ~20 seconds and tap "Try Again".`;
+    }
+    if (msg.includes('insufficient') || msg.includes('credit')) {
+      return rawMsg; // Real credit messages are already friendly
+    }
+    return rawMsg || `Could not generate ${subject}. Please try again.`;
+  };
+
   /* ───── API Calls ───── */
   const generateFunnel = async () => {
     setFunnelStep('generating');
     setError(null);
+    setRetryStatus(null);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-funnel', brief: funnelBrief, funnelType: { name: chosenType!.name, stepCount: chosenType!.stepCount }, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
+      }, {
+        onAttempt: (info) => setRetryStatus({ attempt: info.attempt, max: info.maxAttempts }),
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
@@ -313,43 +346,53 @@ export default function FunnelBuilder({ onBack, funnelPrefill }: { onBack: () =>
         });
       }
     } catch (err: any) {
-      setError(err.message || 'Could not generate funnel. Please try again.');
+      setError(friendlyError(err?.message, 'funnel'));
       setFunnelStep('brief');
+    } finally {
+      setRetryStatus(null);
     }
   };
 
   const generateStepCopy = async (step: FunnelStep) => {
     setGeneratingCopy(step.stepId);
+    setRetryStatus(null);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-step-copy', step, brief: funnelBrief, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
+      }, {
+        onAttempt: (info) => setRetryStatus({ attempt: info.attempt, max: info.maxAttempts }),
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setStepCopy(prev => ({ ...prev, [step.stepId]: data.result }));
       credits.deductAfterSuccess('funnel_builder', 'generate_step_copy', data?.byok, data?.provider);
     } catch (err: any) {
-      setError(err.message || 'Could not generate copy.');
+      setError(friendlyError(err?.message, 'copy'));
     } finally {
       setGeneratingCopy(null);
+      setRetryStatus(null);
     }
   };
 
   const generateEmails = async () => {
     setGeneratingEmails(true);
     setError(null);
+    setRetryStatus(null);
     try {
       const { data, error: fnErr } = await invokeWithRetry('funnel-builder', {
         body: { action: 'generate-emails', brief: funnelBrief, funnelData, userId: credits.currentUser?.id, userEmail: credits.currentUser?.email }
+      }, {
+        onAttempt: (info) => setRetryStatus({ attempt: info.attempt, max: info.maxAttempts }),
       });
       if (fnErr) throw new Error(fnErr.message);
       if (data?.error) throw new Error(data.error);
       setEmailSequence(data.result);
       credits.deductAfterSuccess('funnel_builder', 'generate_email_sequence', data?.byok, data?.provider);
     } catch (err: any) {
-      setError(err.message || 'Could not generate emails.');
+      setError(friendlyError(err?.message, 'emails'));
     } finally {
       setGeneratingEmails(false);
+      setRetryStatus(null);
     }
   };
 
