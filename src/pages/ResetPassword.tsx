@@ -41,6 +41,12 @@ async function checkPwned(password: string): Promise<boolean> {
   }
 }
 
+const cleanupRecoveryStorage = () => {
+  sessionStorage.removeItem('supabase_recovery_flow');
+  sessionStorage.removeItem('recovery_access_token');
+  sessionStorage.removeItem('recovery_refresh_token');
+};
+
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,19 +54,76 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [sessionReady, setSessionReady] = useState(false);
+  const [invalidLink, setInvalidLink] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'PASSWORD_RECOVERY' && session) {
+    let cancelled = false;
+
+    const establishRecoverySession = async () => {
+      // Try to use tokens stashed by main.tsx (Layer 1)
+      const accessToken = sessionStorage.getItem('recovery_access_token');
+      const refreshToken = sessionStorage.getItem('recovery_refresh_token');
+
+      if (accessToken && refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (cancelled) return;
+        if (sessionError) {
+          setInvalidLink(true);
+          return;
+        }
+        sessionStorage.setItem('supabase_recovery_flow', 'true');
         setSessionReady(true);
+        return;
       }
-    });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setSessionReady(true);
-    });
+      // Fallback: maybe Supabase already established a recovery session via PASSWORD_RECOVERY event
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (session) {
+        sessionStorage.setItem('supabase_recovery_flow', 'true');
+        setSessionReady(true);
+        return;
+      }
 
-    return () => subscription.unsubscribe();
+      // Listen briefly in case PASSWORD_RECOVERY arrives after mount
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+        if (cancelled) return;
+        if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && s) {
+          sessionStorage.setItem('supabase_recovery_flow', 'true');
+          setSessionReady(true);
+        }
+      });
+
+      // Give it 1.2s, then declare invalid
+      setTimeout(() => {
+        if (cancelled) return;
+        subscription.unsubscribe();
+        setSessionReady(prev => {
+          if (!prev) setInvalidLink(true);
+          return prev;
+        });
+      }, 1200);
+    };
+
+    establishRecoverySession();
+
+    // Security: if the user navigates away without completing the reset,
+    // sign them out so the recovery session can't be reused.
+    const handleBeforeUnload = () => {
+      // Use synchronous-ish cleanup; signOut is fire-and-forget
+      cleanupRecoveryStorage();
+      supabase.auth.signOut().catch(() => {});
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleReset = async () => {
@@ -73,7 +136,6 @@ const ResetPassword = () => {
     setLoading(true);
     setError('');
 
-    // Check HaveIBeenPwned
     const isPwned = await checkPwned(password);
     if (isPwned) {
       setError('This password has appeared in a data breach. Please choose a different one.');
@@ -89,10 +151,45 @@ const ResetPassword = () => {
       return;
     }
 
+    // Success — wipe recovery state, sign the user out so they log in fresh.
+    cleanupRecoveryStorage();
     setSuccess(true);
     await supabase.auth.signOut();
     setTimeout(() => { window.location.href = '/'; }, 3000);
   };
+
+  // ── Invalid / expired link ──
+  if (invalidLink) {
+    return (
+      <div style={bg}>
+        <div style={card}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+            <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: 20, color: '#0f172a', marginBottom: 8 }}>
+              Reset Link Invalid or Expired
+            </div>
+            <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13.5, color: '#64748b', lineHeight: 1.6, marginBottom: 24 }}>
+              This password reset link has expired or already been used. Reset links are valid for 1 hour and can only be used once.
+            </div>
+            <button
+              onClick={() => { cleanupRecoveryStorage(); window.location.href = '/'; }}
+              style={{
+                width: '100%', padding: 13, borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white',
+                fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 14,
+                boxShadow: '0 4px 16px rgba(124,58,237,0.4)',
+              }}
+            >
+              ← Back to Login
+            </button>
+            <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11.5, color: '#94a3b8', marginTop: 14, lineHeight: 1.5 }}>
+              Use the "Forgot Password" link on the login page to request a new reset email.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
@@ -100,9 +197,9 @@ const ResetPassword = () => {
         <div style={card}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-            <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: 20, color: '#0f172a', marginBottom: 8 }}>Password Reset!</div>
+            <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: 20, color: '#0f172a', marginBottom: 8 }}>Password Updated Successfully</div>
             <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>
-              Your password has been updated successfully. Redirecting you to login...
+              Your password has been changed. You'll be redirected to login with your new password in a moment...
             </div>
           </div>
         </div>
@@ -119,7 +216,7 @@ const ResetPassword = () => {
             Set New Password
           </div>
           <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#64748b' }}>
-            {sessionReady ? 'Enter your new password below.' : 'Verifying reset link...'}
+            {sessionReady ? 'Choose a strong password for your account.' : 'Verifying your reset link...'}
           </div>
         </div>
 
@@ -163,13 +260,11 @@ const ResetPassword = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
               {loading && <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
-              {loading ? 'Resetting...' : '🔐 Reset Password'}
+              {loading ? 'Updating Password...' : '🔐 Set New Password →'}
             </button>
 
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
-              <a href="/" style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#7c3aed', textDecoration: 'none', fontWeight: 600 }}>
-                ← Back to Login
-              </a>
+            <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 14, lineHeight: 1.5 }}>
+              You will be signed out after updating your password and must log in again with your new credentials.
             </div>
           </>
         )}
