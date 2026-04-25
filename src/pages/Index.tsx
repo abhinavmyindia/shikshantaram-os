@@ -2556,7 +2556,7 @@ const Index = () => {
   };
 
   // ── Trial state ──
-  const isTrialUser = !!profile?.is_trial_user;
+  const isTrialUser = !!profile?.is_trial_user || profile?.access_tier === 'trial';
   const trialEndsAt = profile?.trial_ends_at || null;
   const trialExpired = isTrialUser && trialEndsAt ? new Date(trialEndsAt).getTime() <= Date.now() : false;
   const LOCKED_FOR_TRIAL: LockedTool[] = ['offer', 'funnel', 'copy_suite', 'knowledge_base'];
