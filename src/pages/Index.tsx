@@ -193,9 +193,9 @@ interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite', 'knowledge_base'];
 
 const TOOL_ACCESS: Record<string, string[]> = {
-  dashboard: ['basic','premium','beta'],
-  niche: ['basic','premium','beta'],
-  product: ['basic','premium','beta'],
+  dashboard: ['trial','basic','premium','beta'],
+  niche: ['trial','basic','premium','beta'],
+  product: ['trial','basic','premium','beta'],
   offer: ['basic','premium','beta'],
   funnel: ['basic','premium','beta'],
   copy_suite: ['basic','premium','beta'],
