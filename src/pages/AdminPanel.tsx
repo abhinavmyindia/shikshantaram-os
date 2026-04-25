@@ -1282,6 +1282,67 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [showDeletionQueue, setShowDeletionQueue] = useState(false);
   const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
 
+  // Test Trial modal state
+  const [showTestTrial, setShowTestTrial] = useState(false);
+  const [ttName, setTtName] = useState('');
+  const [ttEmail, setTtEmail] = useState('');
+  const [ttPhone, setTtPhone] = useState('');
+  const [ttDays, setTtDays] = useState<2 | 7 | 14 | 30>(7);
+  const [ttNotes, setTtNotes] = useState('');
+  const [ttCreating, setTtCreating] = useState(false);
+  const [ttResult, setTtResult] = useState<{ email: string; tempPassword: string; expiresAt: string; durationDays: number; isNewAuthUser: boolean } | null>(null);
+
+  const seedTestTrial = () => {
+    const stamp = Date.now().toString().slice(-6);
+    setTtName(`Test Trialer ${stamp}`);
+    setTtEmail(`test.trial+${stamp}@shikshantaram.in`);
+    setTtPhone('+919999999999');
+    setTtDays(7);
+    setTtNotes('Smoke test — created from Users tab.');
+  };
+
+  const submitTestTrial = async () => {
+    if (!ttName.trim() || !ttEmail.trim()) {
+      showToast('Name and email are required', 'error');
+      return;
+    }
+    setTtCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-test-trial-user', {
+        body: {
+          fullName: ttName.trim(),
+          email: ttEmail.trim().toLowerCase(),
+          phone: ttPhone.trim(),
+          durationDays: ttDays,
+          adminNotes: ttNotes.trim() || 'Created via Test Trial (admin)',
+          adminId,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setTtResult({
+        email: data.email,
+        tempPassword: data.tempPassword,
+        expiresAt: data.expiresAt,
+        durationDays: data.durationDays,
+        isNewAuthUser: data.isNewAuthUser,
+      });
+      await logActivity('test_trial_created', data.userId, ttName.trim(), { email: data.email, durationDays: data.durationDays });
+      showToast(`🧪 Test trial user created (${ttDays}d)`, 'success');
+      onRefresh();
+    } catch (err: any) {
+      showToast(`❌ Test trial failed: ${err.message}`, 'error');
+    } finally {
+      setTtCreating(false);
+    }
+  };
+
+  const closeTestTrial = () => {
+    setShowTestTrial(false);
+    setTtResult(null);
+    setTtName(''); setTtEmail(''); setTtPhone(''); setTtNotes(''); setTtDays(7);
+  };
+
   useEffect(() => {
     supabase.from('user_byok_keys_safe').select('user_id, provider').eq('is_active', true).eq('is_valid', true)
       .then(({ data }) => setByokKeys(data || []));
@@ -1460,7 +1521,121 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         >
           📥 Export CSV
         </button>
+        {canDo.deleteUsers(role) && (
+          <button
+            onClick={() => { seedTestTrial(); setShowTestTrial(true); }}
+            title="Provision a complete test trial user end-to-end. Bypasses OTP."
+            style={{
+              padding: '7px 14px', borderRadius: 10, border: '1.5px solid rgba(124,58,237,0.3)',
+              background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.08))',
+              cursor: 'pointer', fontSize: 12, fontWeight: 800, color: '#7c3aed',
+              fontFamily: 'DM Sans,sans-serif', display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            🧪 Test Trial
+          </button>
+        )}
       </div>
+
+      {/* Test Trial modal */}
+      {showTestTrial && (
+        <div onClick={closeTestTrial} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, padding: 28, maxWidth: 520, width: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h2 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: 0 }}>🧪 Create Test Trial User</h2>
+              <button onClick={closeTestTrial} style={{ background: '#f1f5f9', border: 'none', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', fontSize: 13 }}>✕</button>
+            </div>
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#64748b', margin: '0 0 18px', lineHeight: 1.5 }}>
+              Provisions a complete trial account end-to-end: auth user, profile (<code>access_tier=trial</code>), 100 starter credits, and a <code>trial_requests</code> record. Bypasses OTP. Use a dummy email for safe testing.
+            </p>
+
+            {!ttResult ? (
+              <>
+                {[
+                  { label: 'Full Name', val: ttName, set: setTtName, ph: 'Test Trialer 123456', type: 'text' },
+                  { label: 'Email', val: ttEmail, set: setTtEmail, ph: 'test.trial+123@shikshantaram.in', type: 'email' },
+                  { label: 'Phone', val: ttPhone, set: setTtPhone, ph: '+919999999999', type: 'tel' },
+                ].map(f => (
+                  <div key={f.label} style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>{f.label}</label>
+                    <input type={f.type} value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                ))}
+
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Trial Duration</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {([2, 7, 14, 30] as const).map(d => (
+                      <button key={d} onClick={() => setTtDays(d)}
+                        style={{
+                          flex: 1, padding: '10px 8px', borderRadius: 10, border: ttDays === d ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
+                          background: ttDays === d ? 'rgba(124,58,237,0.08)' : 'white', cursor: 'pointer',
+                          fontFamily: 'DM Sans,sans-serif', fontWeight: 800, fontSize: 13,
+                          color: ttDays === d ? '#7c3aed' : '#64748b',
+                        }}
+                      >{d}d</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Internal Notes</label>
+                  <textarea value={ttNotes} onChange={e => setTtNotes(e.target.value)} rows={2}
+                    placeholder="Why are you creating this test user?"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ background: '#0f172a', borderRadius: 10, padding: 12, marginBottom: 16, fontFamily: 'monospace', fontSize: 11, color: '#94a3b8', lineHeight: 1.6, overflowX: 'auto' }}>
+                  <div style={{ color: '#64748b', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 9 }}>Payload preview</div>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{JSON.stringify({ fullName: ttName, email: ttEmail, phone: ttPhone, durationDays: ttDays, adminNotes: ttNotes, adminId }, null, 2)}</pre>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={closeTestTrial} disabled={ttCreating}
+                    style={{ flex: 1, padding: 12, borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, color: '#64748b' }}
+                  >Cancel</button>
+                  <button onClick={submitTestTrial} disabled={ttCreating || !ttName.trim() || !ttEmail.trim()}
+                    style={{ flex: 2, padding: 12, borderRadius: 12, border: 'none', background: ttCreating ? '#cbd5e1' : 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', cursor: ttCreating ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 800, fontSize: 13 }}
+                  >{ttCreating ? 'Provisioning...' : `Create ${ttDays}-day Test Trial →`}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ background: 'linear-gradient(135deg,#dcfce7,#bbf7d0)', borderRadius: 12, padding: 16, marginBottom: 16, border: '1px solid #86efac' }}>
+                  <div style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 14, color: '#166534', marginBottom: 4 }}>
+                    ✅ Test trial user created
+                  </div>
+                  <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#15803d' }}>
+                    {ttResult.isNewAuthUser ? 'New auth user created.' : 'Existing auth user reused — password reset.'} Trial expires {new Date(ttResult.expiresAt).toLocaleString('en-IN')}.
+                  </div>
+                </div>
+
+                <div style={{ background: 'linear-gradient(135deg,#fef3c7,#fde68a)', borderRadius: 12, padding: 16, marginBottom: 16, border: '1px dashed #f59e0b' }}>
+                  <div style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 12, color: '#78350f', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em' }}>🔐 Login Credentials</div>
+                  {[{ k: 'Email', v: ttResult.email }, { k: 'Password', v: ttResult.tempPassword }].map(({ k, v }) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '6px 0' }}>
+                      <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 700, color: '#78350f' }}>{k}</span>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', maxWidth: '70%' }}>
+                        <code style={{ fontFamily: 'monospace', fontSize: 11, color: '#0f172a', background: 'rgba(255,255,255,0.7)', padding: '4px 8px', borderRadius: 6, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</code>
+                        <button onClick={() => { navigator.clipboard.writeText(v); showToast(`${k} copied`, 'success'); }}
+                          style={{ background: '#78350f', color: 'white', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 10, fontWeight: 700 }}
+                        >Copy</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={closeTestTrial}
+                  style={{ width: '100%', padding: 12, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 800, fontSize: 13 }}
+                >Done</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={{ ...glassCard, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
