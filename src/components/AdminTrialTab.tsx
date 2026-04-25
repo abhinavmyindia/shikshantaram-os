@@ -81,6 +81,10 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [upgradeAmount, setUpgradeAmount] = useState<number>(0);
   const [upgradeNotes, setUpgradeNotes] = useState('');
 
+  // Trial user actions (Edit / Block / Force Logout / Send Reset / Delete)
+  const [editingTrialUser, setEditingTrialUser] = useState<TrialRequest | null>(null);
+  const [trialActionLoading, setTrialActionLoading] = useState<string | null>(null);
+
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
