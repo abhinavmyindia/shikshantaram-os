@@ -21,6 +21,9 @@ import CreditBalance from '@/components/CreditBalance';
 // supabase already imported above
 import { trackPageView } from '@/utils/activityTracker';
 import { useLowBalanceToast } from '@/hooks/useLowBalanceToast';
+import TrialCountdownPill from '@/components/TrialCountdownPill';
+import TrialExpiryPopup from '@/components/TrialExpiryPopup';
+import TrialLockModal, { LockedTool } from '@/components/TrialLockModal';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
@@ -265,6 +268,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatar
         <span style={{ fontSize: 10, color: '#94a3b8', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '1px 6px', borderRadius: 4 }}>⌘K</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+        {trialEndsAt && <TrialCountdownPill trialEndsAt={trialEndsAt} onClick={onProfileClick} />}
         {userId && <CreditBalance userId={userId} onTopUp={goToCreditsTab} />}
         <div style={{ position: 'relative', cursor: 'pointer' }}>
           <BellIcon />
