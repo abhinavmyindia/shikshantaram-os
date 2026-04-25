@@ -16,9 +16,11 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const fullName = String(body.fullName ?? '').trim();
+    // Accept both camelCase and snake_case from clients
+    const fullName = String(body.fullName ?? body.full_name ?? '').trim();
     const email = String(body.email ?? '').trim().toLowerCase();
     const phone = String(body.phone ?? '').trim();
+    const isResend = body.resend === true;
 
     if (!fullName || !email || !phone) {
       return new Response(JSON.stringify({ error: 'All fields are required.' }), {
