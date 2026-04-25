@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import SecurityTab from '@/components/AdminSecurityTab';
 import AdminCreditsTab from '@/components/AdminCreditsTab';
+import AdminTrialTab from '@/components/AdminTrialTab';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 interface UserRow {
   id: string;
@@ -29,6 +30,8 @@ interface SignupRow {
   submitted_at: string;
   reviewed_at: string | null;
   notes: string;
+  ip_address: string | null;
+  user_agent: string | null;
 }
 
 const glassCard = {
@@ -1528,6 +1531,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
 // ─── SIGNUPS TAB ─────────────────────────────────────────────
 function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void> }) {
   const [signups, setSignups] = useState<SignupRow[]>([]);
+  const [trialIps, setTrialIps] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [approveRequest, setApproveRequest] = useState<SignupRow | null>(null);
 
@@ -1535,8 +1539,18 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
 
   const fetchSignups = async () => {
     setLoading(true);
-    const { data } = await supabase.from('signup_requests').select('*').order('submitted_at', { ascending: false });
-    setSignups((data || []) as unknown as SignupRow[]);
+    const [{ data: s }, { data: t }] = await Promise.all([
+      supabase.from('signup_requests').select('*').order('submitted_at', { ascending: false }),
+      supabase.from('trial_requests').select('email, ip_address').not('ip_address', 'is', null),
+    ]);
+    setSignups((s || []) as unknown as SignupRow[]);
+    const ipMap: Record<string, string[]> = {};
+    (t || []).forEach((row: any) => {
+      if (!row.ip_address) return;
+      if (!ipMap[row.ip_address]) ipMap[row.ip_address] = [];
+      ipMap[row.ip_address].push(row.email);
+    });
+    setTrialIps(ipMap);
     setLoading(false);
   };
 
@@ -1558,36 +1572,48 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
 
-  const SignupRow = ({ s }: { s: SignupRow }) => (
-    <tr style={{ borderTop: '1px solid #f1f5f9' }}>
-      <td style={{ padding: '10px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>{s.full_name}</td>
-      <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.email}</td>
-      <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.phone}</td>
-      <td style={{ padding: '10px 16px' }}>
-        <span style={{
-          fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
-          background: s.payment_type === 'full' ? '#ede9fe' : '#fef9c3',
-          color: s.payment_type === 'full' ? '#7c3aed' : '#92400e',
-        }}>{s.payment_type === 'full' ? 'FULL' : 'RESERVE'}</span>
-      </td>
-      <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(s.submitted_at)}</td>
-      <td style={{ padding: '10px 16px' }}>
-        <span style={{
-          fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
-          background: s.status === 'pending' ? '#fef9c3' : s.status === 'approved' ? '#dcfce7' : '#fee2e2',
-          color: s.status === 'pending' ? '#92400e' : s.status === 'approved' ? '#15803d' : '#991b1b',
-        }}>{s.status}</span>
-      </td>
-      <td style={{ padding: '10px 16px' }}>
-        {s.status === 'pending' && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => setApproveRequest(s)} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✅ Approve</button>
-            <button onClick={() => rejectSignup(s.id)} style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✗ Reject</button>
-          </div>
-        )}
-      </td>
-    </tr>
-  );
+  const SignupRowEl = ({ s }: { s: SignupRow }) => {
+    const trialMatches = s.ip_address ? (trialIps[s.ip_address] || []).filter(e => e !== s.email) : [];
+    const flagged = trialMatches.length > 0;
+    return (
+      <tr style={{ borderTop: '1px solid #f1f5f9' }}>
+        <td style={{ padding: '10px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>{s.full_name}</td>
+        <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.email}</td>
+        <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.phone}</td>
+        <td style={{ padding: '10px 16px', fontSize: 11.5, color: flagged ? '#991b1b' : '#94a3b8', fontWeight: flagged ? 700 : 400 }}>
+          {s.ip_address || '—'}
+          {flagged && (
+            <span title={`Same IP also used by trial accounts: ${trialMatches.join(', ')}`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 6, background: '#fee2e2', color: '#991b1b' }}>
+              ⚠ TRIAL ×{trialMatches.length}
+            </span>
+          )}
+        </td>
+        <td style={{ padding: '10px 16px' }}>
+          <span style={{
+            fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
+            background: s.payment_type === 'full' ? '#ede9fe' : '#fef9c3',
+            color: s.payment_type === 'full' ? '#7c3aed' : '#92400e',
+          }}>{s.payment_type === 'full' ? 'FULL' : 'RESERVE'}</span>
+        </td>
+        <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(s.submitted_at)}</td>
+        <td style={{ padding: '10px 16px' }}>
+          <span style={{
+            fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
+            background: s.status === 'pending' ? '#fef9c3' : s.status === 'approved' ? '#dcfce7' : '#fee2e2',
+            color: s.status === 'pending' ? '#92400e' : s.status === 'approved' ? '#15803d' : '#991b1b',
+          }}>{s.status}</span>
+        </td>
+        <td style={{ padding: '10px 16px' }}>
+          {s.status === 'pending' && (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setApproveRequest(s)} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✅ Approve</button>
+              <button onClick={() => rejectSignup(s.id)} style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✗ Reject</button>
+            </div>
+          )}
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <div>
@@ -1605,13 +1631,13 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#fffbeb' }}>
-                  {['Name', 'Email', 'Phone', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
+                  {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {pendingSignups.map(s => <SignupRow key={s.id} s={s} />)}
+                {pendingSignups.map(s => <SignupRowEl key={s.id} s={s} />)}
               </tbody>
             </table>
           </div>
@@ -1626,13 +1652,13 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['Name', 'Email', 'Phone', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
+                  {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {otherSignups.map(s => <SignupRow key={s.id} s={s} />)}
+                {otherSignups.map(s => <SignupRowEl key={s.id} s={s} />)}
               </tbody>
             </table>
           </div>
@@ -2039,6 +2065,7 @@ export default function AdminPanel() {
     canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview' },
     canDo.viewUsers(role) && { id: 'users', label: '👥 Users' },
     canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups' },
+    canDo.viewSignups(role) && { id: 'trials', label: '🎁 Trials' },
     canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits' },
     canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics' },
     canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security' },
@@ -2113,6 +2140,7 @@ export default function AdminPanel() {
             {tab === 'overview' && canDo.viewOverview(role) && <OverviewTab stats={stats} users={users} emailMap={emailMap} setAdminTab={setTab} />}
             {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
             {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+            {tab === 'trials' && canDo.viewSignups(role) && <AdminTrialTab showToast={showAdminToast} />}
             {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
             {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
             {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
