@@ -64,6 +64,7 @@ const SocialIcon = ({ platform }: { platform: string }) => {
 
 /* ───────── Helpers ───────── */
 const tierMeta: Record<string, { label: string; color: string; bg: string }> = {
+  trial:   { label: 'Trial',   color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
   basic:   { label: 'Basic',   color: '#059669', bg: 'rgba(5,150,105,0.1)'   },
   premium: { label: 'Premium', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
   beta:    { label: 'Beta',    color: '#ec4899', bg: 'rgba(236,72,153,0.1)'  },
