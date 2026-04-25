@@ -48,6 +48,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 const tierColors: Record<string, { bg: string; color: string }> = {
+  trial: { bg: 'rgba(124,58,237,0.1)', color: '#7c3aed' },
   basic: { bg: '#dcfce7', color: '#15803d' },
   premium: { bg: '#ede9fe', color: '#7c3aed' },
   beta: { bg: '#fce7f3', color: '#be185d' },
@@ -55,6 +56,7 @@ const tierColors: Record<string, { bg: string; color: string }> = {
 };
 
 const tierGradients: Record<string, string> = {
+  trial: 'linear-gradient(135deg,#7c3aed,#a855f7)',
   basic: 'linear-gradient(135deg,#059669,#10b981)',
   premium: 'linear-gradient(135deg,#7c3aed,#a855f7)',
   beta: 'linear-gradient(135deg,#ec4899,#c026d3)',
@@ -2060,7 +2062,7 @@ export default function AdminPanel() {
   const loadData = async () => {
     setLoading(true);
     const [usersRes, emailsRes] = await Promise.all([
-      supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
+      supabase.from('user_profiles').select('*').neq('access_tier', 'trial').order('created_at', { ascending: false }),
       supabase.functions.invoke('admin-list-emails'),
     ]);
     const u = (usersRes.data || []) as unknown as UserRow[];

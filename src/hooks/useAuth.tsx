@@ -7,7 +7,7 @@ interface UserProfile {
   id: string;
   full_name: string;
   phone: string;
-  access_tier: 'basic' | 'premium' | 'beta' | 'revoked';
+  access_tier: 'trial' | 'basic' | 'premium' | 'beta' | 'revoked';
   payment_status: string;
   payment_amount: number;
   is_beta_user: boolean;

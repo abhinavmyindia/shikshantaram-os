@@ -674,7 +674,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                 <div style={{ background: '#fef9c3', color: '#92400e', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10, padding: '3px 9px', borderRadius: 20, textTransform: 'uppercase' }}>Trial · ends {expiryStr}</div>
               </div>
 
-              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Access Tier</label>
+              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Upgrade from Trial to…</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 18 }}>
                 {tiers.map(t => {
                   const active = upgradeTier === t.id;
