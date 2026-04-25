@@ -81,6 +81,10 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [upgradeAmount, setUpgradeAmount] = useState<number>(0);
   const [upgradeNotes, setUpgradeNotes] = useState('');
 
+  // Trial user actions (Edit / Block / Force Logout / Send Reset / Delete)
+  const [editingTrialUser, setEditingTrialUser] = useState<TrialRequest | null>(null);
+  const [trialActionLoading, setTrialActionLoading] = useState<string | null>(null);
+
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -216,6 +220,123 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
       showToast(`❌ ${msg}`, 'error');
     } finally {
       setWorking(false);
+    }
+  };
+
+  const handleTrialUserAction = async (req: TrialRequest, action: 'block' | 'force_logout' | 'send_password_reset' | 'delete') => {
+    if (action === 'delete') {
+      if (!confirm(`Permanently delete ${req.full_name}'s trial account? This cannot be undone.`)) return;
+    }
+    setTrialActionLoading(req.id);
+    try {
+      const { data: { user: adminUser } } = await supabase.auth.getUser();
+
+      if (action === 'block') {
+        if (!req.user_id) {
+          showToast('No linked auth user to block', 'error');
+        } else {
+          await supabase.from('user_profiles')
+            .update({ access_tier: 'revoked', updated_at: new Date().toISOString() })
+            .eq('id', req.user_id);
+          // Also force logout active sessions
+          await supabase.functions.invoke('admin-delete-user', {
+            body: { action: 'force_logout', userId: req.user_id },
+          }).catch(() => {});
+          // Log admin action
+          try {
+            await supabase.from('admin_activity_log').insert({
+              admin_id: adminUser?.id,
+              target_user_id: req.user_id,
+              target_user_name: req.full_name,
+              action_type: 'trial_user_blocked',
+              details: { email: req.email, trial_request_id: req.id },
+            });
+          } catch { /* non-fatal */ }
+          showToast(`🚫 ${req.full_name} blocked & sessions revoked`, 'warning');
+        }
+      }
+
+      if (action === 'force_logout') {
+        if (!req.user_id) {
+          showToast('No linked auth user to log out', 'error');
+        } else {
+          const { error: fnErr } = await supabase.functions.invoke('admin-delete-user', {
+            body: { action: 'force_logout', userId: req.user_id },
+          });
+          if (fnErr) throw new Error(fnErr.message);
+          try {
+            await supabase.from('security_events').insert({
+              user_id: req.user_id,
+              user_email: req.email,
+              event_type: 'force_logout',
+              severity: 'medium',
+              description: `Admin force-logged out trial user ${req.email}`,
+            });
+          } catch { /* non-fatal */ }
+          showToast(`⚡ ${req.full_name} force-logged out`, 'success');
+        }
+      }
+
+      if (action === 'send_password_reset') {
+        const { error: fnErr } = await supabase.functions.invoke('send-password-reset', {
+          body: { email: req.email },
+        });
+        if (fnErr) throw new Error(fnErr.message);
+        showToast(`📧 Password reset email sent to ${req.email}`, 'success');
+      }
+
+      if (action === 'delete') {
+        if (req.user_id) {
+          const { error: fnErr } = await supabase.functions.invoke('admin-delete-user', {
+            body: { userId: req.user_id },
+          });
+          if (fnErr) throw new Error(fnErr.message);
+        }
+        // Mark trial as rejected, keep audit trail
+        await supabase.from('trial_requests').update({
+          status: 'rejected',
+          user_id: null,
+          admin_notes: (req.admin_notes || '') + '\n[Account deleted by admin]',
+          updated_at: new Date().toISOString(),
+        } as any).eq('id', req.id);
+        showToast(`🗑 ${req.full_name}'s account deleted`, 'success');
+      }
+
+      await load();
+    } catch (e: any) {
+      showToast(`❌ ${e?.message || 'Action failed'}`, 'error');
+    } finally {
+      setTrialActionLoading(null);
+    }
+  };
+
+  const saveEditedTrialUser = async () => {
+    if (!editingTrialUser) return;
+    setTrialActionLoading(editingTrialUser.id);
+    try {
+      await supabase.from('trial_requests').update({
+        full_name: editingTrialUser.full_name,
+        phone: editingTrialUser.phone,
+        access_duration_days: Number(editingTrialUser.access_duration_days) || null,
+        admin_notes: editingTrialUser.admin_notes,
+        updated_at: new Date().toISOString(),
+      } as any).eq('id', editingTrialUser.id);
+
+      if (editingTrialUser.user_id) {
+        await supabase.from('user_profiles').update({
+          full_name: editingTrialUser.full_name,
+          phone: editingTrialUser.phone,
+          updated_at: new Date().toISOString(),
+        }).eq('id', editingTrialUser.user_id);
+      }
+
+      setEditingTrialUser(null);
+      await load();
+      showToast('✏️ Trial user updated', 'success');
+    } catch (e: any) {
+      showToast(`❌ ${e?.message || 'Save failed'}`, 'error');
+    } finally {
+      setTrialActionLoading(null);
     }
   };
 
@@ -389,6 +510,11 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             <button disabled={working} onClick={() => { setExtending(r); setExtendDays(3); setExtendReason(''); }} style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>⏱️ Extend</button>
                             <button disabled={working} onClick={() => openUpgrade(r)} style={{ background: '#ede9fe', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>🚀 Upgrade</button>
+                            <button disabled={trialActionLoading === r.id} onClick={() => setEditingTrialUser({ ...r })} style={{ background: 'white', color: '#374151', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>✏️ Edit</button>
+                            <button disabled={trialActionLoading === r.id} onClick={() => handleTrialUserAction(r, 'block')} style={{ background: 'rgba(245,158,11,0.08)', color: '#b45309', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>🚫 Block</button>
+                            <button disabled={trialActionLoading === r.id} onClick={() => handleTrialUserAction(r, 'force_logout')} style={{ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.3)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>⚡ Force Logout</button>
+                            <button disabled={trialActionLoading === r.id} onClick={() => handleTrialUserAction(r, 'send_password_reset')} style={{ background: 'rgba(2,132,199,0.08)', color: '#0284c7', border: '1px solid rgba(2,132,199,0.3)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>📧 Send Reset</button>
+                            <button disabled={trialActionLoading === r.id} onClick={() => handleTrialUserAction(r, 'delete')} style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>🗑 Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -588,6 +714,54 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         </div>
         );
       })()}
+
+      {editingTrialUser && (
+        <div onClick={() => setEditingTrialUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 520, width: '100%', maxHeight: '92vh', overflowY: 'auto', background: 'white', borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: 'white' }}>✏️ Edit Trial User — {editingTrialUser.full_name}</div>
+              <button onClick={() => setEditingTrialUser(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {[
+                { label: 'Full Name', key: 'full_name', type: 'text' },
+                { label: 'Email (read-only)', key: 'email', type: 'email', readonly: true },
+                { label: 'Phone Number', key: 'phone', type: 'tel' },
+                { label: 'Access Duration (days)', key: 'access_duration_days', type: 'number' },
+              ].map(field => (
+                <div key={field.key} style={{ marginBottom: 14 }}>
+                  <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{field.label}</label>
+                  <input
+                    type={field.type}
+                    readOnly={field.readonly}
+                    value={(editingTrialUser as any)[field.key] ?? ''}
+                    onChange={e => setEditingTrialUser(prev => prev ? ({ ...prev, [field.key]: e.target.value } as TrialRequest) : prev)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans', fontSize: 13, color: field.readonly ? '#94a3b8' : '#0f172a', outline: 'none', boxSizing: 'border-box', background: field.readonly ? '#f8fafc' : 'white' }}
+                  />
+                </div>
+              ))}
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Admin Notes</label>
+                <textarea
+                  rows={3}
+                  value={editingTrialUser.admin_notes || ''}
+                  onChange={e => setEditingTrialUser(prev => prev ? ({ ...prev, admin_notes: e.target.value } as TrialRequest) : prev)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'flex-end', background: '#fafbfc', position: 'sticky', bottom: 0 }}>
+              <button onClick={() => setEditingTrialUser(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button disabled={trialActionLoading === editingTrialUser.id} onClick={saveEditedTrialUser} style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: trialActionLoading === editingTrialUser.id ? 0.6 : 1, boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}>
+                {trialActionLoading === editingTrialUser.id ? 'Saving…' : '💾 Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
