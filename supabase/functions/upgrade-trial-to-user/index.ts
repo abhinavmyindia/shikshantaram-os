@@ -17,6 +17,7 @@ Deno.serve(async (req) => {
     const newTier = String(body.newTier ?? '').trim();
     const adminNotes = body.adminNotes ? String(body.adminNotes) : null;
     const adminId = body.adminId ? String(body.adminId) : null;
+    const paymentAmount = Number.isFinite(Number(body.paymentAmount)) ? Number(body.paymentAmount) : 0;
 
     if (!requestId) throw new Error('requestId is required.');
     if (!['basic', 'premium', 'beta'].includes(newTier)) {
@@ -47,6 +48,8 @@ Deno.serve(async (req) => {
         trial_ends_at: null,
         is_beta_user: newTier === 'beta',
         payment_status: 'paid',
+        payment_amount: paymentAmount,
+        notes: adminNotes ?? undefined,
         updated_at: new Date().toISOString(),
       })
       .eq('id', record.user_id);
@@ -59,6 +62,7 @@ Deno.serve(async (req) => {
         upgraded_at: new Date().toISOString(),
         upgraded_to_tier: newTier,
         payment_status: 'paid',
+        payment_amount: paymentAmount,
         admin_notes: adminNotes ?? record.admin_notes,
         updated_at: new Date().toISOString(),
       })
@@ -78,7 +82,7 @@ Deno.serve(async (req) => {
         await supabase.from('admin_activity_log').insert({
           admin_id: adminId, action_type: 'trial_upgraded',
           target_user_id: record.user_id, target_user_name: record.full_name,
-          details: { trial_request_id: requestId, new_tier: newTier, email: record.email, ip_address: record.ip_address },
+          details: { trial_request_id: requestId, new_tier: newTier, payment_amount: paymentAmount, email: record.email, ip_address: record.ip_address, admin_notes: adminNotes },
         });
       } catch (e) { console.error('audit log failed:', e); }
     }
