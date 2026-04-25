@@ -9,6 +9,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import AdminPanel from "@/pages/AdminPanel";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
+import TrialPage from "@/pages/TrialPage";
 import IdleWarningModal from "@/components/IdleWarningModal";
 import { supabase } from "@/integrations/supabase/client";
 

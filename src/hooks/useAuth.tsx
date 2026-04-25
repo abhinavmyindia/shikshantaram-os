@@ -11,6 +11,9 @@ interface UserProfile {
   payment_status: string;
   payment_amount: number;
   is_beta_user: boolean;
+  is_trial_user?: boolean;
+  trial_ends_at?: string | null;
+  trial_request_id?: string | null;
   notes: string;
   created_at: string;
   updated_at: string;
