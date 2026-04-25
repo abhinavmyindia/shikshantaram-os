@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import AdminIpLookupModal from './AdminIpLookupModal';
 import TrialAuditLog from './TrialAuditLog';
+import { EditUserModal, SecurityProfileModal, DeleteConfirmModal, type UserRow } from '@/pages/AdminPanel';
+import { useAdminRole, canDo } from '@/hooks/useAdminRole';
 
 interface TrialRequest {
   id: string;
@@ -61,12 +63,12 @@ const statusBadge = (status: string): React.CSSProperties => {
 };
 
 export default function AdminTrialTab({ showToast }: { showToast: (msg: string, type?: string) => void }) {
+  const { role } = useAdminRole();
   const [requests, setRequests] = useState<TrialRequest[]>([]);
+  const [profileMap, setProfileMap] = useState<Record<string, UserRow>>({});
+  const [adminId, setAdminId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'requests' | 'users' | 'audit'>('requests');
-  const [extending, setExtending] = useState<TrialRequest | null>(null);
-  const [extendDays, setExtendDays] = useState(3);
-  const [extendReason, setExtendReason] = useState('');
   const [working, setWorking] = useState(false);
   const [ipLookup, setIpLookup] = useState<string | null>(null);
 
@@ -75,35 +77,63 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [approveDays, setApproveDays] = useState<2 | 7 | 14 | 30>(7);
   const [approveNotes, setApproveNotes] = useState('');
 
-  // Upgrade modal (matches Signups → Approve Access pattern)
-  const [upgrading, setUpgrading] = useState<TrialRequest | null>(null);
-  const [upgradeTier, setUpgradeTier] = useState<'basic' | 'premium' | 'beta'>('premium');
-  const [upgradeAmount, setUpgradeAmount] = useState<number>(0);
-  const [upgradeNotes, setUpgradeNotes] = useState('');
-
-  // Trial user actions (Edit / Block / Force Logout / Send Reset / Delete)
-  const [editingTrialUser, setEditingTrialUser] = useState<TrialRequest | null>(null);
-  const [trialActionLoading, setTrialActionLoading] = useState<string | null>(null);
+  // Trial-row actions (reuse Users tab modals)
+  const [editUser, setEditUser] = useState<{ user: UserRow; trialStartedAt: string | null; email: string } | null>(null);
+  const [securityUser, setSecurityUser] = useState<{ user: UserRow; email: string } | null>(null);
+  const [deleteUser, setDeleteUser] = useState<{ user: UserRow; trialReqId: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('trial_requests')
-      .select('*')
-      .order('submitted_at', { ascending: false })
-      .limit(500);
-    if (error) {
+    const [{ data: { user } }, reqRes] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase.from('trial_requests').select('*').order('submitted_at', { ascending: false }).limit(500),
+    ]);
+    setAdminId(user?.id || '');
+
+    if (reqRes.error) {
       showToast('Failed to load trial requests', 'error');
+      setLoading(false);
+      return;
+    }
+    const list = (reqRes.data || []) as unknown as TrialRequest[];
+    setRequests(list);
+
+    const userIds = list.map(r => r.user_id).filter(Boolean) as string[];
+    if (userIds.length) {
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .in('id', userIds);
+      const map: Record<string, UserRow> = {};
+      (profiles || []).forEach((p: any) => { map[p.id] = p as UserRow; });
+      setProfileMap(map);
     } else {
-      setRequests((data || []) as unknown as TrialRequest[]);
+      setProfileMap({});
     }
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
+  const logActivity = async (action: string, targetUserId: string | null, targetUserName: string | null, details?: Record<string, any>) => {
+    if (!adminId) return;
+    try {
+      await supabase.from('admin_activity_log').insert({
+        admin_id: adminId, action_type: action,
+        target_user_id: targetUserId, target_user_name: targetUserName,
+        details: details || {},
+      } as any);
+    } catch (e) { console.error('audit log failed:', e); }
+  };
+
+  // Treat both DB flag and tier as "trial" so newly created profiles show up here too
   const pending = requests.filter(r => r.status === 'pending');
-  const approved = requests.filter(r => r.status === 'approved');
+  const approved = requests.filter(r =>
+    r.status === 'approved' ||
+    (r.user_id && profileMap[r.user_id]?.is_trial_user === true) ||
+    (r.user_id && profileMap[r.user_id]?.access_tier === 'trial')
+  );
   const expired = requests.filter(r => r.status === 'expired');
   const upgraded = requests.filter(r => r.status === 'upgraded');
 
@@ -117,13 +147,12 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     if (!approving) return;
     setWorking(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('approve-trial-user', {
         body: {
           requestId: approving.id,
           durationDays: approveDays,
           adminNotes: approveNotes.trim() || null,
-          adminId: user?.id,
+          adminId,
         },
       });
       if (error) throw new Error(error.message);
@@ -141,12 +170,11 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
 
   const reject = async (req: TrialRequest) => {
     const reason = prompt(`Reject trial request from ${req.full_name}?\n\nOptional internal reason (leave blank to skip):`, '');
-    if (reason === null) return; // cancelled
+    if (reason === null) return;
     setWorking(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('reject-trial-request', {
-        body: { requestId: req.id, reason: reason.trim() || null, adminId: user?.id },
+        body: { requestId: req.id, reason: reason.trim() || null, adminId },
       });
       if (error || (data as any)?.error) {
         const msg = (data as any)?.error || error?.message || 'Failed to reject';
@@ -162,181 +190,64 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     }
   };
 
-  const openUpgrade = (req: TrialRequest) => {
-    setUpgrading(req);
-    setUpgradeTier('premium');
-    setUpgradeAmount(0);
-    setUpgradeNotes('');
+  // Build a synthetic UserRow for trial requests that have a user_id but no fetched profile yet
+  const buildUserRow = (r: TrialRequest): UserRow | null => {
+    if (!r.user_id) return null;
+    const existing = profileMap[r.user_id];
+    if (existing) {
+      return {
+        ...existing,
+        is_trial_user: true,
+        trial_ends_at: existing.trial_ends_at || r.access_ends_at,
+        trial_request_id: r.id,
+      };
+    }
+    return {
+      id: r.user_id, full_name: r.full_name, phone: r.phone,
+      access_tier: 'trial', payment_status: 'reserved', payment_amount: 0,
+      is_beta_user: false, is_trial_user: true,
+      trial_ends_at: r.access_ends_at, trial_request_id: r.id,
+      notes: r.admin_notes || '', created_at: r.submitted_at, updated_at: r.submitted_at,
+    };
   };
 
-  const confirmUpgrade = async () => {
-    if (!upgrading) return;
-    setWorking(true);
+  const openEdit = (r: TrialRequest) => {
+    const u = buildUserRow(r);
+    if (!u) { showToast('No linked auth user — cannot edit', 'error'); return; }
+    setEditUser({ user: u, trialStartedAt: r.access_starts_at, email: r.email });
+  };
+  const openSecurity = (r: TrialRequest) => {
+    const u = buildUserRow(r);
+    if (!u) { showToast('No linked auth user', 'error'); return; }
+    setSecurityUser({ user: u, email: r.email });
+  };
+  const openDelete = (r: TrialRequest) => {
+    const u = buildUserRow(r);
+    if (!u) { showToast('No linked auth user', 'error'); return; }
+    setDeleteUser({ user: u, trialReqId: r.id });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteUser) return;
+    setDeleting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data, error } = await supabase.functions.invoke('upgrade-trial-to-user', {
-        body: {
-          requestId: upgrading.id,
-          newTier: upgradeTier,
-          paymentAmount: Number(upgradeAmount) || 0,
-          adminNotes: upgradeNotes.trim() || null,
-          adminId: user?.id,
-        },
-      });
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', { body: { userId: deleteUser.user.id } });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      const tierLabel = upgradeTier.charAt(0).toUpperCase() + upgradeTier.slice(1);
-      showToast(`🚀 ${upgrading.full_name} upgraded to ${tierLabel}.`, 'success');
-      setUpgrading(null);
-      load();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to upgrade';
-      showToast(`❌ ${msg}`, 'error');
-    } finally {
-      setWorking(false);
-    }
-  };
-
-  const submitExtend = async () => {
-    if (!extending) return;
-    if (extendDays < 1 || extendDays > 30) {
-      showToast('Days must be between 1 and 30', 'error');
-      return;
-    }
-    setWorking(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('extend-trial', {
-        body: { requestId: extending.id, additionalDays: extendDays, reason: extendReason || null },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.error) throw new Error(data.error);
-      showToast(`⏱️ Extended by ${extendDays} day(s).`, 'success');
-      setExtending(null);
-      setExtendDays(3);
-      setExtendReason('');
-      load();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to extend';
-      showToast(`❌ ${msg}`, 'error');
-    } finally {
-      setWorking(false);
-    }
-  };
-
-  const handleTrialUserAction = async (req: TrialRequest, action: 'block' | 'force_logout' | 'send_password_reset' | 'delete') => {
-    if (action === 'delete') {
-      if (!confirm(`Permanently delete ${req.full_name}'s trial account? This cannot be undone.`)) return;
-    }
-    setTrialActionLoading(req.id);
-    try {
-      const { data: { user: adminUser } } = await supabase.auth.getUser();
-
-      if (action === 'block') {
-        if (!req.user_id) {
-          showToast('No linked auth user to block', 'error');
-        } else {
-          await supabase.from('user_profiles')
-            .update({ access_tier: 'revoked', updated_at: new Date().toISOString() })
-            .eq('id', req.user_id);
-          // Also force logout active sessions
-          await supabase.functions.invoke('admin-delete-user', {
-            body: { action: 'force_logout', userId: req.user_id },
-          }).catch(() => {});
-          // Log admin action
-          try {
-            await supabase.from('admin_activity_log').insert({
-              admin_id: adminUser?.id,
-              target_user_id: req.user_id,
-              target_user_name: req.full_name,
-              action_type: 'trial_user_blocked',
-              details: { email: req.email, trial_request_id: req.id },
-            });
-          } catch { /* non-fatal */ }
-          showToast(`🚫 ${req.full_name} blocked & sessions revoked`, 'warning');
-        }
-      }
-
-      if (action === 'force_logout') {
-        if (!req.user_id) {
-          showToast('No linked auth user to log out', 'error');
-        } else {
-          const { error: fnErr } = await supabase.functions.invoke('admin-delete-user', {
-            body: { action: 'force_logout', userId: req.user_id },
-          });
-          if (fnErr) throw new Error(fnErr.message);
-          try {
-            await supabase.from('security_events').insert({
-              user_id: req.user_id,
-              user_email: req.email,
-              event_type: 'force_logout',
-              severity: 'medium',
-              description: `Admin force-logged out trial user ${req.email}`,
-            });
-          } catch { /* non-fatal */ }
-          showToast(`⚡ ${req.full_name} force-logged out`, 'success');
-        }
-      }
-
-      if (action === 'send_password_reset') {
-        const { error: fnErr } = await supabase.functions.invoke('send-password-reset', {
-          body: { email: req.email },
-        });
-        if (fnErr) throw new Error(fnErr.message);
-        showToast(`📧 Password reset email sent to ${req.email}`, 'success');
-      }
-
-      if (action === 'delete') {
-        if (req.user_id) {
-          const { error: fnErr } = await supabase.functions.invoke('admin-delete-user', {
-            body: { userId: req.user_id },
-          });
-          if (fnErr) throw new Error(fnErr.message);
-        }
-        // Mark trial as rejected, keep audit trail
-        await supabase.from('trial_requests').update({
-          status: 'rejected',
-          user_id: null,
-          admin_notes: (req.admin_notes || '') + '\n[Account deleted by admin]',
-          updated_at: new Date().toISOString(),
-        } as any).eq('id', req.id);
-        showToast(`🗑 ${req.full_name}'s account deleted`, 'success');
-      }
-
-      await load();
-    } catch (e: any) {
-      showToast(`❌ ${e?.message || 'Action failed'}`, 'error');
-    } finally {
-      setTrialActionLoading(null);
-    }
-  };
-
-  const saveEditedTrialUser = async () => {
-    if (!editingTrialUser) return;
-    setTrialActionLoading(editingTrialUser.id);
-    try {
+      // Keep audit trail: mark trial as rejected with note
       await supabase.from('trial_requests').update({
-        full_name: editingTrialUser.full_name,
-        phone: editingTrialUser.phone,
-        access_duration_days: Number(editingTrialUser.access_duration_days) || null,
-        admin_notes: editingTrialUser.admin_notes,
+        status: 'rejected', user_id: null,
+        admin_notes: (requests.find(r => r.id === deleteUser.trialReqId)?.admin_notes || '') + '\n[Account deleted by admin]',
         updated_at: new Date().toISOString(),
-      } as any).eq('id', editingTrialUser.id);
-
-      if (editingTrialUser.user_id) {
-        await supabase.from('user_profiles').update({
-          full_name: editingTrialUser.full_name,
-          phone: editingTrialUser.phone,
-          updated_at: new Date().toISOString(),
-        }).eq('id', editingTrialUser.user_id);
-      }
-
-      setEditingTrialUser(null);
-      await load();
-      showToast('✏️ Trial user updated', 'success');
-    } catch (e: any) {
-      showToast(`❌ ${e?.message || 'Save failed'}`, 'error');
+      } as any).eq('id', deleteUser.trialReqId);
+      await logActivity('user_deleted', deleteUser.user.id, deleteUser.user.full_name);
+      showToast(`🗑 ${deleteUser.user.full_name} deleted.`, 'warning');
+      setDeleteUser(null);
+      load();
+    } catch (err: any) {
+      showToast(`❌ Delete failed: ${err.message}`, 'error');
     } finally {
-      setTrialActionLoading(null);
+      setDeleting(false);
     }
   };
 
@@ -352,6 +263,8 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
       </div>
     );
   }
+
+  const iconBtnStyle: React.CSSProperties = { width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 };
 
   return (
     <div>
@@ -498,6 +411,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                   {approved.map(r => {
                     const ms = r.access_ends_at ? new Date(r.access_ends_at).getTime() - Date.now() : 0;
                     const urgent = ms > 0 && ms < 86400000;
+                    const hasUser = !!r.user_id;
                     return (
                       <tr key={r.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '10px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>{r.full_name}</td>
@@ -507,14 +421,10 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                         <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: urgent ? '#991b1b' : '#0f172a' }}>{fmtRelative(r.access_ends_at)}</td>
                         <td style={{ padding: '10px 16px', fontSize: 12, color: '#0f172a' }}>{r.trial_credits ?? '—'}</td>
                         <td style={{ padding: '10px 16px' }}>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <button disabled={working} onClick={() => { setExtending(r); setExtendDays(3); setExtendReason(''); }} style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>⏱️ Extend</button>
-                            <button disabled={working} onClick={() => openUpgrade(r)} style={{ background: '#ede9fe', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>🚀 Upgrade</button>
-                            <button disabled={trialActionLoading === r.id} onClick={() => setEditingTrialUser({ ...r })} style={{ background: 'white', color: '#374151', border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>✏️ Edit</button>
-                            <button disabled={trialActionLoading === r.id} onClick={() => handleTrialUserAction(r, 'block')} style={{ background: 'rgba(245,158,11,0.08)', color: '#b45309', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>🚫 Block</button>
-                            <button disabled={trialActionLoading === r.id} onClick={() => handleTrialUserAction(r, 'force_logout')} style={{ background: 'rgba(234,88,12,0.08)', color: '#ea580c', border: '1px solid rgba(234,88,12,0.3)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>⚡ Force Logout</button>
-                            <button disabled={trialActionLoading === r.id} onClick={() => handleTrialUserAction(r, 'send_password_reset')} style={{ background: 'rgba(2,132,199,0.08)', color: '#0284c7', border: '1px solid rgba(2,132,199,0.3)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>📧 Send Reset</button>
-                            <button disabled={trialActionLoading === r.id} onClick={() => handleTrialUserAction(r, 'delete')} style={{ background: 'rgba(220,38,38,0.08)', color: '#dc2626', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: 'pointer', opacity: trialActionLoading === r.id ? 0.5 : 1 }}>🗑 Delete</button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            {canDo.editUsers(role) && <button onClick={() => openEdit(r)} disabled={!hasUser} title={hasUser ? 'Edit' : 'No linked user'} style={{ ...iconBtnStyle, opacity: hasUser ? 1 : 0.4, cursor: hasUser ? 'pointer' : 'not-allowed' }}>✏️</button>}
+                            {canDo.blockUsers(role) && <button onClick={() => openSecurity(r)} disabled={!hasUser} title={hasUser ? 'View Security' : 'No linked user'} style={{ ...iconBtnStyle, opacity: hasUser ? 1 : 0.4, cursor: hasUser ? 'pointer' : 'not-allowed' }}>🛡️</button>}
+                            {canDo.deleteUsers(role) && <button onClick={() => openDelete(r)} disabled={!hasUser} title={hasUser ? 'Delete' : 'No linked user'} style={{ ...iconBtnStyle, opacity: hasUser ? 1 : 0.4, cursor: hasUser ? 'pointer' : 'not-allowed' }}>🗑</button>}
                           </div>
                         </td>
                       </tr>
@@ -531,43 +441,45 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
 
       {ipLookup && <AdminIpLookupModal ip={ipLookup} onClose={() => setIpLookup(null)} />}
 
-      {extending && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 20, padding: 28, maxWidth: 440, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 20, color: '#0f172a', marginBottom: 6 }}>⏱️ Extend Trial</div>
-            <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#64748b', marginBottom: 20 }}>
-              Extending trial for <strong style={{ color: '#0f172a' }}>{extending.full_name}</strong>
-              <br />Currently: {fmtRelative(extending.access_ends_at)}
-            </div>
+      {editUser && (
+        <EditUserModal
+          user={editUser.user}
+          email={editUser.email}
+          trialStartedAt={editUser.trialStartedAt}
+          onClose={() => setEditUser(null)}
+          onSave={() => { setEditUser(null); load(); }}
+          onDelete={(_id, name) => { setEditUser(null); load(); showToast(`🗑 ${name} deleted.`, 'warning'); }}
+          showToast={showToast}
+          logActivity={logActivity}
+        />
+      )}
 
-            <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>Additional days</label>
-            <input type="number" min={1} max={30} value={extendDays} onChange={e => setExtendDays(parseInt(e.target.value) || 0)} style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'DM Sans', marginBottom: 14, outline: 'none', boxSizing: 'border-box' }} />
+      {securityUser && (
+        <SecurityProfileModal
+          userId={securityUser.user.id}
+          userEmail={securityUser.email}
+          userName={securityUser.user.full_name}
+          onClose={() => setSecurityUser(null)}
+          adminId={adminId}
+          showToast={showToast}
+        />
+      )}
 
-            <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6 }}>Reason (optional)</label>
-            <textarea value={extendReason} onChange={e => setExtendReason(e.target.value)} placeholder="e.g. Customer requested more time" rows={3} style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13.5, fontFamily: 'DM Sans', resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: 20 }} />
-
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button disabled={working} onClick={() => setExtending(null)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button disabled={working} onClick={submitExtend} style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '10px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.6 : 1 }}>
-                {working ? 'Extending…' : `Extend by ${extendDays}d`}
-              </button>
-            </div>
-          </div>
-        </div>
+      {deleteUser && (
+        <DeleteConfirmModal
+          userName={deleteUser.user.full_name}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteUser(null)}
+          deleting={deleting}
+        />
       )}
 
       {approving && (() => {
-        // Detect existing active trial for the same email (avoid duplicate approvals)
         const activeForSameEmail = approved.find(a =>
           a.id !== approving.id &&
           a.email.toLowerCase() === approving.email.toLowerCase() &&
           a.access_ends_at && new Date(a.access_ends_at).getTime() > Date.now()
         );
-        const payload = {
-          requestId: approving.id,
-          durationDays: approveDays,
-          adminNotes: approveNotes.trim() || null,
-        };
         return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 20, padding: 0, maxWidth: 520, width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
@@ -575,7 +487,6 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
               <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: 'white' }}>✅ Approve Trial Access</div>
               <button onClick={() => setApproving(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
             </div>
-
             <div style={{ padding: 24 }}>
               <div style={{ background: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 14 }}>
@@ -586,17 +497,13 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                   <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{approving.email}</div>
                 </div>
               </div>
-
               {activeForSameEmail && (
                 <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 12, color: '#991b1b', lineHeight: 1.55 }}>
-                  ⚠ <strong>Conflict:</strong> this email already has an active trial ({fmtRelative(activeForSameEmail.access_ends_at)}). Approving again will create a parallel trial. Consider <strong>Extend</strong> instead.
+                  ⚠ <strong>Conflict:</strong> this email already has an active trial ({fmtRelative(activeForSameEmail.access_ends_at)}). Approving again will create a parallel trial. Consider extending from the user's edit modal instead.
                 </div>
               )}
-
-              {/* TRIAL ACCESS CONFIGURATION */}
               <div style={{ background: 'linear-gradient(135deg,#faf5ff,#f0fdf4)', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: 16, marginBottom: 18 }}>
                 <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#7c3aed', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🎁 Trial Access Configuration</div>
-
                 <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trial Duration</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 12 }}>
                   {([2, 7, 14, 30] as const).map(d => {
@@ -608,34 +515,18 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                         background: active ? '#f5f3ff' : 'white',
                         fontFamily: 'Sora', fontWeight: 800, fontSize: 15,
                         color: active ? '#7c3aed' : '#0f172a',
-                      }}>
-                        {d}d
-                      </button>
+                      }}>{d}d</button>
                     );
                   })}
                 </div>
                 <div style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#475569', lineHeight: 1.6 }}>
-                  <strong>Tier:</strong> Basic · <strong>Credits:</strong> 100 starter · <strong>Tools:</strong> Niche Clarity & Product Navigator
+                  <strong>Tier:</strong> Trial · <strong>Credits:</strong> 100 starter · <strong>Tools:</strong> Niche Clarity & Product Navigator
                   <br /><strong>Expires:</strong> {new Date(Date.now() + approveDays * 86400000).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
-
               <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Internal notes (optional)</label>
               <textarea value={approveNotes} onChange={e => setApproveNotes(e.target.value)} placeholder="e.g. Friend of Abhinav, fast-track" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'DM Sans', resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }} />
-
-              {/* DEBUG PAYLOAD PANEL */}
-              <details style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px', color: '#e2e8f0', fontFamily: 'monospace', fontSize: 11.5 }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#7dd3fc', userSelect: 'none', outline: 'none' }}>
-                  🔍 Debug — payload preview (click to inspect)
-                </summary>
-                <div style={{ marginTop: 10, fontSize: 10.5, color: '#94a3b8' }}>POST → <span style={{ color: '#fbbf24' }}>functions/v1/approve-trial-user</span></div>
-                <pre style={{ margin: '8px 0 0', padding: 10, background: '#020617', borderRadius: 8, overflow: 'auto', maxHeight: 180, color: '#e2e8f0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-{JSON.stringify(payload, null, 2)}
-                </pre>
-                <button onClick={() => navigator.clipboard.writeText(JSON.stringify(payload, null, 2))} style={{ marginTop: 8, background: '#1e293b', color: '#7dd3fc', border: '1px solid #334155', borderRadius: 6, padding: '4px 10px', fontFamily: 'monospace', fontSize: 10.5, cursor: 'pointer' }}>📋 Copy JSON</button>
-              </details>
             </div>
-
             <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', background: '#fafbfc', position: 'sticky', bottom: 0 }}>
               <button disabled={working} onClick={() => setApproving(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button disabled={working} onClick={confirmApprove} style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.6 : 1, boxShadow: '0 4px 14px rgba(16,185,129,0.35)' }}>
@@ -646,122 +537,6 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         </div>
         );
       })()}
-
-      {upgrading && (() => {
-        const tiers = [
-          { id: 'basic' as const, label: 'Basic', icon: '🔒', desc: '2 tools', accent: '#64748b', bg: '#f1f5f9' },
-          { id: 'premium' as const, label: 'Premium', icon: '⚡', desc: 'All tools', accent: '#7c3aed', bg: '#f5f3ff' },
-          { id: 'beta' as const, label: 'Beta', icon: '🧪', desc: 'All + previews', accent: '#db2777', bg: '#fdf2f8' },
-        ];
-        const expiryStr = new Date(upgrading.access_ends_at || Date.now()).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 20, padding: 0, maxWidth: 520, width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <div style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
-              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: 'white' }}>🚀 Upgrade to Paid User</div>
-              <button onClick={() => setUpgrading(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
-            </div>
-
-            <div style={{ padding: 24 }}>
-              <div style={{ background: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 14 }}>
-                  {upgrading.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>{upgrading.full_name}</div>
-                  <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{upgrading.email}</div>
-                </div>
-                <div style={{ background: '#fef9c3', color: '#92400e', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10, padding: '3px 9px', borderRadius: 20, textTransform: 'uppercase' }}>Trial · ends {expiryStr}</div>
-              </div>
-
-              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Upgrade from Trial to…</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 18 }}>
-                {tiers.map(t => {
-                  const active = upgradeTier === t.id;
-                  return (
-                    <button key={t.id} onClick={() => setUpgradeTier(t.id)} style={{
-                      padding: '14px 8px', borderRadius: 12, cursor: 'pointer',
-                      border: active ? `2px solid ${t.accent}` : '1.5px solid #e2e8f0',
-                      background: active ? t.bg : 'white',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                    }}>
-                      <div style={{ fontSize: 22 }}>{t.icon}</div>
-                      <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: active ? t.accent : '#0f172a' }}>{t.label}</div>
-                      <div style={{ fontFamily: 'DM Sans', fontSize: 10.5, color: '#94a3b8' }}>{t.desc}</div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Payment Amount (₹)</label>
-              <input type="number" min={0} value={upgradeAmount} onChange={e => setUpgradeAmount(parseInt(e.target.value) || 0)} placeholder="0" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'DM Sans', marginBottom: 14, outline: 'none', boxSizing: 'border-box' }} />
-
-              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Internal Notes (optional)</label>
-              <textarea value={upgradeNotes} onChange={e => setUpgradeNotes(e.target.value)} placeholder="e.g. Paid via UPI" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'DM Sans', resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }} />
-
-              <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#ecfdf5)', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 14px', fontFamily: 'DM Sans', fontSize: 12, color: '#15803d', lineHeight: 1.6 }}>
-                ✓ Removes trial countdown · Adds <strong>500 bonus credits</strong> · Sends upgrade-confirmation email
-              </div>
-            </div>
-
-            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', background: '#fafbfc', position: 'sticky', bottom: 0 }}>
-              <button disabled={working} onClick={() => setUpgrading(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button disabled={working} onClick={confirmUpgrade} style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.6 : 1, boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}>
-                {working ? 'Upgrading…' : `🚀 Upgrade to ${upgradeTier.charAt(0).toUpperCase() + upgradeTier.slice(1)} →`}
-              </button>
-            </div>
-          </div>
-        </div>
-        );
-      })()}
-
-      {editingTrialUser && (
-        <div onClick={() => setEditingTrialUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 520, width: '100%', maxHeight: '92vh', overflowY: 'auto', background: 'white', borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
-            <div style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
-              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: 'white' }}>✏️ Edit Trial User — {editingTrialUser.full_name}</div>
-              <button onClick={() => setEditingTrialUser(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
-            </div>
-
-            <div style={{ padding: 24 }}>
-              {[
-                { label: 'Full Name', key: 'full_name', type: 'text' },
-                { label: 'Email (read-only)', key: 'email', type: 'email', readonly: true },
-                { label: 'Phone Number', key: 'phone', type: 'tel' },
-                { label: 'Access Duration (days)', key: 'access_duration_days', type: 'number' },
-              ].map(field => (
-                <div key={field.key} style={{ marginBottom: 14 }}>
-                  <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{field.label}</label>
-                  <input
-                    type={field.type}
-                    readOnly={field.readonly}
-                    value={(editingTrialUser as any)[field.key] ?? ''}
-                    onChange={e => setEditingTrialUser(prev => prev ? ({ ...prev, [field.key]: e.target.value } as TrialRequest) : prev)}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans', fontSize: 13, color: field.readonly ? '#94a3b8' : '#0f172a', outline: 'none', boxSizing: 'border-box', background: field.readonly ? '#f8fafc' : 'white' }}
-                  />
-                </div>
-              ))}
-
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Admin Notes</label>
-                <textarea
-                  rows={3}
-                  value={editingTrialUser.admin_notes || ''}
-                  onChange={e => setEditingTrialUser(prev => prev ? ({ ...prev, admin_notes: e.target.value } as TrialRequest) : prev)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
-                />
-              </div>
-            </div>
-
-            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'flex-end', background: '#fafbfc', position: 'sticky', bottom: 0 }}>
-              <button onClick={() => setEditingTrialUser(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button disabled={trialActionLoading === editingTrialUser.id} onClick={saveEditedTrialUser} style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: trialActionLoading === editingTrialUser.id ? 0.6 : 1, boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}>
-                {trialActionLoading === editingTrialUser.id ? 'Saving…' : '💾 Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

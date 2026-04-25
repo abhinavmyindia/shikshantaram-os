@@ -8,7 +8,7 @@ import AdminCreditsTab from '@/components/AdminCreditsTab';
 import AdminTrialTab from '@/components/AdminTrialTab';
 import AdminIpLookupModal from '@/components/AdminIpLookupModal';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
-interface UserRow {
+export interface UserRow {
   id: string;
   full_name: string;
   phone: string;
@@ -18,6 +18,7 @@ interface UserRow {
   is_beta_user: boolean;
   is_trial_user?: boolean;
   trial_ends_at?: string | null;
+  trial_request_id?: string | null;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -101,7 +102,7 @@ function AdminToast({ toast, onClose }: { toast: { message: string; type: string
 }
 
 // ─── DELETE CONFIRMATION MODAL ───────────────────────────────
-function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
+export function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
   userName: string; onConfirm: () => void; onCancel: () => void; deleting: boolean;
 }) {
   const [confirmText, setConfirmText] = useState('');
@@ -151,25 +152,33 @@ function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
 }
 
 // ─── EDIT USER MODAL ─────────────────────────────────────────
-function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logActivity }: {
-  user: UserRow; email: string; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
+export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, onDelete, showToast, logActivity }: {
+  user: UserRow; email: string; trialStartedAt?: string | null; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
+  const isTrial = !!user.is_trial_user || user.access_tier === 'trial';
   const [form, setForm] = useState({
     fullName: user.full_name, email, phone: user.phone || '', accessTier: user.access_tier,
     paymentStatus: user.payment_status, paymentAmount: user.payment_amount || 0,
     isBetaUser: user.is_beta_user || false, notes: user.notes || '',
+    trialEndsAt: user.trial_ends_at || null,
   });
   const [originalEmail] = useState(email);
+  const [originalTrialEndsAt] = useState<string | null>(user.trial_ends_at || null);
   const [saving, setSaving] = useState(false);
-  const [sections, setSections] = useState([true, true, false]);
+  // sections: [Personal, Trial (if shown), Access, Email]
+  const [sections, setSections] = useState<boolean[]>(isTrial ? [true, true, true, false] : [true, true, false]);
   const [emailSent, setEmailSent] = useState<Record<string, boolean>>({});
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showEndEarly, setShowEndEarly] = useState(false);
+  const [endingEarly, setEndingEarly] = useState(false);
+  const [customDateOpen, setCustomDateOpen] = useState(false);
+  const [customDateVal, setCustomDateVal] = useState('');
 
   const dirty = form.fullName !== user.full_name || form.email !== email || form.phone !== (user.phone || '') ||
     form.accessTier !== user.access_tier || form.paymentStatus !== user.payment_status ||
     form.paymentAmount !== (user.payment_amount || 0) || form.isBetaUser !== (user.is_beta_user || false) ||
-    form.notes !== (user.notes || '');
+    form.notes !== (user.notes || '') || form.trialEndsAt !== originalTrialEndsAt;
 
   const handleClose = () => {
     if (dirty && !confirm('You have unsaved changes. Discard?')) return;
@@ -181,11 +190,41 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
   const handleSave = async () => {
     setSaving(true);
     try {
-      await supabase.from('user_profiles').update({
+      // Detect trial state transitions
+      const trialExtended = isTrial && form.trialEndsAt !== originalTrialEndsAt;
+      const trialUpgraded = isTrial && form.paymentStatus === 'paid' && form.accessTier !== 'trial' && form.accessTier !== 'revoked';
+
+      const updatePayload: Record<string, any> = {
         full_name: form.fullName.trim(), phone: form.phone.trim(), access_tier: form.accessTier,
         payment_status: form.paymentStatus, payment_amount: form.paymentAmount || 0,
         is_beta_user: form.isBetaUser, notes: form.notes.trim(), updated_at: new Date().toISOString(),
-      } as any).eq('id', user.id);
+      };
+
+      if (trialUpgraded) {
+        updatePayload.is_trial_user = false;
+        updatePayload.trial_ends_at = new Date().toISOString();
+      } else if (trialExtended && form.trialEndsAt) {
+        updatePayload.trial_ends_at = form.trialEndsAt;
+      }
+
+      await supabase.from('user_profiles').update(updatePayload as any).eq('id', user.id);
+
+      // Mirror to trial_requests so the Trials tab reflects the change instantly
+      if (user.trial_request_id && (trialExtended || trialUpgraded)) {
+        const trUpdate: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (trialUpgraded) {
+          trUpdate.status = 'upgraded';
+          trUpdate.upgraded_at = new Date().toISOString();
+          trUpdate.upgraded_to_tier = form.accessTier;
+          trUpdate.payment_status = 'paid';
+          trUpdate.payment_amount = form.paymentAmount || 0;
+        } else if (trialExtended && form.trialEndsAt) {
+          trUpdate.access_ends_at = form.trialEndsAt;
+          trUpdate.status = 'approved';
+        }
+        await supabase.from('trial_requests').update(trUpdate as any).eq('id', user.trial_request_id);
+      }
+
       if (form.email !== originalEmail) {
         const { data, error } = await supabase.functions.invoke('admin-update-user', {
           body: { userId: user.id, newEmail: form.email.toLowerCase().trim() },
@@ -193,17 +232,69 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
         if (error) throw new Error(error.message);
         if (data?.error) throw new Error(data.error);
       }
-      await logActivity('user_edited', user.id, form.fullName, {
-        tier: form.accessTier, payment: form.paymentStatus,
-        ...(form.email !== originalEmail ? { email_changed: form.email } : {}),
-      });
+
+      // Audit logs for trial transitions
+      if (trialUpgraded) {
+        await logActivity('trial_upgraded', user.id, form.fullName, {
+          from_tier: 'trial', to_tier: form.accessTier, amount: form.paymentAmount,
+        });
+        showToast(`✨ ${form.fullName} upgraded from trial to ${form.accessTier}. Now visible in Users tab.`);
+      } else if (trialExtended) {
+        await logActivity('trial_extended', user.id, form.fullName, {
+          old_end: originalTrialEndsAt, new_end: form.trialEndsAt,
+        });
+        showToast(`⏱️ Trial extended for ${form.fullName}.`);
+      } else {
+        await logActivity('user_edited', user.id, form.fullName, {
+          tier: form.accessTier, payment: form.paymentStatus,
+          ...(form.email !== originalEmail ? { email_changed: form.email } : {}),
+        });
+        showToast(`✅ ${form.fullName} updated successfully.`);
+      }
       onSave();
-      showToast(`✅ ${form.fullName} updated successfully.`);
     } catch (err: any) {
       showToast(`❌ Error: ${err.message}`, 'error');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEndTrialEarly = async () => {
+    setEndingEarly(true);
+    try {
+      const now = new Date().toISOString();
+      await supabase.from('user_profiles').update({
+        is_trial_user: false, trial_ends_at: now, updated_at: now,
+      } as any).eq('id', user.id);
+      if (user.trial_request_id) {
+        await supabase.from('trial_requests').update({
+          status: 'expired', access_ends_at: now, updated_at: now,
+        } as any).eq('id', user.trial_request_id);
+      }
+      await logActivity('trial_ended_early', user.id, user.full_name);
+      setShowEndEarly(false);
+      showToast(`🛑 Trial ended early for ${user.full_name}.`, 'warning');
+      onSave();
+    } catch (err: any) {
+      showToast(`❌ ${err.message}`, 'error');
+    } finally {
+      setEndingEarly(false);
+    }
+  };
+
+  const extendBy = (days: number) => {
+    const base = form.trialEndsAt && new Date(form.trialEndsAt) > new Date() ? new Date(form.trialEndsAt) : new Date();
+    const next = new Date(base.getTime() + days * 86400000);
+    setForm(f => ({ ...f, trialEndsAt: next.toISOString() }));
+  };
+
+  const applyCustomDate = () => {
+    if (!customDateVal) return;
+    const d = new Date(customDateVal);
+    if (isNaN(d.getTime())) { showToast('Invalid date', 'error'); return; }
+    if (d.getTime() <= Date.now()) { showToast('Date must be in the future', 'error'); return; }
+    setForm(f => ({ ...f, trialEndsAt: d.toISOString() }));
+    setCustomDateOpen(false);
   };
 
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
@@ -304,8 +395,81 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
                 </div>
               </div>
             )}
-            <SectionHeader index={1} icon="🛡️" iconBg="#dcfce7" iconColor="#059669" title="Access & Payment" />
-            {sections[1] && (
+
+            {isTrial && (() => {
+              const trialIdx = 1;
+              const ms = form.trialEndsAt ? new Date(form.trialEndsAt).getTime() - Date.now() : 0;
+              const expired = ms <= 0;
+              const pillBg = expired ? '#fee2e2' : ms < 3600000 ? '#fee2e2' : ms < 86400000 ? '#fef3c7' : '#dcfce7';
+              const pillColor = expired ? '#991b1b' : ms < 3600000 ? '#991b1b' : ms < 86400000 ? '#92400e' : '#15803d';
+              const days = Math.floor(Math.max(0, ms) / 86400000);
+              const hours = Math.floor((Math.max(0, ms) % 86400000) / 3600000);
+              const timeLabel = expired ? 'EXPIRED' : days > 0 ? `${days} day${days > 1 ? 's' : ''} ${hours}h left` : `${hours}h left`;
+              const fmtDT = (s: string | null) => s ? new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+              return (
+                <>
+                  <SectionHeader index={trialIdx} icon="🎁" iconBg="rgba(124,58,237,0.1)" iconColor="#7c3aed" title="Trial Status"
+                    pill={<span style={{ background: pillBg, color: pillColor, fontSize: 10, padding: '2px 8px', borderRadius: 20, marginLeft: 6, fontWeight: 800 }}>{timeLabel}</span>} />
+                  {sections[trialIdx] && (
+                    <div style={{ padding: '12px 0' }}>
+                      {/* Read-only metadata */}
+                      <div style={{ background: '#faf5ff', border: '1px solid #ede9fe', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                        {[
+                          { label: 'Trial started', value: fmtDT(trialStartedAt || null) },
+                          { label: 'Trial ends', value: fmtDT(form.trialEndsAt) },
+                          { label: 'Time remaining', value: timeLabel },
+                          { label: 'Trialing tier', value: 'Trial (Niche + Product)' },
+                        ].map(row => (
+                          <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12.5 }}>
+                            <span style={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10.5 }}>{row.label}</span>
+                            <span style={{ color: '#0f172a', fontWeight: 600, fontFamily: 'DM Sans' }}>{row.value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Extend Trial</label>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                        {[1, 3, 7].map(d => (
+                          <button key={d} type="button" onClick={() => extendBy(d)} style={{
+                            padding: '6px 14px', borderRadius: 20, border: '1.5px solid #ddd6fe', cursor: 'pointer',
+                            background: 'white', color: '#7c3aed', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12,
+                          }}>+{d} {d === 1 ? 'day' : 'days'}</button>
+                        ))}
+                        <button type="button" onClick={() => setCustomDateOpen(o => !o)} style={{
+                          padding: '6px 14px', borderRadius: 20, border: '1.5px solid #ddd6fe', cursor: 'pointer',
+                          background: 'white', color: '#7c3aed', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12,
+                        }}>Custom date ▾</button>
+                      </div>
+                      {customDateOpen && (
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                          <input type="datetime-local" value={customDateVal} onChange={e => setCustomDateVal(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+                          <button type="button" onClick={applyCustomDate} style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: 10, padding: '0 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Set</button>
+                        </div>
+                      )}
+
+                      {form.trialEndsAt !== originalTrialEndsAt && (
+                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11.5, color: '#15803d' }}>
+                          ✓ New end date pending save: <strong>{fmtDT(form.trialEndsAt)}</strong>
+                        </div>
+                      )}
+
+                      <button type="button" onClick={() => setShowEndEarly(true)} style={{
+                        background: 'none', border: '1.5px solid #fecaca', color: '#ef4444',
+                        borderRadius: 10, padding: '8px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12,
+                        cursor: 'pointer', marginBottom: 12,
+                      }}>End Trial Early</button>
+
+                      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', fontSize: 11.5, color: '#1e40af', lineHeight: 1.55 }}>
+                        ℹ️ To upgrade this user from trial to paid, scroll down to <strong>Access & Payment</strong>, set the desired tier, and change Payment Status to <strong>"Full Paid ✓"</strong>. The upgrade is finalized on Save.
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            <SectionHeader index={isTrial ? 2 : 1} icon="🛡️" iconBg="#dcfce7" iconColor="#059669" title="Access & Payment" />
+            {sections[isTrial ? 2 : 1] && (
               <div style={{ padding: '12px 0' }}>
                 <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Access Tier</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 8 }}>
@@ -360,9 +524,9 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
                 </div>
               </div>
             )}
-            <SectionHeader index={2} icon="🔔" iconBg="#fff7ed" iconColor="#ea580c" title="Send Email Notification"
+            <SectionHeader index={isTrial ? 3 : 2} icon="🔔" iconBg="#fff7ed" iconColor="#ea580c" title="Send Email Notification"
               pill={<span style={{ background: '#f1f5f9', color: '#94a3b8', fontSize: 10, padding: '2px 8px', borderRadius: 20, marginLeft: 6 }}>Optional</span>} />
-            {sections[2] && (
+            {sections[isTrial ? 3 : 2] && (
               <div style={{ padding: '12px 0' }}>
                 <button onClick={() => sendEmail('access')} disabled={!!sendingEmail.access || !!emailSent.access} style={{
                   width: '100%', background: emailSent.access ? 'rgba(5,150,105,0.1)' : sendingEmail.access ? 'rgba(124,58,237,0.1)' : '#f0fdf4',
@@ -408,12 +572,29 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
         </div>
       </div>
       {showDelete && <DeleteConfirmModal userName={user.full_name} onConfirm={handleDeleteConfirm} onCancel={() => setShowDelete(false)} deleting={deleting} />}
+      {showEndEarly && (
+        <div onClick={() => setShowEndEarly(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.65)', backdropFilter: 'blur(12px)', zIndex: 950, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 420, width: '94%', background: 'white', borderRadius: 18, padding: 24, boxShadow: '0 32px 80px rgba(0,0,0,0.3)', animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: '#0f172a', marginBottom: 8 }}>🛑 End trial early?</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#475569', lineHeight: 1.6, marginBottom: 20 }}>
+              End trial for <strong>{user.full_name}</strong>? This will set <code style={{ fontSize: 12, background: '#f1f5f9', padding: '1px 6px', borderRadius: 4 }}>is_trial = false</code> and stop trial access immediately. The user's tier and payment status remain unchanged.
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowEndEarly(false)} disabled={endingEarly} style={{ background: 'none', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: 10, padding: '9px 16px', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleEndTrialEarly} disabled={endingEarly} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontFamily: 'Sora', fontWeight: 700, fontSize: 13, cursor: endingEarly ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {endingEarly && <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
+                {endingEarly ? 'Ending...' : 'End trial now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
 // ─── SECURITY PROFILE MODAL ────────────────────────────────
-function SecurityProfileModal({ userId, userEmail, userName, onClose, adminId, showToast }: {
+export function SecurityProfileModal({ userId, userEmail, userName, onClose, adminId, showToast }: {
   userId: string; userEmail: string; userName: string; onClose: () => void; adminId: string; showToast: (msg: string, type?: string) => void;
 }) {
   const [sessions, setSessions] = useState<any[]>([]);
