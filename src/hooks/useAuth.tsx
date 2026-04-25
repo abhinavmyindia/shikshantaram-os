@@ -56,9 +56,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // ── SECURITY: Block recovery sessions from auto-logging into the dashboard ──
+      if (event === 'PASSWORD_RECOVERY') {
+        sessionStorage.setItem('supabase_recovery_flow', 'true');
+        if (window.location.pathname !== '/reset-password') {
+          window.location.replace('/reset-password');
+        }
+        return;
+      }
+
+      // If a SIGNED_IN event fires during a recovery flow, sign out immediately.
+      // (Supabase may process the hash before main.tsx intercepts it on slow loads.)
+      if (event === 'SIGNED_IN' && session?.user) {
+        const isRecoveryFlow = sessionStorage.getItem('supabase_recovery_flow') === 'true';
+        if (isRecoveryFlow) {
+          await supabase.auth.signOut();
+          if (window.location.pathname !== '/reset-password') {
+            window.location.replace('/reset-password');
+          }
+          return;
+        }
+      }
+
+      if (event === 'SIGNED_OUT') {
+        sessionStorage.removeItem('supabase_recovery_flow');
+        sessionStorage.removeItem('recovery_access_token');
+        sessionStorage.removeItem('recovery_refresh_token');
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
         // Use setTimeout to avoid potential deadlocks with Supabase client
         setTimeout(async () => {
