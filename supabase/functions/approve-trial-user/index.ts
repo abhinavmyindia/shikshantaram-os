@@ -181,6 +181,14 @@ Deno.serve(async (req) => {
         <tr><td style="padding:4px 0">Login Email</td><td style="text-align:right;font-weight:700;color:#0f172a">${record.email}</td></tr>
       </table>
     </div>
+    <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:10px;padding:18px;margin:16px 0;border:1px dashed #f59e0b">
+      <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:13px;color:#78350f;margin-bottom:10px">🔐 Your Login Credentials</div>
+      <table style="width:100%;font-size:13px;color:#78350f">
+        <tr><td style="padding:4px 0">Email</td><td style="text-align:right;font-family:monospace;font-weight:700;color:#0f172a">${record.email}</td></tr>
+        <tr><td style="padding:4px 0">Temporary Password</td><td style="text-align:right;font-family:monospace;font-weight:700;color:#0f172a;letter-spacing:0.5px">${tempPassword}</td></tr>
+      </table>
+      <p style="font-size:11px;color:#92400e;margin:10px 0 0;line-height:1.5">⚠ Please change this password after your first login from <b>My Profile → Security</b>.</p>
+    </div>
     <p style="font-size:14px;color:#475569;line-height:1.7">Start with <b>Niche Clarity</b> to find your perfect niche, then move to <b>Product Navigator</b>. Your first product idea is 15 minutes away.</p>
     <div style="text-align:center;margin:28px 0 16px">
       <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:14px">Start Using Shikshantaram OS →</a>
