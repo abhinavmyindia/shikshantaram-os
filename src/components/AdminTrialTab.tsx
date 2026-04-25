@@ -75,6 +75,12 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [approveDays, setApproveDays] = useState<2 | 7 | 14 | 30>(7);
   const [approveNotes, setApproveNotes] = useState('');
 
+  // Upgrade modal (matches Signups → Approve Access pattern)
+  const [upgrading, setUpgrading] = useState<TrialRequest | null>(null);
+  const [upgradeTier, setUpgradeTier] = useState<'basic' | 'premium' | 'beta'>('premium');
+  const [upgradeAmount, setUpgradeAmount] = useState<number>(0);
+  const [upgradeNotes, setUpgradeNotes] = useState('');
+
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -152,16 +158,32 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     }
   };
 
-  const upgrade = async (req: TrialRequest) => {
-    if (!confirm(`Upgrade ${req.full_name} to a permanent paid user?\n\nThis will:\n• Remove the trial countdown\n• Add 500 bonus credits\n• Send an upgrade-confirmation email`)) return;
+  const openUpgrade = (req: TrialRequest) => {
+    setUpgrading(req);
+    setUpgradeTier('premium');
+    setUpgradeAmount(0);
+    setUpgradeNotes('');
+  };
+
+  const confirmUpgrade = async () => {
+    if (!upgrading) return;
     setWorking(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('upgrade-trial-to-user', {
-        body: { requestId: req.id, newTier: 'basic' },
+        body: {
+          requestId: upgrading.id,
+          newTier: upgradeTier,
+          paymentAmount: Number(upgradeAmount) || 0,
+          adminNotes: upgradeNotes.trim() || null,
+          adminId: user?.id,
+        },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      showToast(`🚀 ${req.full_name} upgraded successfully.`, 'success');
+      const tierLabel = upgradeTier.charAt(0).toUpperCase() + upgradeTier.slice(1);
+      showToast(`🚀 ${upgrading.full_name} upgraded to ${tierLabel}.`, 'success');
+      setUpgrading(null);
       load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to upgrade';
