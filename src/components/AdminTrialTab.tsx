@@ -70,6 +70,11 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [working, setWorking] = useState(false);
   const [ipLookup, setIpLookup] = useState<string | null>(null);
 
+  // Approve modal
+  const [approving, setApproving] = useState<TrialRequest | null>(null);
+  const [approveDays, setApproveDays] = useState<2 | 7 | 14 | 30>(7);
+  const [approveNotes, setApproveNotes] = useState('');
+
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -92,16 +97,27 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const expired = requests.filter(r => r.status === 'expired');
   const upgraded = requests.filter(r => r.status === 'upgraded');
 
-  const approve = async (req: TrialRequest) => {
-    if (!confirm(`Approve trial access for ${req.full_name} (${req.email})?\n\nThis will create their account, send a welcome email, and grant 100 starter credits.`)) return;
+  const openApprove = (req: TrialRequest) => {
+    setApproving(req);
+    setApproveDays(7);
+    setApproveNotes('');
+  };
+
+  const confirmApprove = async () => {
+    if (!approving) return;
     setWorking(true);
     try {
       const { data, error } = await supabase.functions.invoke('approve-trial-user', {
-        body: { requestId: req.id },
+        body: {
+          requestId: approving.id,
+          durationDays: approveDays,
+          adminNotes: approveNotes.trim() || null,
+        },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      showToast(`✅ ${req.full_name} approved — credentials emailed.`, 'success');
+      showToast(`✅ ${approving.full_name} approved for ${approveDays} days — credentials emailed.`, 'success');
+      setApproving(null);
       load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to approve';
