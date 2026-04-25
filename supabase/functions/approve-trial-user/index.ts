@@ -127,13 +127,22 @@ Deno.serve(async (req) => {
       })
       .eq('id', requestId);
 
-    // Audit log (best-effort)
+    // Audit log (best-effort) — full payload for debugging
     if (adminId) {
       try {
         await supabase.from('admin_activity_log').insert({
           admin_id: adminId, action_type: 'trial_approved',
           target_user_id: userId, target_user_name: record.full_name,
-          details: { trial_request_id: requestId, email: record.email, duration_days: durationDays, ip_address: record.ip_address },
+          details: {
+            trial_request_id: requestId,
+            email: record.email,
+            duration_days: durationDays,
+            ip_address: record.ip_address,
+            access_starts_at: now.toISOString(),
+            access_ends_at: expiresAt.toISOString(),
+            admin_notes: adminNotes,
+            request_payload: { requestId, durationDays, adminNotes, adminId },
+          },
         });
       } catch (e) { console.error('audit log failed:', e); }
     }
