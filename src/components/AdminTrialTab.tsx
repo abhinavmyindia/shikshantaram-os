@@ -63,7 +63,7 @@ const statusBadge = (status: string): React.CSSProperties => {
 export default function AdminTrialTab({ showToast }: { showToast: (msg: string, type?: string) => void }) {
   const [requests, setRequests] = useState<TrialRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'requests' | 'users'>('requests');
+  const [view, setView] = useState<'requests' | 'users' | 'audit'>('requests');
   const [extending, setExtending] = useState<TrialRequest | null>(null);
   const [extendDays, setExtendDays] = useState(3);
   const [extendReason, setExtendReason] = useState('');
@@ -198,6 +198,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         {[
           { id: 'requests' as const, label: '📥 Trial Requests', count: pending.length },
           { id: 'users' as const, label: '👤 Active Trial Users', count: approved.length },
+          { id: 'audit' as const, label: '📜 Audit Log', count: null },
         ].map(t => (
           <button key={t.id} onClick={() => setView(t.id)} style={{
             padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -205,7 +206,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
             background: view === t.id ? 'white' : 'transparent',
             color: view === t.id ? '#0f172a' : '#64748b',
             boxShadow: view === t.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-          }}>{t.label} <span style={{ marginLeft: 4, fontSize: 11, color: '#94a3b8' }}>({t.count})</span></button>
+          }}>{t.label}{t.count !== null && <span style={{ marginLeft: 4, fontSize: 11, color: '#94a3b8' }}>({t.count})</span>}</button>
         ))}
       </div>
 
