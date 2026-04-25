@@ -2549,6 +2549,13 @@ const Index = () => {
     tracking.trackToolAction();
   };
 
+  // ── Trial state ──
+  const isTrialUser = !!profile?.is_trial_user;
+  const trialEndsAt = profile?.trial_ends_at || null;
+  const trialExpired = isTrialUser && trialEndsAt ? new Date(trialEndsAt).getTime() <= Date.now() : false;
+  const LOCKED_FOR_TRIAL: LockedTool[] = ['offer', 'funnel', 'copy_suite', 'knowledge_base'];
+  const [trialLockTool, setTrialLockTool] = useState<LockedTool | null>(null);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
 
