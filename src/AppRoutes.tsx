@@ -31,6 +31,14 @@ export default function AppRoutes() {
 
   if (loading) return <SplashScreen />;
 
+  // ── SECURITY: Final safety net for password recovery flow ────────────────
+  // Even if Layers 1–3 fail, refuse to render the dashboard during recovery.
+  const isRecoveryFlow = typeof window !== 'undefined' && sessionStorage.getItem('supabase_recovery_flow') === 'true';
+  if (isRecoveryFlow && window.location.pathname !== '/reset-password') {
+    window.location.replace('/reset-password');
+    return <SplashScreen />;
+  }
+
   // /reset-password and /trial must be accessible regardless of auth state.
   // Normalize: collapse repeated slashes (handles malformed links like //reset-password)
   const path = window.location.pathname.replace(/\/{2,}/g, '/');
