@@ -2680,6 +2680,8 @@ const Index = () => {
       </div>
       {toast && <Toast data={toast} onClose={() => setToast(null)} />}
       {profile?.is_beta_user && user && <BetaFeedback userId={user.id} />}
+      {trialLockTool && <TrialLockModal tool={trialLockTool} onClose={() => setTrialLockTool(null)} />}
+      {trialExpired && <TrialExpiryPopup fullName={profile?.full_name} email={user?.email} />}
       {showUsagePopup && usageMsg && (
         <UsageValuePopup
           message={usageMsg}
