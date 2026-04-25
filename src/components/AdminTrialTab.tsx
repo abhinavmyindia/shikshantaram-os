@@ -388,7 +388,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                         <td style={{ padding: '10px 16px' }}>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             <button disabled={working} onClick={() => { setExtending(r); setExtendDays(3); setExtendReason(''); }} style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>⏱️ Extend</button>
-                            <button disabled={working} onClick={() => upgrade(r)} style={{ background: '#ede9fe', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>🚀 Upgrade</button>
+                            <button disabled={working} onClick={() => openUpgrade(r)} style={{ background: '#ede9fe', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>🚀 Upgrade</button>
                           </div>
                         </td>
                       </tr>
