@@ -292,6 +292,18 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
         return;
       }
 
+      // Best-effort IP capture (fail-open) — used by admin to cross-flag against trial requests
+      let ipAddress: string | null = null;
+      try {
+        const ipResp = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+        if (ipResp.ok) {
+          const ipData = await ipResp.json();
+          ipAddress = ipData?.ip || null;
+        }
+      } catch {
+        // Silently fail — IP capture is optional metadata
+      }
+
       // Insert directly — handle duplicate via unique constraint error
       const { error } = await supabase
         .from('signup_requests')
@@ -301,6 +313,8 @@ function SignupForm({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
           phone: `${countryCode} ${phoneDigits}`.trim(),
           payment_type: paymentType as string,
           status: 'pending',
+          ip_address: ipAddress,
+          user_agent: (navigator.userAgent || '').slice(0, 500),
         });
 
       if (error) {
