@@ -11,8 +11,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const requestId = String(body.requestId ?? '').trim();
-    const otp = String(body.otp ?? '').trim();
+    const requestId = String(body.requestId ?? body.trial_request_id ?? '').trim();
+    const otp = String(body.otp ?? body.otp_code ?? '').trim();
 
     if (!requestId || !otp) throw new Error('requestId and otp are required.');
     if (otp.length !== 6 || !/^\d{6}$/.test(otp)) throw new Error('OTP must be a 6-digit number.');
