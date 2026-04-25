@@ -395,8 +395,81 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
                 </div>
               </div>
             )}
-            <SectionHeader index={1} icon="🛡️" iconBg="#dcfce7" iconColor="#059669" title="Access & Payment" />
-            {sections[1] && (
+
+            {isTrial && (() => {
+              const trialIdx = 1;
+              const ms = form.trialEndsAt ? new Date(form.trialEndsAt).getTime() - Date.now() : 0;
+              const expired = ms <= 0;
+              const pillBg = expired ? '#fee2e2' : ms < 3600000 ? '#fee2e2' : ms < 86400000 ? '#fef3c7' : '#dcfce7';
+              const pillColor = expired ? '#991b1b' : ms < 3600000 ? '#991b1b' : ms < 86400000 ? '#92400e' : '#15803d';
+              const days = Math.floor(Math.max(0, ms) / 86400000);
+              const hours = Math.floor((Math.max(0, ms) % 86400000) / 3600000);
+              const timeLabel = expired ? 'EXPIRED' : days > 0 ? `${days} day${days > 1 ? 's' : ''} ${hours}h left` : `${hours}h left`;
+              const fmtDT = (s: string | null) => s ? new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+              return (
+                <>
+                  <SectionHeader index={trialIdx} icon="🎁" iconBg="rgba(124,58,237,0.1)" iconColor="#7c3aed" title="Trial Status"
+                    pill={<span style={{ background: pillBg, color: pillColor, fontSize: 10, padding: '2px 8px', borderRadius: 20, marginLeft: 6, fontWeight: 800 }}>{timeLabel}</span>} />
+                  {sections[trialIdx] && (
+                    <div style={{ padding: '12px 0' }}>
+                      {/* Read-only metadata */}
+                      <div style={{ background: '#faf5ff', border: '1px solid #ede9fe', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                        {[
+                          { label: 'Trial started', value: fmtDT(trialStartedAt || null) },
+                          { label: 'Trial ends', value: fmtDT(form.trialEndsAt) },
+                          { label: 'Time remaining', value: timeLabel },
+                          { label: 'Trialing tier', value: 'Trial (Niche + Product)' },
+                        ].map(row => (
+                          <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 12.5 }}>
+                            <span style={{ color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', fontSize: 10.5 }}>{row.label}</span>
+                            <span style={{ color: '#0f172a', fontWeight: 600, fontFamily: 'DM Sans' }}>{row.value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Extend Trial</label>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                        {[1, 3, 7].map(d => (
+                          <button key={d} type="button" onClick={() => extendBy(d)} style={{
+                            padding: '6px 14px', borderRadius: 20, border: '1.5px solid #ddd6fe', cursor: 'pointer',
+                            background: 'white', color: '#7c3aed', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12,
+                          }}>+{d} {d === 1 ? 'day' : 'days'}</button>
+                        ))}
+                        <button type="button" onClick={() => setCustomDateOpen(o => !o)} style={{
+                          padding: '6px 14px', borderRadius: 20, border: '1.5px solid #ddd6fe', cursor: 'pointer',
+                          background: 'white', color: '#7c3aed', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12,
+                        }}>Custom date ▾</button>
+                      </div>
+                      {customDateOpen && (
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                          <input type="datetime-local" value={customDateVal} onChange={e => setCustomDateVal(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+                          <button type="button" onClick={applyCustomDate} style={{ background: '#7c3aed', color: 'white', border: 'none', borderRadius: 10, padding: '0 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Set</button>
+                        </div>
+                      )}
+
+                      {form.trialEndsAt !== originalTrialEndsAt && (
+                        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11.5, color: '#15803d' }}>
+                          ✓ New end date pending save: <strong>{fmtDT(form.trialEndsAt)}</strong>
+                        </div>
+                      )}
+
+                      <button type="button" onClick={() => setShowEndEarly(true)} style={{
+                        background: 'none', border: '1.5px solid #fecaca', color: '#ef4444',
+                        borderRadius: 10, padding: '8px 16px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12,
+                        cursor: 'pointer', marginBottom: 12,
+                      }}>End Trial Early</button>
+
+                      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', fontSize: 11.5, color: '#1e40af', lineHeight: 1.55 }}>
+                        ℹ️ To upgrade this user from trial to paid, scroll down to <strong>Access & Payment</strong>, set the desired tier, and change Payment Status to <strong>"Full Paid ✓"</strong>. The upgrade is finalized on Save.
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            <SectionHeader index={isTrial ? 2 : 1} icon="🛡️" iconBg="#dcfce7" iconColor="#059669" title="Access & Payment" />
+            {sections[isTrial ? 2 : 1] && (
               <div style={{ padding: '12px 0' }}>
                 <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Access Tier</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 8 }}>
@@ -451,9 +524,9 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
                 </div>
               </div>
             )}
-            <SectionHeader index={2} icon="🔔" iconBg="#fff7ed" iconColor="#ea580c" title="Send Email Notification"
+            <SectionHeader index={isTrial ? 3 : 2} icon="🔔" iconBg="#fff7ed" iconColor="#ea580c" title="Send Email Notification"
               pill={<span style={{ background: '#f1f5f9', color: '#94a3b8', fontSize: 10, padding: '2px 8px', borderRadius: 20, marginLeft: 6 }}>Optional</span>} />
-            {sections[2] && (
+            {sections[isTrial ? 3 : 2] && (
               <div style={{ padding: '12px 0' }}>
                 <button onClick={() => sendEmail('access')} disabled={!!sendingEmail.access || !!emailSent.access} style={{
                   width: '100%', background: emailSent.access ? 'rgba(5,150,105,0.1)' : sendingEmail.access ? 'rgba(124,58,237,0.1)' : '#f0fdf4',
