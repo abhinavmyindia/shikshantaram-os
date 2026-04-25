@@ -572,6 +572,23 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
         </div>
       </div>
       {showDelete && <DeleteConfirmModal userName={user.full_name} onConfirm={handleDeleteConfirm} onCancel={() => setShowDelete(false)} deleting={deleting} />}
+      {showEndEarly && (
+        <div onClick={() => setShowEndEarly(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(5,10,20,0.65)', backdropFilter: 'blur(12px)', zIndex: 950, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 420, width: '94%', background: 'white', borderRadius: 18, padding: 24, boxShadow: '0 32px 80px rgba(0,0,0,0.3)', animation: 'popIn 0.3s cubic-bezier(0.34,1.56,0.64,1)' }}>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: '#0f172a', marginBottom: 8 }}>🛑 End trial early?</div>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 13.5, color: '#475569', lineHeight: 1.6, marginBottom: 20 }}>
+              End trial for <strong>{user.full_name}</strong>? This will set <code style={{ fontSize: 12, background: '#f1f5f9', padding: '1px 6px', borderRadius: 4 }}>is_trial = false</code> and stop trial access immediately. The user's tier and payment status remain unchanged.
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowEndEarly(false)} disabled={endingEarly} style={{ background: 'none', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: 10, padding: '9px 16px', fontFamily: 'DM Sans', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleEndTrialEarly} disabled={endingEarly} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: 10, padding: '10px 20px', fontFamily: 'Sora', fontWeight: 700, fontSize: 13, cursor: endingEarly ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {endingEarly && <div style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite' }} />}
+                {endingEarly ? 'Ending...' : 'End trial now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
