@@ -86,7 +86,7 @@ export default function TrialAuditLog({ onIpLookup }: Props) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['When', 'Action', 'Admin', 'Target user', 'Trial Request ID', 'Details'].map(h => (
+                {['When', 'Action', 'Admin', 'Target user', 'Trial Request ID', 'Details', 'Payload'].map(h => (
                   <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 10.5, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                 ))}
               </tr>
@@ -122,6 +122,15 @@ export default function TrialAuditLog({ onIpLookup }: Props) {
                       {ip && onIpLookup && (
                         <button onClick={() => onIpLookup(ip)} style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 10.5, color: '#7c3aed', textDecoration: 'underline', fontFamily: 'monospace' }}>{ip}</button>
                       )}
+                    </td>
+                    <td style={{ padding: '10px 16px', fontSize: 10.5, color: '#475569' }}>
+                      <details>
+                        <summary style={{ cursor: 'pointer', fontSize: 10.5, color: '#7c3aed', fontWeight: 700, userSelect: 'none', outline: 'none' }}>view JSON</summary>
+                        <pre style={{ marginTop: 6, padding: 8, background: '#0f172a', color: '#e2e8f0', borderRadius: 6, fontSize: 10, lineHeight: 1.5, maxWidth: 320, maxHeight: 180, overflow: 'auto', fontFamily: 'monospace' }}>
+{JSON.stringify(r.details || {}, null, 2)}
+                        </pre>
+                        <button onClick={() => navigator.clipboard.writeText(JSON.stringify(r.details || {}, null, 2))} style={{ marginTop: 4, background: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 4, padding: '2px 8px', fontFamily: 'monospace', fontSize: 9.5, cursor: 'pointer' }}>📋 Copy</button>
+                      </details>
                     </td>
                   </tr>
                 );
