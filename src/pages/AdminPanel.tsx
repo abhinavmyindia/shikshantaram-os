@@ -8,7 +8,7 @@ import AdminCreditsTab from '@/components/AdminCreditsTab';
 import AdminTrialTab from '@/components/AdminTrialTab';
 import AdminIpLookupModal from '@/components/AdminIpLookupModal';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
-interface UserRow {
+export interface UserRow {
   id: string;
   full_name: string;
   phone: string;
@@ -18,6 +18,7 @@ interface UserRow {
   is_beta_user: boolean;
   is_trial_user?: boolean;
   trial_ends_at?: string | null;
+  trial_request_id?: string | null;
   notes: string;
   created_at: string;
   updated_at: string;
