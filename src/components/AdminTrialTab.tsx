@@ -233,7 +233,13 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                           <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{r.email}</td>
                           <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{r.phone}</td>
                           <td style={{ padding: '10px 16px', fontSize: 11.5, color: flagged ? '#991b1b' : '#94a3b8', fontWeight: flagged ? 700 : 400 }}>
-                            {r.ip_address || '—'}
+                            {r.ip_address ? (
+                              <button onClick={() => setIpLookup(r.ip_address!)}
+                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontFamily: 'monospace', color: flagged ? '#991b1b' : '#475569', textDecoration: 'underline', fontWeight: flagged ? 700 : 500 }}
+                                title="Click to look up all accounts on this IP">
+                                {r.ip_address}
+                              </button>
+                            ) : '—'}
                             {flagged && (
                               <span title={`This IP appears in ${ipCounts[r.ip_address!]} trial requests`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 6, background: '#fee2e2', color: '#991b1b' }}>
                                 ⚠ ×{ipCounts[r.ip_address!]}
@@ -278,7 +284,11 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                       <tr key={r.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{r.full_name}</td>
                         <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{r.email}</td>
-                        <td style={{ padding: '10px 16px', fontSize: 11, color: '#94a3b8' }}>{r.ip_address || '—'}</td>
+                        <td style={{ padding: '10px 16px', fontSize: 11, color: '#94a3b8' }}>
+                          {r.ip_address ? (
+                            <button onClick={() => setIpLookup(r.ip_address!)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, fontFamily: 'monospace', color: '#475569', textDecoration: 'underline' }} title="Look up all accounts on this IP">{r.ip_address}</button>
+                          ) : '—'}
+                        </td>
                         <td style={{ padding: '10px 16px' }}><span style={statusBadge(r.status)}>{r.status}</span></td>
                         <td style={{ padding: '10px 16px', fontSize: 11, color: '#94a3b8' }}>{fmt(r.submitted_at)}</td>
                         <td style={{ padding: '10px 16px', fontSize: 11, color: '#94a3b8' }}>{fmt(r.upgraded_at || r.access_ends_at)}</td>
