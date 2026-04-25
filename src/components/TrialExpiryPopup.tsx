@@ -66,6 +66,19 @@ export default function TrialExpiryPopup({ fullName, email }: Props) {
             Your 7-day free trial is over. Upgrade now to keep your work, your saved items, and unlock unlimited access to all 8 tools.
           </div>
 
+          {/* Founder note */}
+          <div style={{
+            background: 'linear-gradient(135deg,rgba(124,58,237,0.05),rgba(236,72,153,0.04))',
+            borderLeft: '3px solid #7c3aed', borderRadius: 10, padding: '14px 16px', marginBottom: 18,
+          }}>
+            <div style={{ fontFamily: 'DM Sans, sans-serif', fontStyle: 'italic', fontSize: 13.5, color: '#334155', lineHeight: 1.7 }}>
+              "I built Shikshantaram OS for exactly one reason — to help people like you stop overthinking and start building something real. Your trial showed you what's possible. Now let's make it permanent. The full platform, unlimited access, all tools, forever — for ₹29,500. That's less than what one client project pays you."
+            </div>
+            <div style={{ fontFamily: 'Sora, sans-serif', fontSize: 12, fontWeight: 700, color: '#7c3aed', marginTop: 8 }}>
+              — Abhinav, Founder
+            </div>
+          </div>
+
           <div style={{
             background: 'linear-gradient(135deg,rgba(124,58,237,0.06),rgba(168,85,247,0.04))',
             border: '1px solid rgba(124,58,237,0.18)', borderRadius: 14, padding: 16, marginBottom: 20,
@@ -94,6 +107,15 @@ export default function TrialExpiryPopup({ fullName, email }: Props) {
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'}
           >
             🚀 Upgrade Now — ₹29,500
+          </a>
+
+          <a href="https://wa.me/918933966250?text=Hi%2C%20I%20already%20paid%20for%20Shikshantaram%20OS%20full%20access.%20Please%20upgrade%20my%20account."
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              display: 'block', textAlign: 'center', padding: '10px 14px', marginBottom: 6,
+              fontFamily: 'DM Sans, sans-serif', fontSize: 12.5, color: '#475569', textDecoration: 'none', fontWeight: 600,
+            }}>
+            💬 Already paid? WhatsApp us and we'll upgrade your access within 2 hours.
           </a>
 
           <button onClick={handleSignOut}
