@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import AdminIpLookupModal from './AdminIpLookupModal';
+import TrialAuditLog from './TrialAuditLog';
 
 interface TrialRequest {
   id: string;
@@ -66,6 +68,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [extendDays, setExtendDays] = useState(3);
   const [extendReason, setExtendReason] = useState('');
   const [working, setWorking] = useState(false);
+  const [ipLookup, setIpLookup] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
