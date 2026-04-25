@@ -31,16 +31,21 @@ export default function AppRoutes() {
 
   if (loading) return <SplashScreen />;
 
-  // /reset-password must be accessible regardless of auth state
-  // When user clicks the recovery link, Supabase sets a session BEFORE
-  // the ResetPassword component can handle PASSWORD_RECOVERY event.
-  // So this route must be outside the auth gate.
-  const isResetPasswordRoute = window.location.pathname === '/reset-password';
+  // /reset-password and /trial must be accessible regardless of auth state.
+  const path = window.location.pathname;
 
-  if (isResetPasswordRoute) {
+  if (path === '/reset-password') {
     return (
       <Routes>
         <Route path="/reset-password" element={<ResetPassword />} />
+      </Routes>
+    );
+  }
+
+  if (path === '/trial') {
+    return (
+      <Routes>
+        <Route path="/trial" element={<TrialPage />} />
       </Routes>
     );
   }
