@@ -47,7 +47,6 @@ serve(async (req) => {
       if (signOutErr) {
         return new Response(JSON.stringify({ error: signOutErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      // Mark all login_sessions as inactive
       await adminClient.from('login_sessions')
         .update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'admin_force_logout' })
         .eq('user_id', userId)
@@ -56,23 +55,70 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true, action: 'force_logout' }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Default: delete account entirely
-    // Delete related data first (in case no CASCADE)
-    await adminClient.from('beta_feedback').delete().eq('user_id', userId);
-    await adminClient.from('tool_usage').delete().eq('user_id', userId);
-    await adminClient.from('user_sessions').delete().eq('user_id', userId);
-    await adminClient.from('user_profiles').delete().eq('id', userId);
-    await adminClient.from('admin_users').delete().eq('user_id', userId);
+    // Default: delete account entirely.
+    // Order matters: clear FK references that point to user_profiles/auth.users BEFORE removing the profile.
+    const cleanups: { table: string; column: string }[] = [
+      { table: 'beta_feedback',           column: 'user_id' },
+      { table: 'tool_usage',              column: 'user_id' },
+      { table: 'user_sessions',           column: 'user_id' },
+      { table: 'activity_logs',           column: 'user_id' },
+      { table: 'recent_work',             column: 'user_id' },
+      { table: 'saved_items',             column: 'user_id' },
+      { table: 'user_knowledge_docs',     column: 'user_id' },
+      { table: 'user_security_settings',  column: 'user_id' },
+      { table: 'user_presence',           column: 'user_id' },
+      { table: 'user_byok_keys',          column: 'user_id' },
+      { table: 'byok_usage_logs',         column: 'user_id' },
+      { table: 'ai_usage_logs',           column: 'user_id' },
+      { table: 'error_logs',              column: 'user_id' },
+      { table: 'deletion_requests',       column: 'user_id' },
+      { table: 'razorpay_orders',         column: 'user_id' },
+      { table: 'security_events',         column: 'user_id' },
+      { table: 'credit_transactions',     column: 'user_id' },
+      { table: 'user_credits',            column: 'user_id' },
+      { table: 'login_sessions',          column: 'user_id' },
+    ];
 
-    // Delete from Supabase Auth
-    const { error } = await adminClient.auth.admin.deleteUser(userId);
-
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const failures: { table: string; error: string }[] = [];
+    for (const c of cleanups) {
+      const { error: delErr } = await adminClient.from(c.table).delete().eq(c.column, userId);
+      if (delErr && !/does not exist|relation .* does not exist/i.test(delErr.message)) {
+        failures.push({ table: c.table, error: delErr.message });
+      }
     }
 
-    return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // trial_requests: keep audit trail — null out user_id rather than delete.
+    const { error: trialErr } = await adminClient
+      .from('trial_requests')
+      .update({ user_id: null, status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('user_id', userId);
+    if (trialErr) failures.push({ table: 'trial_requests', error: trialErr.message });
+
+    // Now profile (FK from trial_requests.user_id has been cleared above).
+    const { error: profileErr } = await adminClient.from('user_profiles').delete().eq('id', userId);
+    if (profileErr) failures.push({ table: 'user_profiles', error: profileErr.message });
+
+    // admin_users (only matters if the deleted user was on the team).
+    await adminClient.from('admin_users').delete().eq('user_id', userId);
+
+    // Finally delete the auth account.
+    const { error: authErr } = await adminClient.auth.admin.deleteUser(userId);
+    if (authErr) {
+      console.error('auth.admin.deleteUser failed:', authErr.message, 'cleanup failures:', failures);
+      return new Response(JSON.stringify({
+        error: `Auth deletion failed: ${authErr.message}`,
+        cleanup_failures: failures,
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    return new Response(JSON.stringify({ success: true, cleanup_failures: failures }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    console.error('admin-delete-user fatal:', err);
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 });
