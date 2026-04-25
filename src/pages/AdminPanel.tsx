@@ -152,25 +152,33 @@ function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
 }
 
 // ─── EDIT USER MODAL ─────────────────────────────────────────
-function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logActivity }: {
-  user: UserRow; email: string; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
+export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, onDelete, showToast, logActivity }: {
+  user: UserRow; email: string; trialStartedAt?: string | null; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
+  const isTrial = !!user.is_trial_user || user.access_tier === 'trial';
   const [form, setForm] = useState({
     fullName: user.full_name, email, phone: user.phone || '', accessTier: user.access_tier,
     paymentStatus: user.payment_status, paymentAmount: user.payment_amount || 0,
     isBetaUser: user.is_beta_user || false, notes: user.notes || '',
+    trialEndsAt: user.trial_ends_at || null,
   });
   const [originalEmail] = useState(email);
+  const [originalTrialEndsAt] = useState<string | null>(user.trial_ends_at || null);
   const [saving, setSaving] = useState(false);
-  const [sections, setSections] = useState([true, true, false]);
+  // sections: [Personal, Trial (if shown), Access, Email]
+  const [sections, setSections] = useState<boolean[]>(isTrial ? [true, true, true, false] : [true, true, false]);
   const [emailSent, setEmailSent] = useState<Record<string, boolean>>({});
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showEndEarly, setShowEndEarly] = useState(false);
+  const [endingEarly, setEndingEarly] = useState(false);
+  const [customDateOpen, setCustomDateOpen] = useState(false);
+  const [customDateVal, setCustomDateVal] = useState('');
 
   const dirty = form.fullName !== user.full_name || form.email !== email || form.phone !== (user.phone || '') ||
     form.accessTier !== user.access_tier || form.paymentStatus !== user.payment_status ||
     form.paymentAmount !== (user.payment_amount || 0) || form.isBetaUser !== (user.is_beta_user || false) ||
-    form.notes !== (user.notes || '');
+    form.notes !== (user.notes || '') || form.trialEndsAt !== originalTrialEndsAt;
 
   const handleClose = () => {
     if (dirty && !confirm('You have unsaved changes. Discard?')) return;
@@ -182,11 +190,41 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
   const handleSave = async () => {
     setSaving(true);
     try {
-      await supabase.from('user_profiles').update({
+      // Detect trial state transitions
+      const trialExtended = isTrial && form.trialEndsAt !== originalTrialEndsAt;
+      const trialUpgraded = isTrial && form.paymentStatus === 'paid' && form.accessTier !== 'trial' && form.accessTier !== 'revoked';
+
+      const updatePayload: Record<string, any> = {
         full_name: form.fullName.trim(), phone: form.phone.trim(), access_tier: form.accessTier,
         payment_status: form.paymentStatus, payment_amount: form.paymentAmount || 0,
         is_beta_user: form.isBetaUser, notes: form.notes.trim(), updated_at: new Date().toISOString(),
-      } as any).eq('id', user.id);
+      };
+
+      if (trialUpgraded) {
+        updatePayload.is_trial_user = false;
+        updatePayload.trial_ends_at = new Date().toISOString();
+      } else if (trialExtended && form.trialEndsAt) {
+        updatePayload.trial_ends_at = form.trialEndsAt;
+      }
+
+      await supabase.from('user_profiles').update(updatePayload as any).eq('id', user.id);
+
+      // Mirror to trial_requests so the Trials tab reflects the change instantly
+      if (user.trial_request_id && (trialExtended || trialUpgraded)) {
+        const trUpdate: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (trialUpgraded) {
+          trUpdate.status = 'upgraded';
+          trUpdate.upgraded_at = new Date().toISOString();
+          trUpdate.upgraded_to_tier = form.accessTier;
+          trUpdate.payment_status = 'paid';
+          trUpdate.payment_amount = form.paymentAmount || 0;
+        } else if (trialExtended && form.trialEndsAt) {
+          trUpdate.access_ends_at = form.trialEndsAt;
+          trUpdate.status = 'approved';
+        }
+        await supabase.from('trial_requests').update(trUpdate as any).eq('id', user.trial_request_id);
+      }
+
       if (form.email !== originalEmail) {
         const { data, error } = await supabase.functions.invoke('admin-update-user', {
           body: { userId: user.id, newEmail: form.email.toLowerCase().trim() },
@@ -194,17 +232,69 @@ function EditUserModal({ user, email, onClose, onSave, onDelete, showToast, logA
         if (error) throw new Error(error.message);
         if (data?.error) throw new Error(data.error);
       }
-      await logActivity('user_edited', user.id, form.fullName, {
-        tier: form.accessTier, payment: form.paymentStatus,
-        ...(form.email !== originalEmail ? { email_changed: form.email } : {}),
-      });
+
+      // Audit logs for trial transitions
+      if (trialUpgraded) {
+        await logActivity('trial_upgraded', user.id, form.fullName, {
+          from_tier: 'trial', to_tier: form.accessTier, amount: form.paymentAmount,
+        });
+        showToast(`✨ ${form.fullName} upgraded from trial to ${form.accessTier}. Now visible in Users tab.`);
+      } else if (trialExtended) {
+        await logActivity('trial_extended', user.id, form.fullName, {
+          old_end: originalTrialEndsAt, new_end: form.trialEndsAt,
+        });
+        showToast(`⏱️ Trial extended for ${form.fullName}.`);
+      } else {
+        await logActivity('user_edited', user.id, form.fullName, {
+          tier: form.accessTier, payment: form.paymentStatus,
+          ...(form.email !== originalEmail ? { email_changed: form.email } : {}),
+        });
+        showToast(`✅ ${form.fullName} updated successfully.`);
+      }
       onSave();
-      showToast(`✅ ${form.fullName} updated successfully.`);
     } catch (err: any) {
       showToast(`❌ Error: ${err.message}`, 'error');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEndTrialEarly = async () => {
+    setEndingEarly(true);
+    try {
+      const now = new Date().toISOString();
+      await supabase.from('user_profiles').update({
+        is_trial_user: false, trial_ends_at: now, updated_at: now,
+      } as any).eq('id', user.id);
+      if (user.trial_request_id) {
+        await supabase.from('trial_requests').update({
+          status: 'expired', access_ends_at: now, updated_at: now,
+        } as any).eq('id', user.trial_request_id);
+      }
+      await logActivity('trial_ended_early', user.id, user.full_name);
+      setShowEndEarly(false);
+      showToast(`🛑 Trial ended early for ${user.full_name}.`, 'warning');
+      onSave();
+    } catch (err: any) {
+      showToast(`❌ ${err.message}`, 'error');
+    } finally {
+      setEndingEarly(false);
+    }
+  };
+
+  const extendBy = (days: number) => {
+    const base = form.trialEndsAt && new Date(form.trialEndsAt) > new Date() ? new Date(form.trialEndsAt) : new Date();
+    const next = new Date(base.getTime() + days * 86400000);
+    setForm(f => ({ ...f, trialEndsAt: next.toISOString() }));
+  };
+
+  const applyCustomDate = () => {
+    if (!customDateVal) return;
+    const d = new Date(customDateVal);
+    if (isNaN(d.getTime())) { showToast('Invalid date', 'error'); return; }
+    if (d.getTime() <= Date.now()) { showToast('Date must be in the future', 'error'); return; }
+    setForm(f => ({ ...f, trialEndsAt: d.toISOString() }));
+    setCustomDateOpen(false);
   };
 
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
