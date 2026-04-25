@@ -520,6 +520,74 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         </div>
         );
       })()}
+
+      {upgrading && (() => {
+        const tiers = [
+          { id: 'basic' as const, label: 'Basic', icon: '🔒', desc: '2 tools', accent: '#64748b', bg: '#f1f5f9' },
+          { id: 'premium' as const, label: 'Premium', icon: '⚡', desc: 'All tools', accent: '#7c3aed', bg: '#f5f3ff' },
+          { id: 'beta' as const, label: 'Beta', icon: '🧪', desc: 'All + previews', accent: '#db2777', bg: '#fdf2f8' },
+        ];
+        const expiryStr = new Date(upgrading.access_ends_at || Date.now()).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 0, maxWidth: 520, width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: 'white' }}>🚀 Upgrade to Paid User</div>
+              <button onClick={() => setUpgrading(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              <div style={{ background: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 14 }}>
+                  {upgrading.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>{upgrading.full_name}</div>
+                  <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{upgrading.email}</div>
+                </div>
+                <div style={{ background: '#fef9c3', color: '#92400e', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10, padding: '3px 9px', borderRadius: 20, textTransform: 'uppercase' }}>Trial · ends {expiryStr}</div>
+              </div>
+
+              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Access Tier</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 18 }}>
+                {tiers.map(t => {
+                  const active = upgradeTier === t.id;
+                  return (
+                    <button key={t.id} onClick={() => setUpgradeTier(t.id)} style={{
+                      padding: '14px 8px', borderRadius: 12, cursor: 'pointer',
+                      border: active ? `2px solid ${t.accent}` : '1.5px solid #e2e8f0',
+                      background: active ? t.bg : 'white',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    }}>
+                      <div style={{ fontSize: 22 }}>{t.icon}</div>
+                      <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: active ? t.accent : '#0f172a' }}>{t.label}</div>
+                      <div style={{ fontFamily: 'DM Sans', fontSize: 10.5, color: '#94a3b8' }}>{t.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Payment Amount (₹)</label>
+              <input type="number" min={0} value={upgradeAmount} onChange={e => setUpgradeAmount(parseInt(e.target.value) || 0)} placeholder="0" style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'DM Sans', marginBottom: 14, outline: 'none', boxSizing: 'border-box' }} />
+
+              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Internal Notes (optional)</label>
+              <textarea value={upgradeNotes} onChange={e => setUpgradeNotes(e.target.value)} placeholder="e.g. Paid via UPI" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'DM Sans', resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }} />
+
+              <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#ecfdf5)', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 14px', fontFamily: 'DM Sans', fontSize: 12, color: '#15803d', lineHeight: 1.6 }}>
+                ✓ Removes trial countdown · Adds <strong>500 bonus credits</strong> · Sends upgrade-confirmation email
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', background: '#fafbfc', position: 'sticky', bottom: 0 }}>
+              <button disabled={working} onClick={() => setUpgrading(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button disabled={working} onClick={confirmUpgrade} style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.6 : 1, boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}>
+                {working ? 'Upgrading…' : `🚀 Upgrade to ${upgradeTier.charAt(0).toUpperCase() + upgradeTier.slice(1)} →`}
+              </button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
     </div>
   );
 }
