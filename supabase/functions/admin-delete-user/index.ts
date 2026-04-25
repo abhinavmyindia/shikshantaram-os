@@ -35,12 +35,28 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Not an admin' }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { userId } = await req.json();
+    const { userId, action } = await req.json();
 
     if (!userId) {
       return new Response(JSON.stringify({ error: 'userId is required' }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── Force logout: revoke all sessions without deleting the account ──
+    if (action === 'force_logout') {
+      const { error: signOutErr } = await adminClient.auth.admin.signOut(userId, 'global');
+      if (signOutErr) {
+        return new Response(JSON.stringify({ error: signOutErr.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      // Mark all login_sessions as inactive
+      await adminClient.from('login_sessions')
+        .update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'admin_force_logout' })
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      return new Response(JSON.stringify({ success: true, action: 'force_logout' }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Default: delete account entirely
     // Delete related data first (in case no CASCADE)
     await adminClient.from('beta_feedback').delete().eq('user_id', userId);
     await adminClient.from('tool_usage').delete().eq('user_id', userId);
