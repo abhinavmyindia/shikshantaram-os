@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import SecurityTab from '@/components/AdminSecurityTab';
 import AdminCreditsTab from '@/components/AdminCreditsTab';
+import AdminTrialTab from '@/components/AdminTrialTab';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 interface UserRow {
   id: string;
@@ -29,6 +30,8 @@ interface SignupRow {
   submitted_at: string;
   reviewed_at: string | null;
   notes: string;
+  ip_address: string | null;
+  user_agent: string | null;
 }
 
 const glassCard = {
