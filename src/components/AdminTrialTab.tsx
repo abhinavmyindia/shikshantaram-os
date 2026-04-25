@@ -243,13 +243,15 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
             body: { action: 'force_logout', userId: req.user_id },
           }).catch(() => {});
           // Log admin action
-          await supabase.from('admin_activity_log').insert({
-            admin_id: adminUser?.id,
-            target_user_id: req.user_id,
-            target_user_name: req.full_name,
-            action_type: 'trial_user_blocked',
-            details: { email: req.email, trial_request_id: req.id },
-          }).catch(() => {});
+          try {
+            await supabase.from('admin_activity_log').insert({
+              admin_id: adminUser?.id,
+              target_user_id: req.user_id,
+              target_user_name: req.full_name,
+              action_type: 'trial_user_blocked',
+              details: { email: req.email, trial_request_id: req.id },
+            });
+          } catch { /* non-fatal */ }
           showToast(`🚫 ${req.full_name} blocked & sessions revoked`, 'warning');
         }
       }
@@ -262,13 +264,15 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
             body: { action: 'force_logout', userId: req.user_id },
           });
           if (fnErr) throw new Error(fnErr.message);
-          await supabase.from('security_events').insert({
-            user_id: req.user_id,
-            user_email: req.email,
-            event_type: 'force_logout',
-            severity: 'medium',
-            description: `Admin force-logged out trial user ${req.email}`,
-          }).catch(() => {});
+          try {
+            await supabase.from('security_events').insert({
+              user_id: req.user_id,
+              user_email: req.email,
+              event_type: 'force_logout',
+              severity: 'medium',
+              description: `Admin force-logged out trial user ${req.email}`,
+            });
+          } catch { /* non-fatal */ }
           showToast(`⚡ ${req.full_name} force-logged out`, 'success');
         }
       }
