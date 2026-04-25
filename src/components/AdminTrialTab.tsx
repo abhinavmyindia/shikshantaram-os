@@ -70,6 +70,11 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [working, setWorking] = useState(false);
   const [ipLookup, setIpLookup] = useState<string | null>(null);
 
+  // Approve modal
+  const [approving, setApproving] = useState<TrialRequest | null>(null);
+  const [approveDays, setApproveDays] = useState<2 | 7 | 14 | 30>(7);
+  const [approveNotes, setApproveNotes] = useState('');
+
   const load = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -92,16 +97,27 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const expired = requests.filter(r => r.status === 'expired');
   const upgraded = requests.filter(r => r.status === 'upgraded');
 
-  const approve = async (req: TrialRequest) => {
-    if (!confirm(`Approve trial access for ${req.full_name} (${req.email})?\n\nThis will create their account, send a welcome email, and grant 100 starter credits.`)) return;
+  const openApprove = (req: TrialRequest) => {
+    setApproving(req);
+    setApproveDays(7);
+    setApproveNotes('');
+  };
+
+  const confirmApprove = async () => {
+    if (!approving) return;
     setWorking(true);
     try {
       const { data, error } = await supabase.functions.invoke('approve-trial-user', {
-        body: { requestId: req.id },
+        body: {
+          requestId: approving.id,
+          durationDays: approveDays,
+          adminNotes: approveNotes.trim() || null,
+        },
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      showToast(`✅ ${req.full_name} approved — credentials emailed.`, 'success');
+      showToast(`✅ ${approving.full_name} approved for ${approveDays} days — credentials emailed.`, 'success');
+      setApproving(null);
       load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to approve';
@@ -261,7 +277,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                           <td style={{ padding: '10px 16px', fontSize: 11.5, color: '#94a3b8' }}>{fmt(r.submitted_at)}</td>
                           <td style={{ padding: '10px 16px' }}>
                             <div style={{ display: 'flex', gap: 6 }}>
-                              <button disabled={working} onClick={() => approve(r)} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>✅ Approve</button>
+                              <button disabled={working} onClick={() => openApprove(r)} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>✅ Approve</button>
                               <button disabled={working} onClick={() => reject(r)} style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>✗ Reject</button>
                             </div>
                           </td>
@@ -384,6 +400,61 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
               <button disabled={working} onClick={() => setExtending(null)} style={{ background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button disabled={working} onClick={submitExtend} style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '10px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.6 : 1 }}>
                 {working ? 'Extending…' : `Extend by ${extendDays}d`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {approving && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 0, maxWidth: 480, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg,#10b981,#059669)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: 'white' }}>✅ Approve Trial Access</div>
+              <button onClick={() => setApproving(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              <div style={{ background: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 14 }}>
+                  {approving.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>{approving.full_name}</div>
+                  <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{approving.email}</div>
+                </div>
+              </div>
+
+              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trial Duration</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 18 }}>
+                {([2, 7, 14, 30] as const).map(d => {
+                  const active = approveDays === d;
+                  return (
+                    <button key={d} onClick={() => setApproveDays(d)} style={{
+                      padding: '14px 8px', borderRadius: 12, cursor: 'pointer',
+                      border: active ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
+                      background: active ? '#f5f3ff' : 'white',
+                      fontFamily: 'Sora', fontWeight: 800, fontSize: 15,
+                      color: active ? '#7c3aed' : '#0f172a',
+                    }}>
+                      {d}d
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', marginBottom: 18, fontFamily: 'DM Sans', fontSize: 12, color: '#166534', lineHeight: 1.55 }}>
+                <strong>Trial grants:</strong> Basic tier · 100 starter credits · access to Niche Clarity & Product Navigator · expires in {approveDays} day{approveDays > 1 ? 's' : ''}.
+              </div>
+
+              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Internal notes (optional)</label>
+              <textarea value={approveNotes} onChange={e => setApproveNotes(e.target.value)} placeholder="e.g. Friend of Abhinav, fast-track" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'DM Sans', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', background: '#fafbfc' }}>
+              <button disabled={working} onClick={() => setApproving(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button disabled={working} onClick={confirmApprove} style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.6 : 1, boxShadow: '0 4px 14px rgba(16,185,129,0.35)' }}>
+                {working ? 'Approving…' : `✅ Approve & Send Email →`}
               </button>
             </div>
           </div>
