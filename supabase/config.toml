@@ -87,11 +87,5 @@ verify_jwt = false
 [functions.approve-trial-user]
 verify_jwt = false
 
-[functions.upgrade-trial-to-user]
-verify_jwt = false
-
 [functions.get-trial-requests]
-verify_jwt = false
-
-[functions.extend-trial]
 verify_jwt = false
