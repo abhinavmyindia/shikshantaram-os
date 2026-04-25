@@ -126,6 +126,17 @@ Deno.serve(async (req) => {
       })
       .eq('id', requestId);
 
+    // Audit log (best-effort)
+    if (adminId) {
+      try {
+        await supabase.from('admin_activity_log').insert({
+          admin_id: adminId, action_type: 'trial_approved',
+          target_user_id: userId, target_user_name: record.full_name,
+          details: { trial_request_id: requestId, email: record.email, duration_days: durationDays, ip_address: record.ip_address },
+        });
+      } catch (e) { console.error('audit log failed:', e); }
+    }
+
     // Send approval email
     const RESEND_KEY = Deno.env.get('RESEND_API_KEY');
     if (RESEND_KEY) {
