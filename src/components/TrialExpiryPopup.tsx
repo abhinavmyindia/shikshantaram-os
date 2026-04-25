@@ -93,7 +93,7 @@ export default function TrialExpiryPopup({ fullName, email }: Props) {
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'}
           >
-            🚀 Upgrade Now — ₹2,999
+            🚀 Upgrade Now — ₹29,500
           </a>
 
           <button onClick={handleSignOut}

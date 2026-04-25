@@ -324,7 +324,7 @@ export default function TrialPage() {
               </div>
               <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: 22, color: '#0f172a', marginBottom: 8 }}>You're On The List!</div>
               <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#475569', lineHeight: 1.7, marginBottom: 22 }}>
-                Your trial request was verified. Our team will activate your access within a few hours and email your login details to <strong style={{ color: '#0f172a' }}>{email}</strong>.
+                Your registration is confirmed. We'll review your request and send your trial access details to <strong style={{ color: '#0f172a' }}>{email}</strong> within 24 hours.
               </div>
 
               <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.18)', borderRadius: 14, padding: 16, marginBottom: 18, textAlign: 'left' }}>
@@ -339,17 +339,13 @@ export default function TrialPage() {
                 ))}
               </div>
 
-              <a href={PAYMENT_LINK} target="_blank" rel="noopener noreferrer"
+              <a href="https://wa.me/918933966250?text=Hi%2C%20I%20just%20submitted%20a%20trial%20request%20for%20Shikshantaram%20OS."
+                target="_blank" rel="noopener noreferrer"
                 style={{ display: 'block', textAlign: 'center', padding: '13px 20px', borderRadius: 12,
-                  background: 'linear-gradient(135deg,#ea580c,#f59e0b)', color: 'white',
+                  background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white',
                   fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 14, textDecoration: 'none',
-                  boxShadow: '0 4px 20px rgba(234,88,12,0.35)' }}>
-                Skip Trial → Get Full Access ₹2,999 →
-              </a>
-              <a href="/"
-                style={{ display: 'block', textAlign: 'center', padding: 12, marginTop: 8,
-                  fontFamily: 'DM Sans, sans-serif', fontSize: 12.5, color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>
-                ← Back to login
+                  boxShadow: '0 4px 20px rgba(16,185,129,0.35)' }}>
+                💬 Message us on WhatsApp
               </a>
             </div>
           </>

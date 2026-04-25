@@ -115,7 +115,7 @@ export default function TrialStatusBanner({ trialEndsAt, fullName, paymentLink =
         onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'}
         onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)'}
       >
-        {expired ? 'Reactivate access ₹2,999' : 'Upgrade to full access ₹2,999'} →
+        {expired ? 'Reactivate access ₹29,500' : 'Upgrade to full access ₹29,500'} →
       </a>
     </div>
   );
