@@ -107,11 +107,13 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     if (!approving) return;
     setWorking(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('approve-trial-user', {
         body: {
           requestId: approving.id,
           durationDays: approveDays,
           adminNotes: approveNotes.trim() || null,
+          adminId: user?.id,
         },
       });
       if (error) throw new Error(error.message);
@@ -406,10 +408,22 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         </div>
       )}
 
-      {approving && (
+      {approving && (() => {
+        // Detect existing active trial for the same email (avoid duplicate approvals)
+        const activeForSameEmail = approved.find(a =>
+          a.id !== approving.id &&
+          a.email.toLowerCase() === approving.email.toLowerCase() &&
+          a.access_ends_at && new Date(a.access_ends_at).getTime() > Date.now()
+        );
+        const payload = {
+          requestId: approving.id,
+          durationDays: approveDays,
+          adminNotes: approveNotes.trim() || null,
+        };
+        return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 20, padding: 0, maxWidth: 480, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }}>
-            <div style={{ background: 'linear-gradient(135deg,#10b981,#059669)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 0, maxWidth: 520, width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ background: 'linear-gradient(135deg,#10b981,#059669)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
               <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: 'white' }}>✅ Approve Trial Access</div>
               <button onClick={() => setApproving(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
             </div>
@@ -425,33 +439,56 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                 </div>
               </div>
 
-              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trial Duration</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 18 }}>
-                {([2, 7, 14, 30] as const).map(d => {
-                  const active = approveDays === d;
-                  return (
-                    <button key={d} onClick={() => setApproveDays(d)} style={{
-                      padding: '14px 8px', borderRadius: 12, cursor: 'pointer',
-                      border: active ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
-                      background: active ? '#f5f3ff' : 'white',
-                      fontFamily: 'Sora', fontWeight: 800, fontSize: 15,
-                      color: active ? '#7c3aed' : '#0f172a',
-                    }}>
-                      {d}d
-                    </button>
-                  );
-                })}
-              </div>
+              {activeForSameEmail && (
+                <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 12, color: '#991b1b', lineHeight: 1.55 }}>
+                  ⚠ <strong>Conflict:</strong> this email already has an active trial ({fmtRelative(activeForSameEmail.access_ends_at)}). Approving again will create a parallel trial. Consider <strong>Extend</strong> instead.
+                </div>
+              )}
 
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', marginBottom: 18, fontFamily: 'DM Sans', fontSize: 12, color: '#166534', lineHeight: 1.55 }}>
-                <strong>Trial grants:</strong> Basic tier · 100 starter credits · access to Niche Clarity & Product Navigator · expires in {approveDays} day{approveDays > 1 ? 's' : ''}.
+              {/* TRIAL ACCESS CONFIGURATION */}
+              <div style={{ background: 'linear-gradient(135deg,#faf5ff,#f0fdf4)', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: 16, marginBottom: 18 }}>
+                <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: '#7c3aed', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>🎁 Trial Access Configuration</div>
+
+                <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Trial Duration</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 12 }}>
+                  {([2, 7, 14, 30] as const).map(d => {
+                    const active = approveDays === d;
+                    return (
+                      <button key={d} onClick={() => setApproveDays(d)} style={{
+                        padding: '14px 8px', borderRadius: 12, cursor: 'pointer',
+                        border: active ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
+                        background: active ? '#f5f3ff' : 'white',
+                        fontFamily: 'Sora', fontWeight: 800, fontSize: 15,
+                        color: active ? '#7c3aed' : '#0f172a',
+                      }}>
+                        {d}d
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#475569', lineHeight: 1.6 }}>
+                  <strong>Tier:</strong> Basic · <strong>Credits:</strong> 100 starter · <strong>Tools:</strong> Niche Clarity & Product Navigator
+                  <br /><strong>Expires:</strong> {new Date(Date.now() + approveDays * 86400000).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
 
               <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Internal notes (optional)</label>
-              <textarea value={approveNotes} onChange={e => setApproveNotes(e.target.value)} placeholder="e.g. Friend of Abhinav, fast-track" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'DM Sans', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+              <textarea value={approveNotes} onChange={e => setApproveNotes(e.target.value)} placeholder="e.g. Friend of Abhinav, fast-track" rows={2} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'DM Sans', resize: 'vertical', outline: 'none', boxSizing: 'border-box', marginBottom: 14 }} />
+
+              {/* DEBUG PAYLOAD PANEL */}
+              <details style={{ background: '#0f172a', borderRadius: 10, padding: '10px 14px', color: '#e2e8f0', fontFamily: 'monospace', fontSize: 11.5 }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#7dd3fc', userSelect: 'none', outline: 'none' }}>
+                  🔍 Debug — payload preview (click to inspect)
+                </summary>
+                <div style={{ marginTop: 10, fontSize: 10.5, color: '#94a3b8' }}>POST → <span style={{ color: '#fbbf24' }}>functions/v1/approve-trial-user</span></div>
+                <pre style={{ margin: '8px 0 0', padding: 10, background: '#020617', borderRadius: 8, overflow: 'auto', maxHeight: 180, color: '#e2e8f0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+{JSON.stringify(payload, null, 2)}
+                </pre>
+                <button onClick={() => navigator.clipboard.writeText(JSON.stringify(payload, null, 2))} style={{ marginTop: 8, background: '#1e293b', color: '#7dd3fc', border: '1px solid #334155', borderRadius: 6, padding: '4px 10px', fontFamily: 'monospace', fontSize: 10.5, cursor: 'pointer' }}>📋 Copy JSON</button>
+              </details>
             </div>
 
-            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', background: '#fafbfc' }}>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', background: '#fafbfc', position: 'sticky', bottom: 0 }}>
               <button disabled={working} onClick={() => setApproving(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
               <button disabled={working} onClick={confirmApprove} style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.6 : 1, boxShadow: '0 4px 14px rgba(16,185,129,0.35)' }}>
                 {working ? 'Approving…' : `✅ Approve & Send Email →`}
@@ -459,7 +496,8 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

@@ -16,6 +16,8 @@ interface UserRow {
   payment_status: string;
   payment_amount: number;
   is_beta_user: boolean;
+  is_trial_user?: boolean;
+  trial_ends_at?: string | null;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -1481,7 +1483,27 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                   <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{emailMap[u.id] || '—'}</td>
                   <td style={{ padding: '10px 16px', fontSize: 12, fontFamily: 'DM Sans,sans-serif', color: u.phone ? '#0f172a' : '#cbd5e1', fontWeight: u.phone ? 600 : 400 }}>{u.phone || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
+                      {u.is_trial_user ? (() => {
+                        const ends = u.trial_ends_at ? new Date(u.trial_ends_at).getTime() : 0;
+                        const ms = ends - Date.now();
+                        const expired = ms <= 0;
+                        const days = Math.max(0, Math.floor(ms / 86400000));
+                        const hours = Math.max(0, Math.floor((ms % 86400000) / 3600000));
+                        const label = expired ? 'EXPIRED' : days > 0 ? `${days}d left` : `${hours}h left`;
+                        const urgent = !expired && ms < 86400000;
+                        return (
+                          <span title={ends ? new Date(ends).toLocaleString() : ''} style={{ fontSize: 9, fontWeight: 800, background: expired ? '#fee2e2' : urgent ? '#fef3c7' : '#fef9c3', color: expired ? '#991b1b' : urgent ? '#92400e' : '#854d0e', padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>
+                            🎁 TRIAL · {label}
+                          </span>
+                        );
+                      })() : (u.payment_amount || 0) > 0 ? (
+                        <span style={{ fontSize: 9, fontWeight: 800, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>💳 PAID</span>
+                      ) : u.is_beta_user ? (
+                        <span style={{ fontSize: 9, fontWeight: 800, background: '#fce7f3', color: '#9d174d', padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>✨ BETA</span>
+                      ) : null}
+                    </div>
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 12, fontFamily: 'DM Sans,sans-serif', fontWeight: 700, color: (u.payment_amount || 0) > 0 ? '#059669' : '#cbd5e1' }}>
                     {(u.payment_amount || 0) > 0 ? `₹${(u.payment_amount || 0).toLocaleString('en-IN')}` : '—'}
