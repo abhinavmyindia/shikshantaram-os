@@ -331,8 +331,8 @@ export default function TrialPage() {
                 <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 13, color: '#0f172a', marginBottom: 8 }}>What you'll get:</div>
                 {[
                   '🎁 100 free trial credits',
-                  '⏱ 7 days of full access',
-                  '🛠 4 live tools to explore',
+                  '⏱ 7 days of access',
+                  '🛠 2 live tools: Niche Clarity & Product Navigator',
                   '📧 Login credentials by email',
                 ].map(t => (
                   <div key={t} style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#475569', padding: '4px 0' }}>{t}</div>
