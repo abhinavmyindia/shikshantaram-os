@@ -112,19 +112,26 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   };
 
   const reject = async (req: TrialRequest) => {
-    if (!confirm(`Reject trial request from ${req.full_name}?`)) return;
+    const reason = prompt(`Reject trial request from ${req.full_name}?\n\nOptional internal reason (leave blank to skip):`, '');
+    if (reason === null) return; // cancelled
     setWorking(true);
-    const { error } = await supabase
-      .from('trial_requests')
-      .update({ status: 'rejected', updated_at: new Date().toISOString() } as any)
-      .eq('id', req.id);
-    if (error) {
-      showToast('Failed to reject', 'error');
-    } else {
-      showToast(`Request from ${req.full_name} rejected.`, 'warning');
-      load();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke('reject-trial-request', {
+        body: { requestId: req.id, reason: reason.trim() || null, adminId: user?.id },
+      });
+      if (error || (data as any)?.error) {
+        const msg = (data as any)?.error || error?.message || 'Failed to reject';
+        showToast(msg, 'error');
+      } else {
+        showToast(`Request from ${req.full_name} rejected.`, 'warning');
+        load();
+      }
+    } catch (e: any) {
+      showToast(e?.message || 'Failed to reject', 'error');
+    } finally {
+      setWorking(false);
     }
-    setWorking(false);
   };
 
   const upgrade = async (req: TrialRequest) => {
