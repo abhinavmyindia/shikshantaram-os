@@ -1682,6 +1682,8 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
         <ApproveAccessModal request={approveRequest} onClose={() => setApproveRequest(null)}
           onApproved={() => { fetchSignups(); onRefresh(); }} showToast={showToast} logActivity={logActivity} />
       )}
+
+      {ipLookup && <AdminIpLookupModal ip={ipLookup} onClose={() => setIpLookup(null)} />}
     </div>
   );
 }
