@@ -50,8 +50,8 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Generate reset link
-    const APP_URL = Deno.env.get('APP_URL') || 'https://os.shikshantaram.in';
+    // Generate reset link — strip trailing slash to prevent double-slash URLs
+    const APP_URL = (Deno.env.get('APP_URL') || 'https://os.shikshantaram.in').replace(/\/+$/, '');
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',

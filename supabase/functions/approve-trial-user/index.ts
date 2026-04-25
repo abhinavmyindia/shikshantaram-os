@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
     // Create or fetch auth user
     const tempPassword = `Trial_${crypto.randomUUID().slice(0, 12)}!Aa1`;
     let userId: string | null = null;
+    let isNewUser = false;
 
     const { data: created, error: authErr } = await supabase.auth.admin.createUser({
       email: record.email,
@@ -57,11 +58,16 @@ Deno.serve(async (req) => {
 
     if (created?.user?.id) {
       userId = created.user.id;
+      isNewUser = true;
     } else if (authErr && (authErr.message || '').toLowerCase().includes('already')) {
-      // User already exists — find them
+      // User already exists — find them and reset password so trial credentials still work
       const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
       const found = list?.users?.find((u: any) => u.email?.toLowerCase() === record.email.toLowerCase());
-      if (found) userId = found.id;
+      if (found) {
+        userId = found.id;
+        // Reset password so the credentials we email are valid for returning trialers
+        await supabase.auth.admin.updateUserById(found.id, { password: tempPassword });
+      }
     } else if (authErr) {
       throw new Error(`Auth user creation failed: ${authErr.message}`);
     }
