@@ -223,6 +223,119 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     }
   };
 
+  const handleTrialUserAction = async (req: TrialRequest, action: 'block' | 'force_logout' | 'send_password_reset' | 'delete') => {
+    if (action === 'delete') {
+      if (!confirm(`Permanently delete ${req.full_name}'s trial account? This cannot be undone.`)) return;
+    }
+    setTrialActionLoading(req.id);
+    try {
+      const { data: { user: adminUser } } = await supabase.auth.getUser();
+
+      if (action === 'block') {
+        if (!req.user_id) {
+          showToast('No linked auth user to block', 'error');
+        } else {
+          await supabase.from('user_profiles')
+            .update({ access_tier: 'revoked', updated_at: new Date().toISOString() })
+            .eq('id', req.user_id);
+          // Also force logout active sessions
+          await supabase.functions.invoke('admin-delete-user', {
+            body: { action: 'force_logout', userId: req.user_id },
+          }).catch(() => {});
+          // Log admin action
+          await supabase.from('admin_activity_log').insert({
+            admin_id: adminUser?.id,
+            target_user_id: req.user_id,
+            target_user_name: req.full_name,
+            action_type: 'trial_user_blocked',
+            details: { email: req.email, trial_request_id: req.id },
+          }).catch(() => {});
+          showToast(`🚫 ${req.full_name} blocked & sessions revoked`, 'warning');
+        }
+      }
+
+      if (action === 'force_logout') {
+        if (!req.user_id) {
+          showToast('No linked auth user to log out', 'error');
+        } else {
+          const { error: fnErr } = await supabase.functions.invoke('admin-delete-user', {
+            body: { action: 'force_logout', userId: req.user_id },
+          });
+          if (fnErr) throw new Error(fnErr.message);
+          await supabase.from('security_events').insert({
+            user_id: req.user_id,
+            user_email: req.email,
+            event_type: 'force_logout',
+            severity: 'medium',
+            description: `Admin force-logged out trial user ${req.email}`,
+          }).catch(() => {});
+          showToast(`⚡ ${req.full_name} force-logged out`, 'success');
+        }
+      }
+
+      if (action === 'send_password_reset') {
+        const { error: fnErr } = await supabase.functions.invoke('send-password-reset', {
+          body: { email: req.email },
+        });
+        if (fnErr) throw new Error(fnErr.message);
+        showToast(`📧 Password reset email sent to ${req.email}`, 'success');
+      }
+
+      if (action === 'delete') {
+        if (req.user_id) {
+          const { error: fnErr } = await supabase.functions.invoke('admin-delete-user', {
+            body: { userId: req.user_id },
+          });
+          if (fnErr) throw new Error(fnErr.message);
+        }
+        // Mark trial as rejected, keep audit trail
+        await supabase.from('trial_requests').update({
+          status: 'rejected',
+          user_id: null,
+          admin_notes: (req.admin_notes || '') + '\n[Account deleted by admin]',
+          updated_at: new Date().toISOString(),
+        } as any).eq('id', req.id);
+        showToast(`🗑 ${req.full_name}'s account deleted`, 'success');
+      }
+
+      await load();
+    } catch (e: any) {
+      showToast(`❌ ${e?.message || 'Action failed'}`, 'error');
+    } finally {
+      setTrialActionLoading(null);
+    }
+  };
+
+  const saveEditedTrialUser = async () => {
+    if (!editingTrialUser) return;
+    setTrialActionLoading(editingTrialUser.id);
+    try {
+      await supabase.from('trial_requests').update({
+        full_name: editingTrialUser.full_name,
+        phone: editingTrialUser.phone,
+        access_duration_days: Number(editingTrialUser.access_duration_days) || null,
+        admin_notes: editingTrialUser.admin_notes,
+        updated_at: new Date().toISOString(),
+      } as any).eq('id', editingTrialUser.id);
+
+      if (editingTrialUser.user_id) {
+        await supabase.from('user_profiles').update({
+          full_name: editingTrialUser.full_name,
+          phone: editingTrialUser.phone,
+          updated_at: new Date().toISOString(),
+        }).eq('id', editingTrialUser.user_id);
+      }
+
+      setEditingTrialUser(null);
+      await load();
+      showToast('✏️ Trial user updated', 'success');
+    } catch (e: any) {
+      showToast(`❌ ${e?.message || 'Save failed'}`, 'error');
+    } finally {
+      setTrialActionLoading(null);
+    }
+  };
+
   const ipCounts: Record<string, number> = {};
   requests.forEach(r => {
     if (r.ip_address) ipCounts[r.ip_address] = (ipCounts[r.ip_address] || 0) + 1;
