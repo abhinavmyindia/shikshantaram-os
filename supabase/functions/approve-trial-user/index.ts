@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
           id: userId,
           full_name: record.full_name,
           phone: record.phone,
-          access_tier: 'basic',
+          access_tier: 'trial',
           is_trial_user: true,
           trial_ends_at: expiresAt.toISOString(),
           trial_request_id: requestId,
