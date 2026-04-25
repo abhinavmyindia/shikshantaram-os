@@ -13,14 +13,15 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const requestId = String(body.requestId ?? '').trim();
-    const durationDays = Number(body.durationDays);
+    const requestId = String(body.requestId ?? body.trial_request_id ?? '').trim();
+    const rawDuration = body.durationDays ?? body.duration_days ?? body.days;
+    const durationDays = Number(rawDuration);
     const adminNotes = body.adminNotes ? String(body.adminNotes) : null;
     const adminId = body.adminId ? String(body.adminId) : null;
 
     if (!requestId) throw new Error('requestId is required.');
-    if (![2, 7, 14, 30].includes(durationDays)) {
-      throw new Error('Duration must be 2, 7, 14, or 30 days.');
+    if (!Number.isFinite(durationDays) || ![2, 7, 14, 30].includes(durationDays)) {
+      throw new Error(`Duration must be 2, 7, 14, or 30 days. Received: ${JSON.stringify(rawDuration)}`);
     }
 
     const supabase = createClient(
