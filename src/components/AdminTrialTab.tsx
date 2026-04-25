@@ -107,11 +107,13 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     if (!approving) return;
     setWorking(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('approve-trial-user', {
         body: {
           requestId: approving.id,
           durationDays: approveDays,
           adminNotes: approveNotes.trim() || null,
+          adminId: user?.id,
         },
       });
       if (error) throw new Error(error.message);
