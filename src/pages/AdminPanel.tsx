@@ -1702,20 +1702,6 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         >
           📥 Export CSV
         </button>
-        {canDo.deleteUsers(role) && (
-          <button
-            onClick={() => { seedTestTrial(); setShowTestTrial(true); }}
-            title="Provision a complete test trial user end-to-end. Bypasses OTP."
-            style={{
-              padding: '7px 14px', borderRadius: 10, border: '1.5px solid rgba(124,58,237,0.3)',
-              background: 'linear-gradient(135deg,rgba(124,58,237,0.08),rgba(168,85,247,0.08))',
-              cursor: 'pointer', fontSize: 12, fontWeight: 800, color: '#7c3aed',
-              fontFamily: 'DM Sans,sans-serif', display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            🧪 Test Trial
-          </button>
-        )}
       </div>
 
       {/* Test Trial modal */}
