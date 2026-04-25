@@ -235,7 +235,7 @@ const TOOL_CARDS = [
 ];
 
 /* ───────── Navbar ───────── */
-function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatarColor = '#7c3aed', userId }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void; avatarColor?: string; userId?: string }) {
+function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatarColor = '#7c3aed', userId, trialEndsAt }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void; avatarColor?: string; userId?: string; trialEndsAt?: string | null }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
