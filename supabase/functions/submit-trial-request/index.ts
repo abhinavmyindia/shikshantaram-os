@@ -63,6 +63,38 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
+    // On resend: refresh OTP for the existing pending record instead of erroring out
+    if (isResend && existing && existing.status === 'pending') {
+      const newOtp = generateOTP();
+      const newExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      await supabase
+        .from('trial_requests')
+        .update({ otp_code: newOtp, otp_expires_at: newExpiry, otp_verified: false, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+
+      const RESEND_API_KEY_R = Deno.env.get('RESEND_API_KEY');
+      if (RESEND_API_KEY_R) {
+        const htmlR = `<div style="font-family:'DM Sans',sans-serif;max-width:520px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:16px"><div style="text-align:center;padding:8px 0 24px"><h1 style="font-size:22px;color:#0f172a;margin:0">Your new code</h1><p style="color:#64748b;font-size:14px;margin:8px 0 0">Hi ${fullName.split(' ')[0] || 'there'}, here's a fresh verification code.</p></div><div style="background:white;border-radius:12px;padding:28px;border:1px solid #e2e8f0;text-align:center"><div style="font-family:'Sora',sans-serif;font-weight:900;font-size:42px;letter-spacing:0.3em;color:#7c3aed;margin-bottom:8px">${newOtp}</div><div style="color:#94a3b8;font-size:12px">Expires in 10 minutes</div></div></div>`;
+        try {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_API_KEY_R}` },
+            body: JSON.stringify({
+              from: 'Shikshantaram OS Trial <trial@shikshantaram.in>',
+              to: email,
+              subject: `Your new OTP for Shikshantaram OS Trial — ${newOtp}`,
+              html: htmlR,
+            }),
+          });
+        } catch (e) { console.error('Resend OTP (resend) failed:', e); }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, requestId: existing.id, trial_request_id: existing.id, resent: true }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (existing) {
       if (existing.status === 'pending' || existing.status === 'approved') {
         return new Response(
