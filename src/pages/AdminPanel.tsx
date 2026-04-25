@@ -1665,7 +1665,9 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
             background: filter === f ? '#7c3aed' : '#f1f5f9', color: filter === f ? 'white' : '#64748b',
           }}>{f}</button>
         ))}
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>Showing {filtered.length} of {users.length}</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8', fontFamily: 'DM Sans,sans-serif', whiteSpace: 'nowrap' }}>
+          Showing {filtered.length} of {users.length}
+        </span>
         <button
           onClick={() => {
             const escape = (v: any) => {
@@ -1697,7 +1699,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
           style={{
             padding: '7px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: 'white',
             cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#0f172a', fontFamily: 'DM Sans,sans-serif',
-            display: 'flex', alignItems: 'center', gap: 6,
+            display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
           }}
         >
           📥 Export CSV
