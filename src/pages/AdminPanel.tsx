@@ -1282,6 +1282,67 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [showDeletionQueue, setShowDeletionQueue] = useState(false);
   const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
 
+  // Test Trial modal state
+  const [showTestTrial, setShowTestTrial] = useState(false);
+  const [ttName, setTtName] = useState('');
+  const [ttEmail, setTtEmail] = useState('');
+  const [ttPhone, setTtPhone] = useState('');
+  const [ttDays, setTtDays] = useState<2 | 7 | 14 | 30>(7);
+  const [ttNotes, setTtNotes] = useState('');
+  const [ttCreating, setTtCreating] = useState(false);
+  const [ttResult, setTtResult] = useState<{ email: string; tempPassword: string; expiresAt: string; durationDays: number; isNewAuthUser: boolean } | null>(null);
+
+  const seedTestTrial = () => {
+    const stamp = Date.now().toString().slice(-6);
+    setTtName(`Test Trialer ${stamp}`);
+    setTtEmail(`test.trial+${stamp}@shikshantaram.in`);
+    setTtPhone('+919999999999');
+    setTtDays(7);
+    setTtNotes('Smoke test — created from Users tab.');
+  };
+
+  const submitTestTrial = async () => {
+    if (!ttName.trim() || !ttEmail.trim()) {
+      showToast('Name and email are required', 'error');
+      return;
+    }
+    setTtCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-test-trial-user', {
+        body: {
+          fullName: ttName.trim(),
+          email: ttEmail.trim().toLowerCase(),
+          phone: ttPhone.trim(),
+          durationDays: ttDays,
+          adminNotes: ttNotes.trim() || 'Created via Test Trial (admin)',
+          adminId,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setTtResult({
+        email: data.email,
+        tempPassword: data.tempPassword,
+        expiresAt: data.expiresAt,
+        durationDays: data.durationDays,
+        isNewAuthUser: data.isNewAuthUser,
+      });
+      await logActivity('test_trial_created', data.userId, ttName.trim(), { email: data.email, durationDays: data.durationDays });
+      showToast(`🧪 Test trial user created (${ttDays}d)`, 'success');
+      onRefresh();
+    } catch (err: any) {
+      showToast(`❌ Test trial failed: ${err.message}`, 'error');
+    } finally {
+      setTtCreating(false);
+    }
+  };
+
+  const closeTestTrial = () => {
+    setShowTestTrial(false);
+    setTtResult(null);
+    setTtName(''); setTtEmail(''); setTtPhone(''); setTtNotes(''); setTtDays(7);
+  };
+
   useEffect(() => {
     supabase.from('user_byok_keys_safe').select('user_id, provider').eq('is_active', true).eq('is_valid', true)
       .then(({ data }) => setByokKeys(data || []));
