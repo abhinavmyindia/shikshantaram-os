@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, requestId: trialRecord.id }), {
+    return new Response(JSON.stringify({ success: true, requestId: trialRecord.id, trial_request_id: trialRecord.id }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
