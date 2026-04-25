@@ -32,9 +32,14 @@ export default function AppRoutes() {
   if (loading) return <SplashScreen />;
 
   // /reset-password and /trial must be accessible regardless of auth state.
-  const path = window.location.pathname;
+  // Normalize: collapse repeated slashes (handles malformed links like //reset-password)
+  const path = window.location.pathname.replace(/\/{2,}/g, '/');
 
   if (path === '/reset-password') {
+    // If URL was malformed, replace it cleanly so the recovery hash is preserved
+    if (window.location.pathname !== '/reset-password') {
+      window.history.replaceState(null, '', '/reset-password' + window.location.search + window.location.hash);
+    }
     return (
       <Routes>
         <Route path="/reset-password" element={<ResetPassword />} />

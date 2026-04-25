@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
     // Create or fetch auth user
     const tempPassword = `Trial_${crypto.randomUUID().slice(0, 12)}!Aa1`;
     let userId: string | null = null;
+    let isNewUser = false;
 
     const { data: created, error: authErr } = await supabase.auth.admin.createUser({
       email: record.email,
@@ -57,11 +58,16 @@ Deno.serve(async (req) => {
 
     if (created?.user?.id) {
       userId = created.user.id;
+      isNewUser = true;
     } else if (authErr && (authErr.message || '').toLowerCase().includes('already')) {
-      // User already exists — find them
+      // User already exists — find them and reset password so trial credentials still work
       const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
       const found = list?.users?.find((u: any) => u.email?.toLowerCase() === record.email.toLowerCase());
-      if (found) userId = found.id;
+      if (found) {
+        userId = found.id;
+        // Reset password so the credentials we email are valid for returning trialers
+        await supabase.auth.admin.updateUserById(found.id, { password: tempPassword });
+      }
     } else if (authErr) {
       throw new Error(`Auth user creation failed: ${authErr.message}`);
     }
@@ -174,6 +180,14 @@ Deno.serve(async (req) => {
         <tr><td style="padding:4px 0">Free Credits</td><td style="text-align:right;font-weight:700;color:#059669">100 (ready to use)</td></tr>
         <tr><td style="padding:4px 0">Login Email</td><td style="text-align:right;font-weight:700;color:#0f172a">${record.email}</td></tr>
       </table>
+    </div>
+    <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:10px;padding:18px;margin:16px 0;border:1px dashed #f59e0b">
+      <div style="font-family:'Sora',sans-serif;font-weight:800;font-size:13px;color:#78350f;margin-bottom:10px">🔐 Your Login Credentials</div>
+      <table style="width:100%;font-size:13px;color:#78350f">
+        <tr><td style="padding:4px 0">Email</td><td style="text-align:right;font-family:monospace;font-weight:700;color:#0f172a">${record.email}</td></tr>
+        <tr><td style="padding:4px 0">Temporary Password</td><td style="text-align:right;font-family:monospace;font-weight:700;color:#0f172a;letter-spacing:0.5px">${tempPassword}</td></tr>
+      </table>
+      <p style="font-size:11px;color:#92400e;margin:10px 0 0;line-height:1.5">⚠ Please change this password after your first login from <b>My Profile → Security</b>.</p>
     </div>
     <p style="font-size:14px;color:#475569;line-height:1.7">Start with <b>Niche Clarity</b> to find your perfect niche, then move to <b>Product Navigator</b>. Your first product idea is 15 minutes away.</p>
     <div style="text-align:center;margin:28px 0 16px">
