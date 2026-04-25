@@ -21,6 +21,9 @@ import CreditBalance from '@/components/CreditBalance';
 // supabase already imported above
 import { trackPageView } from '@/utils/activityTracker';
 import { useLowBalanceToast } from '@/hooks/useLowBalanceToast';
+import TrialCountdownPill from '@/components/TrialCountdownPill';
+import TrialExpiryPopup from '@/components/TrialExpiryPopup';
+import TrialLockModal, { LockedTool } from '@/components/TrialLockModal';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
@@ -235,7 +238,7 @@ const TOOL_CARDS = [
 ];
 
 /* ───────── Navbar ───────── */
-function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatarColor = '#7c3aed', userId }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void; avatarColor?: string; userId?: string }) {
+function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatarColor = '#7c3aed', userId, trialEndsAt }: { userName: string; userTier: string; isAdmin: boolean; onSignOut: () => void; onProfileClick: () => void; avatarColor?: string; userId?: string; trialEndsAt?: string | null }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const initials = userName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'U';
@@ -265,6 +268,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatar
         <span style={{ fontSize: 10, color: '#94a3b8', background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '1px 6px', borderRadius: 4 }}>⌘K</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+        {trialEndsAt && <TrialCountdownPill trialEndsAt={trialEndsAt} onClick={onProfileClick} />}
         {userId && <CreditBalance userId={userId} onTopUp={goToCreditsTab} />}
         <div style={{ position: 'relative', cursor: 'pointer' }}>
           <BellIcon />
@@ -2533,6 +2537,11 @@ const Index = () => {
   };
 
   const navigateTo = (page: PageId) => {
+    // Trial-user gating: block locked tools
+    if (isTrialUser && LOCKED_FOR_TRIAL.includes(page as LockedTool)) {
+      setTrialLockTool(page as LockedTool);
+      return;
+    }
     tracking.closeToolTracking();
     setActivePage(page);
     trackPageView(page);
@@ -2544,6 +2553,13 @@ const Index = () => {
   const handleToolAction = () => {
     tracking.trackToolAction();
   };
+
+  // ── Trial state ──
+  const isTrialUser = !!profile?.is_trial_user;
+  const trialEndsAt = profile?.trial_ends_at || null;
+  const trialExpired = isTrialUser && trialEndsAt ? new Date(trialEndsAt).getTime() <= Date.now() : false;
+  const LOCKED_FOR_TRIAL: LockedTool[] = ['offer', 'funnel', 'copy_suite', 'knowledge_base'];
+  const [trialLockTool, setTrialLockTool] = useState<LockedTool | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
@@ -2606,7 +2622,7 @@ const Index = () => {
         display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden',
         background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)',
       }}>
-        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} avatarColor={avatarColor} userId={user?.id} />
+        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} avatarColor={avatarColor} userId={user?.id} trialEndsAt={trialEndsAt} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
           {/* Mobile hamburger */}
           {isMobile && !sidebarOpen && (
@@ -2664,6 +2680,8 @@ const Index = () => {
       </div>
       {toast && <Toast data={toast} onClose={() => setToast(null)} />}
       {profile?.is_beta_user && user && <BetaFeedback userId={user.id} />}
+      {trialLockTool && <TrialLockModal tool={trialLockTool} onClose={() => setTrialLockTool(null)} />}
+      {trialExpired && <TrialExpiryPopup fullName={profile?.full_name} email={user?.email} />}
       {showUsagePopup && usageMsg && (
         <UsageValuePopup
           message={usageMsg}
