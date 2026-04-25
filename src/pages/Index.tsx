@@ -2537,6 +2537,11 @@ const Index = () => {
   };
 
   const navigateTo = (page: PageId) => {
+    // Trial-user gating: block locked tools
+    if (isTrialUser && LOCKED_FOR_TRIAL.includes(page as LockedTool)) {
+      setTrialLockTool(page as LockedTool);
+      return;
+    }
     tracking.closeToolTracking();
     setActivePage(page);
     trackPageView(page);
@@ -2617,7 +2622,7 @@ const Index = () => {
         display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden',
         background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)',
       }}>
-        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} avatarColor={avatarColor} userId={user?.id} />
+        <Navbar userName={userName} userTier={tier} isAdmin={isAdmin} onSignOut={signOut} onProfileClick={() => setActivePage('profile')} avatarColor={avatarColor} userId={user?.id} trialEndsAt={trialEndsAt} />
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
           {/* Mobile hamburger */}
           {isMobile && !sidebarOpen && (
