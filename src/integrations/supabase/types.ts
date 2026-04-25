@@ -763,6 +763,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          ip_address: string | null
           notes: string | null
           payment_type: string
           phone: string
@@ -770,11 +771,13 @@ export type Database = {
           reviewed_by: string | null
           status: string
           submitted_at: string | null
+          user_agent: string | null
         }
         Insert: {
           email: string
           full_name: string
           id?: string
+          ip_address?: string | null
           notes?: string | null
           payment_type: string
           phone: string
@@ -782,11 +785,13 @@ export type Database = {
           reviewed_by?: string | null
           status?: string
           submitted_at?: string | null
+          user_agent?: string | null
         }
         Update: {
           email?: string
           full_name?: string
           id?: string
+          ip_address?: string | null
           notes?: string | null
           payment_type?: string
           phone?: string
@@ -794,6 +799,7 @@ export type Database = {
           reviewed_by?: string | null
           status?: string
           submitted_at?: string | null
+          user_agent?: string | null
         }
         Relationships: []
       }
@@ -879,6 +885,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trial_requests: {
+        Row: {
+          access_duration_days: number | null
+          access_ends_at: string | null
+          access_starts_at: string | null
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          ip_address: string | null
+          otp_code: string | null
+          otp_expires_at: string | null
+          otp_verified: boolean | null
+          payment_amount: number | null
+          payment_link: string | null
+          payment_status: string | null
+          phone: string
+          status: string
+          submitted_at: string | null
+          trial_credits: number | null
+          updated_at: string | null
+          upgraded_at: string | null
+          upgraded_to_tier: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_duration_days?: number | null
+          access_ends_at?: string | null
+          access_starts_at?: string | null
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          ip_address?: string | null
+          otp_code?: string | null
+          otp_expires_at?: string | null
+          otp_verified?: boolean | null
+          payment_amount?: number | null
+          payment_link?: string | null
+          payment_status?: string | null
+          phone: string
+          status?: string
+          submitted_at?: string | null
+          trial_credits?: number | null
+          updated_at?: string | null
+          upgraded_at?: string | null
+          upgraded_to_tier?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_duration_days?: number | null
+          access_ends_at?: string | null
+          access_starts_at?: string | null
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          ip_address?: string | null
+          otp_code?: string | null
+          otp_expires_at?: string | null
+          otp_verified?: boolean | null
+          payment_amount?: number | null
+          payment_link?: string | null
+          payment_status?: string | null
+          phone?: string
+          status?: string
+          submitted_at?: string | null
+          trial_credits?: number | null
+          updated_at?: string | null
+          upgraded_at?: string | null
+          upgraded_to_tier?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_byok_keys: {
         Row: {
@@ -1049,6 +1142,7 @@ export type Database = {
           instagram: string | null
           instagram_url: string | null
           is_beta_user: boolean | null
+          is_trial_user: boolean | null
           linkedin: string | null
           linkedin_url: string | null
           notes: string | null
@@ -1059,6 +1153,8 @@ export type Database = {
           payment_amount: number | null
           payment_status: string
           phone: string | null
+          trial_ends_at: string | null
+          trial_request_id: string | null
           twitter: string | null
           twitter_url: string | null
           updated_at: string | null
@@ -1085,6 +1181,7 @@ export type Database = {
           instagram?: string | null
           instagram_url?: string | null
           is_beta_user?: boolean | null
+          is_trial_user?: boolean | null
           linkedin?: string | null
           linkedin_url?: string | null
           notes?: string | null
@@ -1095,6 +1192,8 @@ export type Database = {
           payment_amount?: number | null
           payment_status?: string
           phone?: string | null
+          trial_ends_at?: string | null
+          trial_request_id?: string | null
           twitter?: string | null
           twitter_url?: string | null
           updated_at?: string | null
@@ -1121,6 +1220,7 @@ export type Database = {
           instagram?: string | null
           instagram_url?: string | null
           is_beta_user?: boolean | null
+          is_trial_user?: boolean | null
           linkedin?: string | null
           linkedin_url?: string | null
           notes?: string | null
@@ -1131,6 +1231,8 @@ export type Database = {
           payment_amount?: number | null
           payment_status?: string
           phone?: string | null
+          trial_ends_at?: string | null
+          trial_request_id?: string | null
           twitter?: string | null
           twitter_url?: string | null
           updated_at?: string | null
@@ -1139,7 +1241,15 @@ export type Database = {
           website_url?: string | null
           youtube_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_trial_request_id_fkey"
+            columns: ["trial_request_id"]
+            isOneToOne: false
+            referencedRelation: "trial_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_security_settings: {
         Row: {
@@ -1309,6 +1419,7 @@ export type Database = {
             Returns: Json
           }
       delete_expired_recent_work: { Args: never; Returns: undefined }
+      expire_trial_users: { Args: never; Returns: undefined }
       get_my_admin_role: { Args: never; Returns: string }
       get_signup_count: { Args: never; Returns: number }
       has_admin_role: {
