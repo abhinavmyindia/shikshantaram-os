@@ -288,14 +288,30 @@ export default function TrialPage() {
             </button>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, fontFamily: 'DM Sans, sans-serif', fontSize: 12 }}>
-              <button onClick={() => { setStep('form'); setOtp(''); setOtpError(''); }}
+              <button onClick={() => { setStep('form'); setOtp(''); setOtpError(''); setResendCount(0); setResendCooldown(0); }}
                 style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}>
                 ← Use different email
               </button>
-              <button onClick={resendOtp} disabled={resendCooldown > 0}
-                style={{ background: 'none', border: 'none', color: resendCooldown > 0 ? '#cbd5e1' : '#7c3aed', fontWeight: 700, cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer', fontSize: 12 }}>
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
-              </button>
+              {(() => {
+                const exhausted = resendCount >= MAX_RESENDS;
+                const disabled = resendCooldown > 0 || exhausted;
+                let label: string;
+                if (exhausted) label = `Limit reached (${MAX_RESENDS}/${MAX_RESENDS})`;
+                else if (resendCooldown > 0) {
+                  const mm = Math.floor(resendCooldown / 60);
+                  const ss = resendCooldown % 60;
+                  label = mm > 0 ? `Resend in ${mm}m ${ss}s` : `Resend in ${ss}s`;
+                } else {
+                  label = `Resend code (${MAX_RESENDS - resendCount} left)`;
+                }
+                return (
+                  <button onClick={resendOtp} disabled={disabled}
+                    style={{ background: 'none', border: 'none', color: disabled ? '#cbd5e1' : '#7c3aed', fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 12 }}
+                    title={exhausted ? 'Maximum resends reached for this session' : ''}>
+                    {label}
+                  </button>
+                );
+              })()}
             </div>
           </>
         )}
