@@ -714,6 +714,54 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         </div>
         );
       })()}
+
+      {editingTrialUser && (
+        <div onClick={() => setEditingTrialUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 520, width: '100%', maxHeight: '92vh', overflowY: 'auto', background: 'white', borderRadius: 20, boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: 'white' }}>✏️ Edit Trial User — {editingTrialUser.full_name}</div>
+              <button onClick={() => setEditingTrialUser(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {[
+                { label: 'Full Name', key: 'full_name', type: 'text' },
+                { label: 'Email (read-only)', key: 'email', type: 'email', readonly: true },
+                { label: 'Phone Number', key: 'phone', type: 'tel' },
+                { label: 'Access Duration (days)', key: 'access_duration_days', type: 'number' },
+              ].map(field => (
+                <div key={field.key} style={{ marginBottom: 14 }}>
+                  <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{field.label}</label>
+                  <input
+                    type={field.type}
+                    readOnly={field.readonly}
+                    value={(editingTrialUser as any)[field.key] ?? ''}
+                    onChange={e => setEditingTrialUser(prev => prev ? ({ ...prev, [field.key]: e.target.value } as TrialRequest) : prev)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans', fontSize: 13, color: field.readonly ? '#94a3b8' : '#0f172a', outline: 'none', boxSizing: 'border-box', background: field.readonly ? '#f8fafc' : 'white' }}
+                  />
+                </div>
+              ))}
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Admin Notes</label>
+                <textarea
+                  rows={3}
+                  value={editingTrialUser.admin_notes || ''}
+                  onChange={e => setEditingTrialUser(prev => prev ? ({ ...prev, admin_notes: e.target.value } as TrialRequest) : prev)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'flex-end', background: '#fafbfc', position: 'sticky', bottom: 0 }}>
+              <button onClick={() => setEditingTrialUser(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button disabled={trialActionLoading === editingTrialUser.id} onClick={saveEditedTrialUser} style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: 'pointer', opacity: trialActionLoading === editingTrialUser.id ? 0.6 : 1, boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}>
+                {trialActionLoading === editingTrialUser.id ? 'Saving…' : '💾 Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
