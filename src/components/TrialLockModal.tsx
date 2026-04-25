@@ -1,37 +1,36 @@
 import { CSSProperties } from 'react';
 
-const PAYMENT_LINK = 'https://rzp.io/rzp/osaccess';
-
 export type LockedTool = 'offer' | 'funnel' | 'copy_suite' | 'knowledge_base';
 
 interface Props {
   tool: LockedTool;
   onClose: () => void;
+  onUpgrade: () => void;
 }
 
-const TOOL_COPY: Record<LockedTool, { emoji: string; title: string; pitch: string; gradient: string; }> = {
+const TRIAL_LOCK_MESSAGES: Record<LockedTool, { emoji: string; headline: string; body: string; gradient: string; }> = {
   offer: {
     emoji: '🎁',
-    title: 'Offer Creation is for full members',
-    pitch: 'Build conversion-tested offers with pricing psychology, bonuses, and positioning frameworks. Available with full access.',
+    headline: "Offer Creation is a full-access feature",
+    body: "You just found the tool that turns your product idea into a complete, irresistible offer — pricing strategy, value stack, guarantee script, objection handlers, the works. Trial users get the ideas. Full members get the offer that actually sells them. One upgrade away.",
     gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
   },
   funnel: {
-    emoji: '🪜',
-    title: 'Funnel Builder is for full members',
-    pitch: 'Map out your complete sales funnel — from lead magnet to high-ticket back-end — in 3 guided steps.',
+    emoji: '🔀',
+    headline: "Honestly? Seeing Funnel Builder would just make you upgrade faster.",
+    body: "So we saved you the temptation. It builds your complete sales funnel — every page, every step, every email in the sequence — in one go. Trial users get to imagine it. Full members get to use it. You already know which one you want.",
     gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)',
   },
   copy_suite: {
     emoji: '✍️',
-    title: 'Copywriting Suite is for full members',
-    pitch: 'Write sales pages, email sequences, ad copy, and hooks in minutes. 7 copy types, AI-powered, conversion-focused.',
+    headline: "The words that make people buy are behind this wall",
+    body: "The Copy Suite writes your sales page, email sequence, social posts, and ads — all tuned to your exact niche and offer. Not generic copy. Your copy. Trial gives you the idea. Full membership gives you the words to sell it. That gap is ₹29,500.",
     gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
   },
   knowledge_base: {
     emoji: '📚',
-    title: 'Knowledge Base is for full members',
-    pitch: 'Upload your PDFs, docs, and notes — the AI uses them as your private expertise context across every tool.',
+    headline: "Knowledge Base is where it gets scary personal",
+    body: "Upload your resume, notes, or any document — and the AI finds product ideas only you could build, based on what you actually know. It's the most personalised feature on the platform. And yes, it's behind the upgrade. Because once you experience ideas built from your own expertise, generic AI tools feel broken forever.",
     gradient: 'linear-gradient(135deg, #10b981, #06b6d4)',
   },
 };
@@ -44,12 +43,14 @@ const overlay: CSSProperties = {
 };
 
 const card: CSSProperties = {
-  width: '100%', maxWidth: 440, background: 'white', borderRadius: 24, overflow: 'hidden',
+  width: '100%', maxWidth: 460, background: 'white', borderRadius: 24, overflow: 'hidden',
   boxShadow: '0 28px 80px rgba(0,0,0,0.4)', animation: 'tlmPopIn 0.35s cubic-bezier(0.34,1.56,0.64,1)',
 };
 
-export default function TrialLockModal({ tool, onClose }: Props) {
-  const copy = TOOL_COPY[tool];
+export default function TrialLockModal({ tool, onClose, onUpgrade }: Props) {
+  const copy = TRIAL_LOCK_MESSAGES[tool];
+  const handleUpgrade = () => { onClose(); onUpgrade(); };
+
   return (
     <div style={overlay} onClick={onClose}>
       <style>{`
@@ -63,7 +64,7 @@ export default function TrialLockModal({ tool, onClose }: Props) {
           position: 'relative', overflow: 'hidden', textAlign: 'center',
         }}>
           <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', top: -40, right: -40 }} />
-          <button onClick={onClose} style={{
+          <button onClick={onClose} aria-label="Close" style={{
             position: 'absolute', top: 12, right: 12, width: 28, height: 28, borderRadius: '50%',
             background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)',
             color: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer',
@@ -74,37 +75,37 @@ export default function TrialLockModal({ tool, onClose }: Props) {
 
         {/* Body */}
         <div style={{ padding: '24px 24px 22px' }}>
-          <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: 19, color: '#0f172a', textAlign: 'center', marginBottom: 10, letterSpacing: '-0.02em' }}>
-            {copy.title}
+          <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 900, fontSize: 19, color: '#0f172a', textAlign: 'center', marginBottom: 12, letterSpacing: '-0.02em', lineHeight: 1.3 }}>
+            {copy.headline}
           </div>
           <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13.5, color: '#475569', lineHeight: 1.7, textAlign: 'center', marginBottom: 18 }}>
-            {copy.pitch}
+            {copy.body}
           </div>
 
           <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.18)', borderRadius: 12, padding: 14, marginBottom: 18 }}>
             <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 12.5, color: '#0f172a', marginBottom: 8 }}>
-              ✨ Upgrade for ₹2,999 to unlock:
+              ✨ Upgrade for ₹29,500 to unlock:
             </div>
             <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12.5, color: '#475569', lineHeight: 1.7 }}>
               All 8 tools · 500 bonus credits · Lifetime updates · Your trial work kept
             </div>
           </div>
 
-          <a href={PAYMENT_LINK} target="_blank" rel="noopener noreferrer"
+          <button onClick={handleUpgrade}
             style={{
-              display: 'block', textAlign: 'center', padding: '13px 20px', borderRadius: 12,
-              background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white',
-              fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 14, textDecoration: 'none',
+              display: 'block', width: '100%', textAlign: 'center', padding: '13px 20px', borderRadius: 12,
+              background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', border: 'none', cursor: 'pointer',
+              fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 14,
               boxShadow: '0 4px 20px rgba(124,58,237,0.35)', marginBottom: 8,
             }}>
-            🚀 Upgrade to Full Access →
-          </a>
+            Upgrade to Full Access — ₹29,500 →
+          </button>
           <button onClick={onClose}
             style={{
               width: '100%', padding: 10, background: 'none', border: 'none',
               fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: '#94a3b8', fontWeight: 600, cursor: 'pointer',
             }}>
-            Maybe later
+            Go back to trial
           </button>
         </div>
       </div>

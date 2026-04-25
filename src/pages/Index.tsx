@@ -2561,6 +2561,7 @@ const Index = () => {
   const trialExpired = isTrialUser && trialEndsAt ? new Date(trialEndsAt).getTime() <= Date.now() : false;
   const LOCKED_FOR_TRIAL: LockedTool[] = ['offer', 'funnel', 'copy_suite', 'knowledge_base'];
   const [trialLockTool, setTrialLockTool] = useState<LockedTool | null>(null);
+  const [showTrialUpgrade, setShowTrialUpgrade] = useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
@@ -2688,8 +2689,14 @@ const Index = () => {
       </div>
       {toast && <Toast data={toast} onClose={() => setToast(null)} />}
       {profile?.is_beta_user && user && <BetaFeedback userId={user.id} />}
-      {trialLockTool && <TrialLockModal tool={trialLockTool} onClose={() => setTrialLockTool(null)} />}
-      {trialExpired && <TrialExpiryPopup fullName={profile?.full_name} email={user?.email} />}
+      {trialLockTool && (
+        <TrialLockModal
+          tool={trialLockTool}
+          onClose={() => setTrialLockTool(null)}
+          onUpgrade={() => setShowTrialUpgrade(true)}
+        />
+      )}
+      {(trialExpired || showTrialUpgrade) && <TrialExpiryPopup fullName={profile?.full_name} email={user?.email} />}
       {showUsagePopup && usageMsg && (
         <UsageValuePopup
           message={usageMsg}

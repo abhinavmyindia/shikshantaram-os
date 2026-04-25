@@ -26,22 +26,30 @@ export default function TrialCountdownPill({ trialEndsAt, onClick }: Props) {
   const diff = endTs - now;
   const { d, h, m, expired } = fmt(diff);
 
-  // urgency: <24h = red, <72h = orange, else purple
+  // urgency bands: critical (<6h) = red, warning (<24h) = amber, normal (>24h) = purple
   let bg = 'linear-gradient(135deg,#7c3aed,#a855f7)';
   let shadow = '0 2px 10px rgba(124,58,237,0.35)';
+  let dotColor = '#ffffff';
+  let pulse = false;
   let label: string;
   if (expired) {
     bg = 'linear-gradient(135deg,#dc2626,#ef4444)';
     shadow = '0 2px 10px rgba(220,38,38,0.45)';
+    dotColor = '#fecaca';
+    pulse = true;
     label = '⛔ Trial Expired';
-  } else if (diff < 24 * 3600 * 1000) {
+  } else if (diff < 6 * 3600 * 1000) {
     bg = 'linear-gradient(135deg,#dc2626,#ef4444)';
     shadow = '0 2px 12px rgba(220,38,38,0.45)';
+    dotColor = '#fecaca';
+    pulse = true;
     label = h > 0 ? `⏰ ${h}h ${m}m left` : `⏰ ${m}m left`;
-  } else if (diff < 72 * 3600 * 1000) {
+  } else if (diff < 24 * 3600 * 1000) {
     bg = 'linear-gradient(135deg,#ea580c,#f59e0b)';
     shadow = '0 2px 10px rgba(234,88,12,0.4)';
-    label = `⏳ ${d}d ${h}h left`;
+    dotColor = '#fde68a';
+    pulse = true;
+    label = h > 0 ? `⏳ ${h}h ${m}m left` : `⏳ ${m}m left`;
   } else {
     label = `🎁 Trial · ${d}d ${h}h left`;
   }
@@ -61,6 +69,14 @@ export default function TrialCountdownPill({ trialEndsAt, onClick }: Props) {
       onMouseLeave={e => { if (onClick) (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}
       title={expired ? 'Your trial has ended' : `Trial ends ${new Date(trialEndsAt).toLocaleString('en-IN')}`}
     >
+      <style>{`@keyframes tcpPulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.85);} }`}</style>
+      {pulse && (
+        <span style={{
+          display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+          background: dotColor, boxShadow: `0 0 6px ${dotColor}`,
+          animation: 'tcpPulse 1.2s ease-in-out infinite',
+        }} />
+      )}
       {label}
     </div>
   );
