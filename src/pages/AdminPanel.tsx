@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import SecurityTab from '@/components/AdminSecurityTab';
 import AdminCreditsTab from '@/components/AdminCreditsTab';
 import AdminTrialTab from '@/components/AdminTrialTab';
+import AdminIpLookupModal from '@/components/AdminIpLookupModal';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 interface UserRow {
   id: string;
@@ -1534,6 +1535,7 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
   const [trialIps, setTrialIps] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [approveRequest, setApproveRequest] = useState<SignupRow | null>(null);
+  const [ipLookup, setIpLookup] = useState<string | null>(null);
 
   useEffect(() => { fetchSignups(); }, []);
 
@@ -1581,7 +1583,11 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
         <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.email}</td>
         <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{s.phone}</td>
         <td style={{ padding: '10px 16px', fontSize: 11.5, color: flagged ? '#991b1b' : '#94a3b8', fontWeight: flagged ? 700 : 400 }}>
-          {s.ip_address || '—'}
+          {s.ip_address ? (
+            <button onClick={() => setIpLookup(s.ip_address!)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontFamily: 'monospace', color: flagged ? '#991b1b' : '#475569', textDecoration: 'underline', fontWeight: flagged ? 700 : 500 }} title="Click to look up all accounts on this IP">
+              {s.ip_address}
+            </button>
+          ) : '—'}
           {flagged && (
             <span title={`Same IP also used by trial accounts: ${trialMatches.join(', ')}`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 6, background: '#fee2e2', color: '#991b1b' }}>
               ⚠ TRIAL ×{trialMatches.length}
@@ -1676,6 +1682,8 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
         <ApproveAccessModal request={approveRequest} onClose={() => setApproveRequest(null)}
           onApproved={() => { fetchSignups(); onRefresh(); }} showToast={showToast} logActivity={logActivity} />
       )}
+
+      {ipLookup && <AdminIpLookupModal ip={ipLookup} onClose={() => setIpLookup(null)} />}
     </div>
   );
 }

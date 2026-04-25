@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import AdminIpLookupModal from './AdminIpLookupModal';
+import TrialAuditLog from './TrialAuditLog';
 
 interface TrialRequest {
   id: string;
@@ -61,11 +63,12 @@ const statusBadge = (status: string): React.CSSProperties => {
 export default function AdminTrialTab({ showToast }: { showToast: (msg: string, type?: string) => void }) {
   const [requests, setRequests] = useState<TrialRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'requests' | 'users'>('requests');
+  const [view, setView] = useState<'requests' | 'users' | 'audit'>('requests');
   const [extending, setExtending] = useState<TrialRequest | null>(null);
   const [extendDays, setExtendDays] = useState(3);
   const [extendReason, setExtendReason] = useState('');
   const [working, setWorking] = useState(false);
+  const [ipLookup, setIpLookup] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -195,6 +198,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         {[
           { id: 'requests' as const, label: '📥 Trial Requests', count: pending.length },
           { id: 'users' as const, label: '👤 Active Trial Users', count: approved.length },
+          { id: 'audit' as const, label: '📜 Audit Log', count: null },
         ].map(t => (
           <button key={t.id} onClick={() => setView(t.id)} style={{
             padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
@@ -202,7 +206,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
             background: view === t.id ? 'white' : 'transparent',
             color: view === t.id ? '#0f172a' : '#64748b',
             boxShadow: view === t.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-          }}>{t.label} <span style={{ marginLeft: 4, fontSize: 11, color: '#94a3b8' }}>({t.count})</span></button>
+          }}>{t.label}{t.count !== null && <span style={{ marginLeft: 4, fontSize: 11, color: '#94a3b8' }}>({t.count})</span>}</button>
         ))}
       </div>
 
@@ -229,7 +233,13 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                           <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{r.email}</td>
                           <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{r.phone}</td>
                           <td style={{ padding: '10px 16px', fontSize: 11.5, color: flagged ? '#991b1b' : '#94a3b8', fontWeight: flagged ? 700 : 400 }}>
-                            {r.ip_address || '—'}
+                            {r.ip_address ? (
+                              <button onClick={() => setIpLookup(r.ip_address!)}
+                                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11.5, fontFamily: 'monospace', color: flagged ? '#991b1b' : '#475569', textDecoration: 'underline', fontWeight: flagged ? 700 : 500 }}
+                                title="Click to look up all accounts on this IP">
+                                {r.ip_address}
+                              </button>
+                            ) : '—'}
                             {flagged && (
                               <span title={`This IP appears in ${ipCounts[r.ip_address!]} trial requests`} style={{ marginLeft: 6, fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 6, background: '#fee2e2', color: '#991b1b' }}>
                                 ⚠ ×{ipCounts[r.ip_address!]}
@@ -274,7 +284,11 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                       <tr key={r.id} style={{ borderTop: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '10px 16px', fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{r.full_name}</td>
                         <td style={{ padding: '10px 16px', fontSize: 12, color: '#64748b' }}>{r.email}</td>
-                        <td style={{ padding: '10px 16px', fontSize: 11, color: '#94a3b8' }}>{r.ip_address || '—'}</td>
+                        <td style={{ padding: '10px 16px', fontSize: 11, color: '#94a3b8' }}>
+                          {r.ip_address ? (
+                            <button onClick={() => setIpLookup(r.ip_address!)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 11, fontFamily: 'monospace', color: '#475569', textDecoration: 'underline' }} title="Look up all accounts on this IP">{r.ip_address}</button>
+                          ) : '—'}
+                        </td>
                         <td style={{ padding: '10px 16px' }}><span style={statusBadge(r.status)}>{r.status}</span></td>
                         <td style={{ padding: '10px 16px', fontSize: 11, color: '#94a3b8' }}>{fmt(r.submitted_at)}</td>
                         <td style={{ padding: '10px 16px', fontSize: 11, color: '#94a3b8' }}>{fmt(r.upgraded_at || r.access_ends_at)}</td>
@@ -339,6 +353,10 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
           )}
         </>
       )}
+
+      {view === 'audit' && <TrialAuditLog onIpLookup={(ip) => setIpLookup(ip)} />}
+
+      {ipLookup && <AdminIpLookupModal ip={ipLookup} onClose={() => setIpLookup(null)} />}
 
       {extending && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>

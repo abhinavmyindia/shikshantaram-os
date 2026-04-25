@@ -68,6 +68,9 @@ export default function TrialPage() {
   const [verifying, setVerifying] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendCount, setResendCount] = useState(0); // # of resends used (excludes initial send)
+  const MAX_RESENDS = 3;
+  const COOLDOWN_LADDER = [60, 120, 300]; // seconds: 1st=60s, 2nd=120s, 3rd=300s
 
   // SEO: noindex + page title
   useEffect(() => {
@@ -140,6 +143,10 @@ export default function TrialPage() {
 
   const resendOtp = async () => {
     if (resendCooldown > 0) return;
+    if (resendCount >= MAX_RESENDS) {
+      setOtpError(`Resend limit reached (${MAX_RESENDS}/${MAX_RESENDS}). Please start over with a different email.`);
+      return;
+    }
     setOtpError('');
     try {
       await supabase.functions.invoke('submit-trial-request', {
@@ -150,7 +157,10 @@ export default function TrialPage() {
           resend: true,
         },
       });
-      setResendCooldown(60);
+      const nextCount = resendCount + 1;
+      setResendCount(nextCount);
+      const nextCooldown = COOLDOWN_LADDER[Math.min(nextCount - 1, COOLDOWN_LADDER.length - 1)];
+      setResendCooldown(nextCooldown);
     } catch {
       setOtpError('Could not resend. Please try again in a moment.');
     }
@@ -278,14 +288,30 @@ export default function TrialPage() {
             </button>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, fontFamily: 'DM Sans, sans-serif', fontSize: 12 }}>
-              <button onClick={() => { setStep('form'); setOtp(''); setOtpError(''); }}
+              <button onClick={() => { setStep('form'); setOtp(''); setOtpError(''); setResendCount(0); setResendCooldown(0); }}
                 style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}>
                 ← Use different email
               </button>
-              <button onClick={resendOtp} disabled={resendCooldown > 0}
-                style={{ background: 'none', border: 'none', color: resendCooldown > 0 ? '#cbd5e1' : '#7c3aed', fontWeight: 700, cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer', fontSize: 12 }}>
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
-              </button>
+              {(() => {
+                const exhausted = resendCount >= MAX_RESENDS;
+                const disabled = resendCooldown > 0 || exhausted;
+                let label: string;
+                if (exhausted) label = `Limit reached (${MAX_RESENDS}/${MAX_RESENDS})`;
+                else if (resendCooldown > 0) {
+                  const mm = Math.floor(resendCooldown / 60);
+                  const ss = resendCooldown % 60;
+                  label = mm > 0 ? `Resend in ${mm}m ${ss}s` : `Resend in ${ss}s`;
+                } else {
+                  label = `Resend code (${MAX_RESENDS - resendCount} left)`;
+                }
+                return (
+                  <button onClick={resendOtp} disabled={disabled}
+                    style={{ background: 'none', border: 'none', color: disabled ? '#cbd5e1' : '#7c3aed', fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 12 }}
+                    title={exhausted ? 'Maximum resends reached for this session' : ''}>
+                    {label}
+                  </button>
+                );
+              })()}
             </div>
           </>
         )}

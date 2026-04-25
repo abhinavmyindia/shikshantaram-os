@@ -24,6 +24,7 @@ import { useLowBalanceToast } from '@/hooks/useLowBalanceToast';
 import TrialCountdownPill from '@/components/TrialCountdownPill';
 import TrialExpiryPopup from '@/components/TrialExpiryPopup';
 import TrialLockModal, { LockedTool } from '@/components/TrialLockModal';
+import TrialStatusBanner from '@/components/TrialStatusBanner';
 
 /* ───────── seedRng ───────── */
 function seedRng(str: string) {
@@ -2663,7 +2664,14 @@ const Index = () => {
             <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} savedCount={savedCount} />
           </div>
           <main id="main-content-area" style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '32px 16px' : '32px 36px', marginLeft: 0 }}>
-            {activePage === 'dashboard' && <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />}
+            {activePage === 'dashboard' && (
+              <>
+                {isTrialUser && trialEndsAt && (
+                  <TrialStatusBanner trialEndsAt={trialEndsAt} fullName={userName} />
+                )}
+                <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />
+              </>
+            )}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onNavigate={navigateTo} />}
             {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onBuildOffer={(data) => {
               setOfferPrefill(data);

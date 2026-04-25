@@ -12,11 +12,13 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const requestId = String(body.requestId ?? '').trim();
-    const extraDays = Number(body.extraDays);
+    const extraDays = Number(body.extraDays ?? body.additionalDays);
+    const adminId = body.adminId ? String(body.adminId) : null;
+    const reason = body.reason ? String(body.reason) : null;
 
     if (!requestId) throw new Error('requestId is required.');
-    if (![2, 7, 14, 30].includes(extraDays)) {
-      throw new Error('extraDays must be 2, 7, 14, or 30.');
+    if (!Number.isFinite(extraDays) || extraDays < 1 || extraDays > 30) {
+      throw new Error('extraDays must be between 1 and 30.');
     }
 
     const supabase = createClient(
@@ -56,6 +58,18 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq('id', record.user_id);
+
+    // Audit log (best-effort)
+    if (adminId) {
+      try {
+        const { data: rec } = await supabase.from('trial_requests').select('full_name, email, ip_address').eq('id', requestId).maybeSingle();
+        await supabase.from('admin_activity_log').insert({
+          admin_id: adminId, action_type: 'trial_extended',
+          target_user_id: record.user_id, target_user_name: rec?.full_name || null,
+          details: { trial_request_id: requestId, extra_days: extraDays, reason, email: rec?.email, ip_address: rec?.ip_address },
+        });
+      } catch (e) { console.error('audit log failed:', e); }
+    }
 
     return new Response(
       JSON.stringify({ success: true, newEndsAt: newEnd.toISOString() }),

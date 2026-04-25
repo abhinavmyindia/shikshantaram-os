@@ -16,6 +16,7 @@ Deno.serve(async (req) => {
     const requestId = String(body.requestId ?? '').trim();
     const newTier = String(body.newTier ?? '').trim();
     const adminNotes = body.adminNotes ? String(body.adminNotes) : null;
+    const adminId = body.adminId ? String(body.adminId) : null;
 
     if (!requestId) throw new Error('requestId is required.');
     if (!['basic', 'premium', 'beta'].includes(newTier)) {
@@ -70,6 +71,17 @@ Deno.serve(async (req) => {
       p_type: 'gift',
       p_description: `Upgrade bonus — welcome to ${newTier} tier`,
     });
+
+    // Audit log (best-effort)
+    if (adminId) {
+      try {
+        await supabase.from('admin_activity_log').insert({
+          admin_id: adminId, action_type: 'trial_upgraded',
+          target_user_id: record.user_id, target_user_name: record.full_name,
+          details: { trial_request_id: requestId, new_tier: newTier, email: record.email, ip_address: record.ip_address },
+        });
+      } catch (e) { console.error('audit log failed:', e); }
+    }
 
     // Send upgrade email
     const tierLabel = newTier.charAt(0).toUpperCase() + newTier.slice(1);
