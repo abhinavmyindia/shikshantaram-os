@@ -102,7 +102,7 @@ function AdminToast({ toast, onClose }: { toast: { message: string; type: string
 }
 
 // ─── DELETE CONFIRMATION MODAL ───────────────────────────────
-function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
+export function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: {
   userName: string; onConfirm: () => void; onCancel: () => void; deleting: boolean;
 }) {
   const [confirmText, setConfirmText] = useState('');
@@ -594,7 +594,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
 }
 
 // ─── SECURITY PROFILE MODAL ────────────────────────────────
-function SecurityProfileModal({ userId, userEmail, userName, onClose, adminId, showToast }: {
+export function SecurityProfileModal({ userId, userEmail, userName, onClose, adminId, showToast }: {
   userId: string; userEmail: string; userName: string; onClose: () => void; adminId: string; showToast: (msg: string, type?: string) => void;
 }) {
   const [sessions, setSessions] = useState<any[]>([]);
