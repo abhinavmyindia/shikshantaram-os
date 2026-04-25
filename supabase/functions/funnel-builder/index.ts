@@ -322,12 +322,14 @@ serve(async (req) => {
     }
   } catch (e) {
     console.error('funnel-builder error:', e);
-    await supabaseAdmin.from('error_logs').insert({
-      error_type: 'edge_function_error', severity: 'error',
-      message: e instanceof Error ? e.message : 'Unknown error',
-      stack_trace: e instanceof Error ? e.stack : undefined,
-      module: 'funnel_builder', additional_data: { function: 'funnel-builder' },
-    }).catch(() => {});
+    try {
+      await supabaseAdmin.from('error_logs').insert({
+        error_type: 'edge_function_error', severity: 'error',
+        message: e instanceof Error ? e.message : 'Unknown error',
+        stack_trace: e instanceof Error ? e.stack : undefined,
+        module: 'funnel_builder', additional_data: { function: 'funnel-builder' },
+      });
+    } catch (_) { /* ignore logging failure */ }
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'Unknown error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
