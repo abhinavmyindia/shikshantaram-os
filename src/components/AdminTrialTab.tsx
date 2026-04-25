@@ -277,7 +277,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                           <td style={{ padding: '10px 16px', fontSize: 11.5, color: '#94a3b8' }}>{fmt(r.submitted_at)}</td>
                           <td style={{ padding: '10px 16px' }}>
                             <div style={{ display: 'flex', gap: 6 }}>
-                              <button disabled={working} onClick={() => approve(r)} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>✅ Approve</button>
+                              <button disabled={working} onClick={() => openApprove(r)} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>✅ Approve</button>
                               <button disabled={working} onClick={() => reject(r)} style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.5 : 1 }}>✗ Reject</button>
                             </div>
                           </td>
