@@ -354,6 +354,10 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         </>
       )}
 
+      {view === 'audit' && <TrialAuditLog onIpLookup={(ip) => setIpLookup(ip)} />}
+
+      {ipLookup && <AdminIpLookupModal ip={ipLookup} onClose={() => setIpLookup(null)} />}
+
       {extending && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ background: 'white', borderRadius: 20, padding: 28, maxWidth: 440, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
