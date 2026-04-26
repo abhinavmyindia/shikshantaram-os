@@ -205,21 +205,28 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
       const trialUpgraded = isTrial && form.paymentStatus === 'paid' && form.accessTier !== 'trial' && form.accessTier !== 'revoked';
       const switchingToTrial = !isTrial && form.accessTier === 'trial';
 
+      const switchingFromTrial = isTrial && form.accessTier !== 'trial';
+
       const updatePayload: Record<string, any> = {
         full_name: form.fullName.trim(), phone: form.phone.trim(), access_tier: form.accessTier,
         payment_status: form.paymentStatus, payment_amount: form.paymentAmount || 0,
         is_beta_user: form.isBetaUser, notes: form.notes.trim(), updated_at: new Date().toISOString(),
       };
 
+      let newTrialEndsAt: string | null = null;
       if (switchingToTrial) {
         const days = Math.max(1, Math.min(90, Number(form.trialDurationDays) || 7));
-        const endsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        newTrialEndsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
         updatePayload.is_trial = true;
         updatePayload.trial_started_at = new Date().toISOString();
-        updatePayload.trial_ends_at = endsAt;
+        updatePayload.trial_ends_at = newTrialEndsAt;
       } else if (trialUpgraded) {
         updatePayload.is_trial = false;
         updatePayload.trial_ends_at = new Date().toISOString();
+      } else if (switchingFromTrial) {
+        // Leaving trial for a non-trial tier (not via the paid-upgrade path) — clear stale trial end
+        updatePayload.is_trial = false;
+        updatePayload.trial_ends_at = null;
       } else if (trialExtended && form.trialEndsAt) {
         updatePayload.trial_ends_at = form.trialEndsAt;
       }
