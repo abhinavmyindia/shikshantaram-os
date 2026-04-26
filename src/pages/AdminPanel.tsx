@@ -156,12 +156,21 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
   user: UserRow; email: string; trialStartedAt?: string | null; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
   const isTrial = user.access_tier === 'trial';
+  // For existing trial users, default duration input to remaining days (min 1, max 90)
+  const initialTrialDuration = (() => {
+    if (isTrial && user.trial_ends_at) {
+      const ms = new Date(user.trial_ends_at).getTime() - Date.now();
+      const days = Math.ceil(ms / (24 * 60 * 60 * 1000));
+      return Math.max(1, Math.min(90, days));
+    }
+    return 7;
+  })();
   const [form, setForm] = useState({
     fullName: user.full_name, email, phone: user.phone || '', accessTier: user.access_tier,
     paymentStatus: user.payment_status, paymentAmount: user.payment_amount || 0,
     isBetaUser: user.is_beta_user || false, notes: user.notes || '',
     trialEndsAt: user.trial_ends_at || null,
-    trialDurationDays: 7,
+    trialDurationDays: initialTrialDuration,
   });
   const [originalEmail] = useState(email);
   const [originalTrialEndsAt] = useState<string | null>(user.trial_ends_at || null);
@@ -196,21 +205,28 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
       const trialUpgraded = isTrial && form.paymentStatus === 'paid' && form.accessTier !== 'trial' && form.accessTier !== 'revoked';
       const switchingToTrial = !isTrial && form.accessTier === 'trial';
 
+      const switchingFromTrial = isTrial && form.accessTier !== 'trial';
+
       const updatePayload: Record<string, any> = {
         full_name: form.fullName.trim(), phone: form.phone.trim(), access_tier: form.accessTier,
         payment_status: form.paymentStatus, payment_amount: form.paymentAmount || 0,
         is_beta_user: form.isBetaUser, notes: form.notes.trim(), updated_at: new Date().toISOString(),
       };
 
+      let newTrialEndsAt: string | null = null;
       if (switchingToTrial) {
         const days = Math.max(1, Math.min(90, Number(form.trialDurationDays) || 7));
-        const endsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        newTrialEndsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
         updatePayload.is_trial = true;
         updatePayload.trial_started_at = new Date().toISOString();
-        updatePayload.trial_ends_at = endsAt;
+        updatePayload.trial_ends_at = newTrialEndsAt;
       } else if (trialUpgraded) {
         updatePayload.is_trial = false;
         updatePayload.trial_ends_at = new Date().toISOString();
+      } else if (switchingFromTrial) {
+        // Leaving trial for a non-trial tier (not via the paid-upgrade path) — clear stale trial end
+        updatePayload.is_trial = false;
+        updatePayload.trial_ends_at = null;
       } else if (trialExtended && form.trialEndsAt) {
         updatePayload.trial_ends_at = form.trialEndsAt;
       }
@@ -218,7 +234,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
       await supabase.from('user_profiles').update(updatePayload as any).eq('id', user.id);
 
       // Mirror to trial_requests so the Trials tab reflects the change instantly
-      if (user.trial_request_id && (trialExtended || trialUpgraded)) {
+      if (user.trial_request_id && (trialExtended || trialUpgraded || switchingToTrial)) {
         const trUpdate: Record<string, any> = { updated_at: new Date().toISOString() };
         if (trialUpgraded) {
           trUpdate.status = 'upgraded';
@@ -226,6 +242,10 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
           trUpdate.upgraded_to_tier = form.accessTier;
           trUpdate.payment_status = 'paid';
           trUpdate.payment_amount = form.paymentAmount || 0;
+        } else if (switchingToTrial && newTrialEndsAt) {
+          trUpdate.access_starts_at = new Date().toISOString();
+          trUpdate.access_ends_at = newTrialEndsAt;
+          trUpdate.status = 'approved';
         } else if (trialExtended && form.trialEndsAt) {
           trUpdate.access_ends_at = form.trialEndsAt;
           trUpdate.status = 'approved';
