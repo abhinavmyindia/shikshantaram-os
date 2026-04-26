@@ -549,7 +549,10 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
                     </div>
                   ))}
                 </div>
-                {form.accessTier === 'trial' && (
+                {/* Trial Duration input only appears when switching a NON-trial user TO trial.
+                    For existing trial users, the Trial Status section above is the single
+                    source of truth for extending/ending the trial. */}
+                {form.accessTier === 'trial' && !isTrial && (
                   <div style={{ marginBottom: 14, marginTop: 4 }}>
                     <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Trial Duration (Days)</label>
                     <input type="number" min={1} max={90} value={form.trialDurationDays}

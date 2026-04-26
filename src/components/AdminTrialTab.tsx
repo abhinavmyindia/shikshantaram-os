@@ -408,7 +408,11 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                 </thead>
                 <tbody>
                   {approved.map(r => {
-                    const ms = r.access_ends_at ? new Date(r.access_ends_at).getTime() - Date.now() : 0;
+                    // Single source of truth: user_profiles.trial_ends_at.
+                    // Fall back to access_ends_at only if the profile hasn't loaded yet.
+                    const profileEndsAt = r.user_id ? profileMap[r.user_id]?.trial_ends_at : null;
+                    const effectiveEndsAt = profileEndsAt || r.access_ends_at;
+                    const ms = effectiveEndsAt ? new Date(effectiveEndsAt).getTime() - Date.now() : 0;
                     const urgent = ms > 0 && ms < 86400000;
                     const hasUser = !!r.user_id;
                     return (
@@ -416,8 +420,8 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                         <td style={{ padding: '10px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>{r.full_name}</td>
                         <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{r.email}</td>
                         <td style={{ padding: '10px 16px', fontSize: 11.5, color: '#94a3b8' }}>{fmt(r.access_starts_at)}</td>
-                        <td style={{ padding: '10px 16px', fontSize: 11.5, color: '#94a3b8' }}>{fmt(r.access_ends_at)}</td>
-                        <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: urgent ? '#991b1b' : '#0f172a' }}>{fmtRelative(r.access_ends_at)}</td>
+                        <td style={{ padding: '10px 16px', fontSize: 11.5, color: '#94a3b8' }}>{fmt(effectiveEndsAt)}</td>
+                        <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: urgent ? '#991b1b' : '#0f172a' }}>{fmtRelative(effectiveEndsAt)}</td>
                         <td style={{ padding: '10px 16px', fontSize: 12, color: '#0f172a' }}>{r.trial_credits ?? '—'}</td>
                         <td style={{ padding: '10px 16px' }}>
                           <div style={{ display: 'flex', gap: 6 }}>
