@@ -818,7 +818,7 @@ function ToolCard({ card, onClick, delay, lockedIndex, trialLocked = false }: { 
                   backgroundSize: '200px 100%',
                   animation: 'badgeShimmer 2.5s linear infinite',
                 }} />
-                <span style={{ position: 'relative' as const }}>⚡ BUILDING NOW</span>
+                <span style={{ position: 'relative' as const }}>{trialLocked && !card.locked ? '🔒 TRIAL LOCKED' : '⚡ BUILDING NOW'}</span>
               </span>
             : <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(255,255,255,0.3)', color: 'white', padding: '2px 8px', borderRadius: 20, letterSpacing: '0.06em' }}>LIVE</span>
           }
