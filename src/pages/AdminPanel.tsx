@@ -194,6 +194,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
       // Detect trial state transitions
       const trialExtended = isTrial && form.trialEndsAt !== originalTrialEndsAt;
       const trialUpgraded = isTrial && form.paymentStatus === 'paid' && form.accessTier !== 'trial' && form.accessTier !== 'revoked';
+      const switchingToTrial = !isTrial && form.accessTier === 'trial';
 
       const updatePayload: Record<string, any> = {
         full_name: form.fullName.trim(), phone: form.phone.trim(), access_tier: form.accessTier,
@@ -201,7 +202,13 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
         is_beta_user: form.isBetaUser, notes: form.notes.trim(), updated_at: new Date().toISOString(),
       };
 
-      if (trialUpgraded) {
+      if (switchingToTrial) {
+        const days = Math.max(1, Math.min(90, Number(form.trialDurationDays) || 7));
+        const endsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        updatePayload.is_trial = true;
+        updatePayload.trial_started_at = new Date().toISOString();
+        updatePayload.trial_ends_at = endsAt;
+      } else if (trialUpgraded) {
         updatePayload.is_trial = false;
         updatePayload.trial_ends_at = new Date().toISOString();
       } else if (trialExtended && form.trialEndsAt) {
