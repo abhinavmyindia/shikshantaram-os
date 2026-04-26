@@ -225,6 +225,27 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
         await supabase.from('trial_requests').update(trUpdate as any).eq('id', user.trial_request_id);
       }
 
+      // On upgrade, grant 500-credit welcome bonus to the new paid tier
+      if (trialUpgraded) {
+        try {
+          const { data: cur } = await supabase.from('user_credits')
+            .select('balance, lifetime_topped').eq('user_id', user.id).maybeSingle();
+          const upgradeBonus = 500;
+          const newBalance = (cur?.balance || 0) + upgradeBonus;
+          const newTopped = (cur?.lifetime_topped || 0) + upgradeBonus;
+          await supabase.from('user_credits').update({
+            balance: newBalance, lifetime_topped: newTopped, updated_at: new Date().toISOString(),
+          }).eq('user_id', user.id);
+          await supabase.from('credit_transactions').insert({
+            user_id: user.id, user_email: email, type: 'gift',
+            amount: upgradeBonus, balance_after: newBalance,
+            description: `Upgrade bonus — welcome to ${form.accessTier} tier`,
+          } as any);
+        } catch (creditErr) {
+          console.warn('Upgrade bonus grant failed (non-blocking):', creditErr);
+        }
+      }
+
       if (form.email !== originalEmail) {
         const { data, error } = await supabase.functions.invoke('admin-update-user', {
           body: { userId: user.id, newEmail: form.email.toLowerCase().trim() },
