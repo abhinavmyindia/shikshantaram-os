@@ -892,7 +892,7 @@ function getGreeting() {
   return 'Good evening';
 }
 
-function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string }) {
+function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha', isTrialUser = false }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string; isTrialUser?: boolean }) {
   const [greeting, setGreeting] = useState(getGreeting());
   const [popupCard, setPopupCard] = useState<typeof TOOL_CARDS[0] | null>(null);
   const [recentWork, setRecentWork] = useState<any[]>([]);
