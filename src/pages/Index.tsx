@@ -871,7 +871,7 @@ function ToolCard({ card, onClick, delay, lockedIndex, trialLocked = false }: { 
                   border: `1px solid ${card.accent}30`,
                   padding: '5px 14px', borderRadius: 50, cursor: 'pointer',
                   transition: 'all 0.18s',
-                }}>⚡ Coming Soon</span>
+                }}>{trialLocked && !card.locked ? '🔒 Upgrade to Unlock' : '⚡ Coming Soon'}</span>
             : <button onMouseEnter={e => { e.currentTarget.style.background = card.accent; e.currentTarget.style.color = 'white'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = card.accentLight; e.currentTarget.style.color = card.accent; }}
                 style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: card.accent, background: card.accentLight, padding: '5px 14px', borderRadius: 50, border: 'none', cursor: 'pointer', transition: 'all 0.15s' }}>
