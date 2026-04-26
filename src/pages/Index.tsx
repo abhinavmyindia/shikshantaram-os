@@ -760,10 +760,11 @@ function LockedCardPopup({ cardId, gradient, accent, onClose }: { cardId: string
 }
 
 /* ───────── Tool Card ───────── */
-function ToolCard({ card, onClick, delay, lockedIndex }: { card: typeof TOOL_CARDS[0]; onClick: () => void; delay: number; lockedIndex?: number }) {
+function ToolCard({ card, onClick, delay, lockedIndex, trialLocked = false }: { card: typeof TOOL_CARDS[0]; onClick: () => void; delay: number; lockedIndex?: number; trialLocked?: boolean }) {
   const [hovered, setHovered] = useState(false);
   const [bouncing, setBouncing] = useState(false);
-  const locked = card.locked;
+  // Treat as locked visually if either the tool is "Coming Soon" OR the user is on a trial without access
+  const locked = card.locked || trialLocked;
   const grad = card.gradient;
   const entranceDelay = locked && lockedIndex !== undefined ? (0.18 + lockedIndex * 0.04) : delay;
 
