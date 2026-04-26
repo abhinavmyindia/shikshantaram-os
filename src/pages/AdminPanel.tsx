@@ -1241,7 +1241,7 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const day24hAgo = new Date(now.getTime() - 86400000).toISOString();
 
-      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes, revTodayRes, revWeekRes, deductionsRes, critErrRes, secEvtRes] = await Promise.all([
+      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes, revTodayRes, revWeekRes, deductionsRes, critErrRes, secEvtRes, paidRes, trialRes] = await Promise.all([
         supabase.from('user_presence').select('user_id, user_email, user_name, last_seen, current_page, session_start').gte('last_seen', twoMinAgo).order('last_seen', { ascending: false }),
         supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', todayStart),
         supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', weekStart),
@@ -1253,6 +1253,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
         supabase.from('credit_transactions').select('amount').in('type', ['deduction', 'shadow_deduction']).gte('created_at', day24hAgo),
         supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false),
         supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('is_reviewed', false).in('severity', ['high', 'critical']),
+        supabase.from('user_profiles').select('*', { count: 'exact', head: true }).in('access_tier', ['basic', 'premium', 'beta']),
+        supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('access_tier', 'trial'),
       ]);
 
       setPresenceData(presRes.data || []);
@@ -1261,6 +1263,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       setCreditsConsumed24h(Math.abs((deductionsRes.data || []).reduce((s: number, t: any) => s + t.amount, 0)));
       setCriticalErrors(critErrRes.count || 0);
       setUnreviewedSecurityEvents(secEvtRes.count || 0);
+      setPaidUserCount(paidRes.count || 0);
+      setTrialUserCount(trialRes.count || 0);
 
       const tokenData = aiTodayRes.data || [];
       const tokensToday = (tokenData as any[]).reduce((s: number, l: any) => s + (l.total_tokens || 0), 0);
