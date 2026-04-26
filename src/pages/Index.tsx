@@ -1003,11 +1003,18 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha', isTria
       {/* Tool cards grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
         {TOOL_CARDS.map((card, i) => {
-          const currentLockedIdx = card.locked ? lockedIdx++ : undefined;
+          const TRIAL_LOCKED_CARD_IDS = ['offer', 'funnel', 'copy_suite'];
+          const trialLocked = isTrialUser && TRIAL_LOCKED_CARD_IDS.includes(card.id);
+          const currentLockedIdx = (card.locked || trialLocked) ? lockedIdx++ : undefined;
           return (
             <ToolCard key={card.id} card={card} delay={0.14 + i * 0.04}
               lockedIndex={currentLockedIdx}
-              onClick={() => card.locked ? setPopupCard(card) : onNavigate(card.id as PageId)} />
+              trialLocked={trialLocked}
+              onClick={() => {
+                if (trialLocked) { onNavigate(card.id as PageId); return; } // navigateTo opens TrialLockModal
+                if (card.locked) { setPopupCard(card); return; }
+                onNavigate(card.id as PageId);
+              }} />
           );
         })}
       </div>
