@@ -2678,7 +2678,7 @@ const Index = () => {
                 {isTrialUser && trialEndsAt && (
                   <TrialStatusBanner trialEndsAt={trialEndsAt} fullName={userName} />
                 )}
-                <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />
+                <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} isTrialUser={isTrialUser} />
               </>
             )}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onNavigate={navigateTo} />}
