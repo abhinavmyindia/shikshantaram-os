@@ -161,6 +161,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
     paymentStatus: user.payment_status, paymentAmount: user.payment_amount || 0,
     isBetaUser: user.is_beta_user || false, notes: user.notes || '',
     trialEndsAt: user.trial_ends_at || null,
+    trialDurationDays: 7,
   });
   const [originalEmail] = useState(email);
   const [originalTrialEndsAt] = useState<string | null>(user.trial_ends_at || null);
@@ -193,6 +194,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
       // Detect trial state transitions
       const trialExtended = isTrial && form.trialEndsAt !== originalTrialEndsAt;
       const trialUpgraded = isTrial && form.paymentStatus === 'paid' && form.accessTier !== 'trial' && form.accessTier !== 'revoked';
+      const switchingToTrial = !isTrial && form.accessTier === 'trial';
 
       const updatePayload: Record<string, any> = {
         full_name: form.fullName.trim(), phone: form.phone.trim(), access_tier: form.accessTier,
@@ -200,7 +202,13 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
         is_beta_user: form.isBetaUser, notes: form.notes.trim(), updated_at: new Date().toISOString(),
       };
 
-      if (trialUpgraded) {
+      if (switchingToTrial) {
+        const days = Math.max(1, Math.min(90, Number(form.trialDurationDays) || 7));
+        const endsAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        updatePayload.is_trial = true;
+        updatePayload.trial_started_at = new Date().toISOString();
+        updatePayload.trial_ends_at = endsAt;
+      } else if (trialUpgraded) {
         updatePayload.is_trial = false;
         updatePayload.trial_ends_at = new Date().toISOString();
       } else if (trialExtended && form.trialEndsAt) {
@@ -493,28 +501,43 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
             {sections[isTrial ? 2 : 1] && (
               <div style={{ padding: '12px 0' }}>
                 <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 8 }}>Access Tier</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 8 }}>
                   {[
+                    { key: 'trial', label: 'Trial', desc: 'Time-limited access', badge: 'Trial 🕐', color: '#0891b2' },
                     { key: 'basic', label: 'Basic', desc: 'Niche + Product', badge: '2 tools', color: '#059669' },
                     { key: 'premium', label: 'Premium', desc: 'All tools', badge: 'Full access ✦', color: '#7c3aed' },
                     { key: 'beta', label: 'Beta', desc: 'All tools + feedback', badge: 'Beta 🧪', color: '#ec4899' },
                   ].map(t => (
-                    <div key={t.key} onClick={() => setForm(f => ({ ...f, accessTier: t.key }))} style={{
+                    <div key={t.key} onClick={() => setForm(f => {
+                      if (t.key === 'trial') {
+                        return { ...f, accessTier: 'trial', paymentStatus: 'pending', paymentAmount: 0 };
+                      }
+                      return { ...f, accessTier: t.key };
+                    })} style={{
                       borderRadius: 10, padding: 12, cursor: 'pointer',
                       border: `2px solid ${form.accessTier === t.key ? t.color : '#e2e8f0'}`,
-                      background: form.accessTier === t.key ? `${t.color}0F` : '#f8fafc',
+                      background: form.accessTier === t.key ? (t.key === 'trial' ? 'rgba(8,145,178,0.06)' : `${t.color}0F`) : '#f8fafc',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <div style={{ width: 14, height: 14, borderRadius: '50%', border: `2px solid ${form.accessTier === t.key ? t.color : '#cbd5e1'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {form.accessTier === t.key && <div style={{ width: 7, height: 7, borderRadius: '50%', background: t.color }} />}
                         </div>
-                        <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13 }}>{t.label}</span>
+                        <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{t.label}</span>
                       </div>
                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{t.desc}</div>
                       <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: t.color, marginTop: 4 }}>{t.badge}</div>
                     </div>
                   ))}
                 </div>
+                {form.accessTier === 'trial' && (
+                  <div style={{ marginBottom: 14, marginTop: 4 }}>
+                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Trial Duration (Days)</label>
+                    <input type="number" min={1} max={90} value={form.trialDurationDays}
+                      onChange={e => setForm(f => ({ ...f, trialDurationDays: parseInt(e.target.value) || 1 }))}
+                      style={inputStyle} />
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>Access will expire after this many days from today.</div>
+                  </div>
+                )}
                 <div onClick={() => setForm(f => ({ ...f, accessTier: 'revoked' }))} style={{ cursor: 'pointer', marginTop: 4, marginBottom: 14 }}>
                   <span style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#ef4444' }}>🔒 Revoke access</span>
                 </div>
@@ -529,7 +552,10 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
                 </div>
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Payment Amount (₹)</label>
-                  <input type="number" value={form.paymentAmount} onChange={e => setForm(f => ({ ...f, paymentAmount: parseInt(e.target.value) || 0 }))} placeholder="0" style={inputStyle} />
+                  <input type="number" value={form.paymentAmount} readOnly={form.accessTier === 'trial'}
+                    onChange={e => setForm(f => ({ ...f, paymentAmount: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                    style={{ ...inputStyle, background: form.accessTier === 'trial' ? '#f1f5f9' : (inputStyle as any).background, color: form.accessTier === 'trial' ? '#94a3b8' : (inputStyle as any).color, cursor: form.accessTier === 'trial' ? 'not-allowed' : 'text' }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
                   <div>
