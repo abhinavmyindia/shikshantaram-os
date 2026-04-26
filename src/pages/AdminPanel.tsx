@@ -1214,6 +1214,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
   const [creditsConsumed24h, setCreditsConsumed24h] = useState(0);
   const [criticalErrors, setCriticalErrors] = useState(0);
   const [unreviewedSecurityEvents, setUnreviewedSecurityEvents] = useState(0);
+  const [paidUserCount, setPaidUserCount] = useState(0);
+  const [trialUserCount, setTrialUserCount] = useState(0);
 
   const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed', copywriting_suite: '#ec4899' };
   const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity', copywriting_suite: 'Copy Suite' };
@@ -1239,7 +1241,7 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const day24hAgo = new Date(now.getTime() - 86400000).toISOString();
 
-      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes, revTodayRes, revWeekRes, deductionsRes, critErrRes, secEvtRes] = await Promise.all([
+      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes, revTodayRes, revWeekRes, deductionsRes, critErrRes, secEvtRes, paidRes, trialRes] = await Promise.all([
         supabase.from('user_presence').select('user_id, user_email, user_name, last_seen, current_page, session_start').gte('last_seen', twoMinAgo).order('last_seen', { ascending: false }),
         supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', todayStart),
         supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', weekStart),
@@ -1251,6 +1253,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
         supabase.from('credit_transactions').select('amount').in('type', ['deduction', 'shadow_deduction']).gte('created_at', day24hAgo),
         supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false),
         supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('is_reviewed', false).in('severity', ['high', 'critical']),
+        supabase.from('user_profiles').select('*', { count: 'exact', head: true }).in('access_tier', ['basic', 'premium', 'beta']),
+        supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('access_tier', 'trial'),
       ]);
 
       setPresenceData(presRes.data || []);
@@ -1259,6 +1263,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       setCreditsConsumed24h(Math.abs((deductionsRes.data || []).reduce((s: number, t: any) => s + t.amount, 0)));
       setCriticalErrors(critErrRes.count || 0);
       setUnreviewedSecurityEvents(secEvtRes.count || 0);
+      setPaidUserCount(paidRes.count || 0);
+      setTrialUserCount(trialRes.count || 0);
 
       const tokenData = aiTodayRes.data || [];
       const tokensToday = (tokenData as any[]).reduce((s: number, l: any) => s + (l.total_tokens || 0), 0);
@@ -1349,23 +1355,46 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       <div>
         <h3 style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '0.08em', margin: '0 0 12px' }}>Business Vitals</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-          {[
+          {([
             { icon: '💰', iconBg: 'rgba(5,150,105,0.1)', value: `₹${todayRevenue?.toLocaleString('en-IN') || '0'}`, label: 'Revenue Today', sub: `₹${weekRevenue?.toLocaleString('en-IN') || '0'} this week`, color: '#059669', period: 'Today' },
             { icon: '🤖', iconBg: 'rgba(6,182,212,0.1)', value: todayStats.aiCallsToday || 0, label: 'AI Calls Today', sub: todayStats.tokensToday ? `${(todayStats.tokensToday / 1000).toFixed(1)}K tokens` : '0 tokens', color: '#0891b2', period: 'Today' },
             { icon: '⚡', iconBg: 'rgba(124,58,237,0.1)', value: creditsConsumed24h?.toLocaleString('en-IN') || 0, label: 'Credits Used (24h)', sub: 'Shadow + live deductions', color: '#7c3aed', period: '24h' },
-            { icon: '👥', iconBg: 'rgba(234,88,12,0.1)', value: todayStats.activeToday || 0, label: 'Active Today', sub: `${todayStats.activeWeek || 0} this week · ${todayStats.totalUsers || stats.total} total`, color: '#ea580c', period: 'Today' },
+            { __totalUsers: true } as any,
             { icon: '🔥', iconBg: 'rgba(245,158,11,0.1)', value: formatModuleName(todayStats.topModule?.[0]), label: 'Hottest Tool Today', sub: `${todayStats.topModule?.[1] || 0} calls today`, color: '#b45309', period: 'Today', smallText: true },
             { icon: '🆕', iconBg: 'rgba(16,185,129,0.1)', value: todayStats.newSignupsThisWeek || 0, label: 'New Signups', sub: 'Last 7 days', color: '#10b981', period: '7d' },
-          ].map(k => (
-            <div key={k.label} style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)', borderRadius: 16, padding: 18, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: k.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{k.icon}</div>
-                <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 10, color: '#94a3b8' }}>{k.period}</span>
+          ] as any[]).map((k: any, idx: number) => (
+            k.__totalUsers ? (
+              <div key="total-users" style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)', borderRadius: 16, padding: 18, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(2,132,199,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>👥</div>
+                  <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 10, color: '#94a3b8' }}>Total</span>
+                </div>
+                <p style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 24, color: '#0f172a', margin: '0 0 2px', lineHeight: 1.2 }}>{paidUserCount + trialUserCount}</p>
+                <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#94a3b8', margin: '0 0 8px', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Total Users</p>
+                <div style={{ display: 'flex', gap: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' as const, alignItems: 'center' }}>
+                  <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#0284c7', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 10 }}>⚡</span>{paidUserCount} paid
+                  </span>
+                  <span style={{ color: '#e2e8f0', fontSize: 11 }}>·</span>
+                  <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: trialUserCount > 0 ? '#7c3aed' : '#94a3b8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {trialUserCount > 0 && (
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', animation: 'pulseDot 2s infinite', flexShrink: 0, display: 'inline-block' }} />
+                    )}
+                    {trialUserCount} on trial
+                  </span>
+                </div>
               </div>
-              <p style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: (k as any).smallText ? 18 : 24, color: k.color, margin: '0 0 2px', lineHeight: 1.2 }}>{k.value}</p>
-              <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#94a3b8', margin: '0 0 6px', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{k.label}</p>
-              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#64748b', margin: 0 }}>{k.sub}</p>
-            </div>
+            ) : (
+              <div key={k.label} style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)', borderRadius: 16, padding: 18, border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: k.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{k.icon}</div>
+                  <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 10, color: '#94a3b8' }}>{k.period}</span>
+                </div>
+                <p style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: k.smallText ? 18 : 24, color: k.color, margin: '0 0 2px', lineHeight: 1.2 }}>{k.value}</p>
+                <p style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 11, color: '#94a3b8', margin: '0 0 6px', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{k.label}</p>
+                <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#64748b', margin: 0 }}>{k.sub}</p>
+              </div>
+            )
           ))}
         </div>
       </div>
