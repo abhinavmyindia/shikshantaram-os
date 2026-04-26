@@ -93,39 +93,23 @@ Deno.serve(async (req) => {
         { onConflict: 'id' }
       );
 
-    // Credit allocation:
-    // - If trigger fired (new user), they already got 50. Top up by 50 → 100 total.
-    // - If no credits row exists (edge case), grant full 100.
+    // Credit allocation — overwrite to exactly 100. The starter-credits trigger
+    // skips trial users, so this function is the single source of truth for trial credits.
     const { data: existingCredits } = await supabase
       .from('user_credits')
-      .select('balance, free_credits_given, lifetime_topped')
+      .select('balance')
       .eq('user_id', userId)
       .maybeSingle();
 
     if (existingCredits) {
-      const newBalance = (existingCredits.balance || 0) + 50;
-      const newGiven = (existingCredits.free_credits_given || 0) + 50;
-      const newTopped = (existingCredits.lifetime_topped || 0) + 50;
-
       await supabase.from('user_credits')
         .update({
-          balance: newBalance,
-          free_credits_given: newGiven,
-          lifetime_topped: newTopped,
+          balance: 100,
+          free_credits_given: 100,
+          lifetime_topped: 100,
           updated_at: now.toISOString(),
         })
         .eq('user_id', userId);
-
-      await supabase.from('credit_transactions').insert({
-        user_id: userId,
-        user_email: record.email,
-        type: 'promo',
-        amount: 50,
-        balance_after: newBalance,
-        description: 'Trial top-up — reaching 100 total trial credits',
-        tool_module: 'trial',
-        call_type: 'starter_allocation',
-      });
     } else {
       await supabase.from('user_credits').insert({
         user_id: userId,
@@ -133,17 +117,18 @@ Deno.serve(async (req) => {
         lifetime_topped: 100,
         free_credits_given: 100,
       });
-      await supabase.from('credit_transactions').insert({
-        user_id: userId,
-        user_email: record.email,
-        type: 'promo',
-        amount: 100,
-        balance_after: 100,
-        description: 'Trial starter credits — 100 total',
-        tool_module: 'trial',
-        call_type: 'starter_allocation',
-      });
     }
+
+    await supabase.from('credit_transactions').insert({
+      user_id: userId,
+      user_email: record.email,
+      type: 'promo',
+      amount: 100,
+      balance_after: 100,
+      description: 'Trial starter credits — 100 total',
+      tool_module: 'trial',
+      call_type: 'starter_allocation',
+    });
 
     // Update trial request
     await supabase

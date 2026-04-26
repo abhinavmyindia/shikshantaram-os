@@ -760,10 +760,11 @@ function LockedCardPopup({ cardId, gradient, accent, onClose }: { cardId: string
 }
 
 /* ───────── Tool Card ───────── */
-function ToolCard({ card, onClick, delay, lockedIndex }: { card: typeof TOOL_CARDS[0]; onClick: () => void; delay: number; lockedIndex?: number }) {
+function ToolCard({ card, onClick, delay, lockedIndex, trialLocked = false }: { card: typeof TOOL_CARDS[0]; onClick: () => void; delay: number; lockedIndex?: number; trialLocked?: boolean }) {
   const [hovered, setHovered] = useState(false);
   const [bouncing, setBouncing] = useState(false);
-  const locked = card.locked;
+  // Treat as locked visually if either the tool is "Coming Soon" OR the user is on a trial without access
+  const locked = card.locked || trialLocked;
   const grad = card.gradient;
   const entranceDelay = locked && lockedIndex !== undefined ? (0.18 + lockedIndex * 0.04) : delay;
 
@@ -817,7 +818,7 @@ function ToolCard({ card, onClick, delay, lockedIndex }: { card: typeof TOOL_CAR
                   backgroundSize: '200px 100%',
                   animation: 'badgeShimmer 2.5s linear infinite',
                 }} />
-                <span style={{ position: 'relative' as const }}>⚡ BUILDING NOW</span>
+                <span style={{ position: 'relative' as const }}>{trialLocked && !card.locked ? '🔒 TRIAL LOCKED' : '⚡ BUILDING NOW'}</span>
               </span>
             : <span style={{ fontSize: 8, fontWeight: 800, background: 'rgba(255,255,255,0.3)', color: 'white', padding: '2px 8px', borderRadius: 20, letterSpacing: '0.06em' }}>LIVE</span>
           }
@@ -870,7 +871,7 @@ function ToolCard({ card, onClick, delay, lockedIndex }: { card: typeof TOOL_CAR
                   border: `1px solid ${card.accent}30`,
                   padding: '5px 14px', borderRadius: 50, cursor: 'pointer',
                   transition: 'all 0.18s',
-                }}>⚡ Coming Soon</span>
+                }}>{trialLocked && !card.locked ? '🔒 Upgrade to Unlock' : '⚡ Coming Soon'}</span>
             : <button onMouseEnter={e => { e.currentTarget.style.background = card.accent; e.currentTarget.style.color = 'white'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = card.accentLight; e.currentTarget.style.color = card.accent; }}
                 style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: card.accent, background: card.accentLight, padding: '5px 14px', borderRadius: 50, border: 'none', cursor: 'pointer', transition: 'all 0.15s' }}>
@@ -891,7 +892,7 @@ function getGreeting() {
   return 'Good evening';
 }
 
-function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string }) {
+function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha', isTrialUser = false }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string; isTrialUser?: boolean }) {
   const [greeting, setGreeting] = useState(getGreeting());
   const [popupCard, setPopupCard] = useState<typeof TOOL_CARDS[0] | null>(null);
   const [recentWork, setRecentWork] = useState<any[]>([]);
@@ -1002,11 +1003,18 @@ function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha' }: { on
       {/* Tool cards grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
         {TOOL_CARDS.map((card, i) => {
-          const currentLockedIdx = card.locked ? lockedIdx++ : undefined;
+          const TRIAL_LOCKED_CARD_IDS = ['offer', 'funnel', 'copy_suite'];
+          const trialLocked = isTrialUser && TRIAL_LOCKED_CARD_IDS.includes(card.id);
+          const currentLockedIdx = (card.locked || trialLocked) ? lockedIdx++ : undefined;
           return (
             <ToolCard key={card.id} card={card} delay={0.14 + i * 0.04}
               lockedIndex={currentLockedIdx}
-              onClick={() => card.locked ? setPopupCard(card) : onNavigate(card.id as PageId)} />
+              trialLocked={trialLocked}
+              onClick={() => {
+                if (trialLocked) { onNavigate(card.id as PageId); return; } // navigateTo opens TrialLockModal
+                if (card.locked) { setPopupCard(card); return; }
+                onNavigate(card.id as PageId);
+              }} />
           );
         })}
       </div>
@@ -2670,7 +2678,7 @@ const Index = () => {
                 {isTrialUser && trialEndsAt && (
                   <TrialStatusBanner trialEndsAt={trialEndsAt} fullName={userName} />
                 )}
-                <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} />
+                <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} isTrialUser={isTrialUser} />
               </>
             )}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onNavigate={navigateTo} />}
