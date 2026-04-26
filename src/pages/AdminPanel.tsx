@@ -156,12 +156,21 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
   user: UserRow; email: string; trialStartedAt?: string | null; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
   const isTrial = user.access_tier === 'trial';
+  // For existing trial users, default duration input to remaining days (min 1, max 90)
+  const initialTrialDuration = (() => {
+    if (isTrial && user.trial_ends_at) {
+      const ms = new Date(user.trial_ends_at).getTime() - Date.now();
+      const days = Math.ceil(ms / (24 * 60 * 60 * 1000));
+      return Math.max(1, Math.min(90, days));
+    }
+    return 7;
+  })();
   const [form, setForm] = useState({
     fullName: user.full_name, email, phone: user.phone || '', accessTier: user.access_tier,
     paymentStatus: user.payment_status, paymentAmount: user.payment_amount || 0,
     isBetaUser: user.is_beta_user || false, notes: user.notes || '',
     trialEndsAt: user.trial_ends_at || null,
-    trialDurationDays: 7,
+    trialDurationDays: initialTrialDuration,
   });
   const [originalEmail] = useState(email);
   const [originalTrialEndsAt] = useState<string | null>(user.trial_ends_at || null);
