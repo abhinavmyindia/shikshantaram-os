@@ -1142,7 +1142,7 @@ export type Database = {
           instagram: string | null
           instagram_url: string | null
           is_beta_user: boolean | null
-          is_trial_user: boolean | null
+          is_trial: boolean | null
           linkedin: string | null
           linkedin_url: string | null
           notes: string | null
@@ -1155,6 +1155,8 @@ export type Database = {
           phone: string | null
           trial_ends_at: string | null
           trial_request_id: string | null
+          trial_source_tier: string | null
+          trial_started_at: string | null
           twitter: string | null
           twitter_url: string | null
           updated_at: string | null
@@ -1181,7 +1183,7 @@ export type Database = {
           instagram?: string | null
           instagram_url?: string | null
           is_beta_user?: boolean | null
-          is_trial_user?: boolean | null
+          is_trial?: boolean | null
           linkedin?: string | null
           linkedin_url?: string | null
           notes?: string | null
@@ -1194,6 +1196,8 @@ export type Database = {
           phone?: string | null
           trial_ends_at?: string | null
           trial_request_id?: string | null
+          trial_source_tier?: string | null
+          trial_started_at?: string | null
           twitter?: string | null
           twitter_url?: string | null
           updated_at?: string | null
@@ -1220,7 +1224,7 @@ export type Database = {
           instagram?: string | null
           instagram_url?: string | null
           is_beta_user?: boolean | null
-          is_trial_user?: boolean | null
+          is_trial?: boolean | null
           linkedin?: string | null
           linkedin_url?: string | null
           notes?: string | null
@@ -1233,6 +1237,8 @@ export type Database = {
           phone?: string | null
           trial_ends_at?: string | null
           trial_request_id?: string | null
+          trial_source_tier?: string | null
+          trial_started_at?: string | null
           twitter?: string | null
           twitter_url?: string | null
           updated_at?: string | null
