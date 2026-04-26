@@ -234,7 +234,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
       await supabase.from('user_profiles').update(updatePayload as any).eq('id', user.id);
 
       // Mirror to trial_requests so the Trials tab reflects the change instantly
-      if (user.trial_request_id && (trialExtended || trialUpgraded)) {
+      if (user.trial_request_id && (trialExtended || trialUpgraded || switchingToTrial)) {
         const trUpdate: Record<string, any> = { updated_at: new Date().toISOString() };
         if (trialUpgraded) {
           trUpdate.status = 'upgraded';
@@ -242,6 +242,10 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
           trUpdate.upgraded_to_tier = form.accessTier;
           trUpdate.payment_status = 'paid';
           trUpdate.payment_amount = form.paymentAmount || 0;
+        } else if (switchingToTrial && newTrialEndsAt) {
+          trUpdate.access_starts_at = new Date().toISOString();
+          trUpdate.access_ends_at = newTrialEndsAt;
+          trUpdate.status = 'approved';
         } else if (trialExtended && form.trialEndsAt) {
           trUpdate.access_ends_at = form.trialEndsAt;
           trUpdate.status = 'approved';
