@@ -127,11 +127,10 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     } catch (e) { console.error('audit log failed:', e); }
   };
 
-  // Treat both DB flag and tier as "trial" so newly created profiles show up here too
+  // Active trials: status approved OR profile.access_tier === 'trial'
   const pending = requests.filter(r => r.status === 'pending');
   const approved = requests.filter(r =>
     r.status === 'approved' ||
-    (r.user_id && profileMap[r.user_id]?.is_trial_user === true) ||
     (r.user_id && profileMap[r.user_id]?.access_tier === 'trial')
   );
   const expired = requests.filter(r => r.status === 'expired');
@@ -197,7 +196,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     if (existing) {
       return {
         ...existing,
-        is_trial_user: true,
+        is_trial: true,
         trial_ends_at: existing.trial_ends_at || r.access_ends_at,
         trial_request_id: r.id,
       };
@@ -205,7 +204,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     return {
       id: r.user_id, full_name: r.full_name, phone: r.phone,
       access_tier: 'trial', payment_status: 'reserved', payment_amount: 0,
-      is_beta_user: false, is_trial_user: true,
+      is_beta_user: false, is_trial: true,
       trial_ends_at: r.access_ends_at, trial_request_id: r.id,
       notes: r.admin_notes || '', created_at: r.submitted_at, updated_at: r.submitted_at,
     };

@@ -16,7 +16,7 @@ export interface UserRow {
   payment_status: string;
   payment_amount: number;
   is_beta_user: boolean;
-  is_trial_user?: boolean;
+  is_trial?: boolean;
   trial_ends_at?: string | null;
   trial_request_id?: string | null;
   notes: string;
@@ -155,7 +155,7 @@ export function DeleteConfirmModal({ userName, onConfirm, onCancel, deleting }: 
 export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, onDelete, showToast, logActivity }: {
   user: UserRow; email: string; trialStartedAt?: string | null; onClose: () => void; onSave: () => void; onDelete: (id: string, name: string) => void; showToast: (msg: string, type?: string) => void; logActivity: (a: string, id: string | null, name: string | null, d?: Record<string, any>) => Promise<void>;
 }) {
-  const isTrial = !!user.is_trial_user || user.access_tier === 'trial';
+  const isTrial = user.access_tier === 'trial';
   const [form, setForm] = useState({
     fullName: user.full_name, email, phone: user.phone || '', accessTier: user.access_tier,
     paymentStatus: user.payment_status, paymentAmount: user.payment_amount || 0,
@@ -201,7 +201,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
       };
 
       if (trialUpgraded) {
-        updatePayload.is_trial_user = false;
+        updatePayload.is_trial = false;
         updatePayload.trial_ends_at = new Date().toISOString();
       } else if (trialExtended && form.trialEndsAt) {
         updatePayload.trial_ends_at = form.trialEndsAt;
@@ -223,6 +223,27 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
           trUpdate.status = 'approved';
         }
         await supabase.from('trial_requests').update(trUpdate as any).eq('id', user.trial_request_id);
+      }
+
+      // On upgrade, grant 500-credit welcome bonus to the new paid tier
+      if (trialUpgraded) {
+        try {
+          const { data: cur } = await supabase.from('user_credits')
+            .select('balance, lifetime_topped').eq('user_id', user.id).maybeSingle();
+          const upgradeBonus = 500;
+          const newBalance = (cur?.balance || 0) + upgradeBonus;
+          const newTopped = (cur?.lifetime_topped || 0) + upgradeBonus;
+          await supabase.from('user_credits').update({
+            balance: newBalance, lifetime_topped: newTopped, updated_at: new Date().toISOString(),
+          }).eq('user_id', user.id);
+          await supabase.from('credit_transactions').insert({
+            user_id: user.id, user_email: email, type: 'gift',
+            amount: upgradeBonus, balance_after: newBalance,
+            description: `Upgrade bonus — welcome to ${form.accessTier} tier`,
+          } as any);
+        } catch (creditErr) {
+          console.warn('Upgrade bonus grant failed (non-blocking):', creditErr);
+        }
       }
 
       if (form.email !== originalEmail) {
@@ -264,7 +285,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
     try {
       const now = new Date().toISOString();
       await supabase.from('user_profiles').update({
-        is_trial_user: false, trial_ends_at: now, updated_at: now,
+        is_trial: false, trial_ends_at: now, updated_at: now,
       } as any).eq('id', user.id);
       if (user.trial_request_id) {
         await supabase.from('trial_requests').update({
@@ -1831,7 +1852,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                   <td style={{ padding: '10px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 9, fontWeight: 800, background: tc.bg, color: tc.color, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase' }}>{u.access_tier}</span>
-                      {u.is_trial_user ? (() => {
+                      {u.access_tier === 'trial' ? (() => {
                         const ends = u.trial_ends_at ? new Date(u.trial_ends_at).getTime() : 0;
                         const ms = ends - Date.now();
                         const expired = ms <= 0;
