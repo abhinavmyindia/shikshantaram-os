@@ -161,6 +161,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
     paymentStatus: user.payment_status, paymentAmount: user.payment_amount || 0,
     isBetaUser: user.is_beta_user || false, notes: user.notes || '',
     trialEndsAt: user.trial_ends_at || null,
+    trialDurationDays: 7,
   });
   const [originalEmail] = useState(email);
   const [originalTrialEndsAt] = useState<string | null>(user.trial_ends_at || null);
