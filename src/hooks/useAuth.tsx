@@ -11,7 +11,9 @@ interface UserProfile {
   payment_status: string;
   payment_amount: number;
   is_beta_user: boolean;
-  is_trial_user?: boolean;
+  is_trial?: boolean;
+  trial_started_at?: string | null;
+  trial_source_tier?: 'basic' | 'premium' | 'beta' | null;
   trial_ends_at?: string | null;
   trial_request_id?: string | null;
   notes: string;
