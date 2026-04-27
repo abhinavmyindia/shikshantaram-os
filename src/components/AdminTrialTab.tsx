@@ -265,6 +265,47 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
 
   const iconBtnStyle: React.CSSProperties = { width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 };
 
+  const exportActiveTrialsCSV = () => {
+    if (approved.length === 0) {
+      showToast('No active trial users to export', 'warning');
+      return;
+    }
+    const esc = (v: any) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const headers = ['Name', 'Email', 'Phone', 'Started', 'Ends', 'Time Left', 'Duration (Days)', 'Credits', 'IP Address', 'Admin Notes', 'User ID', 'Trial Request ID'];
+    const rows = approved.map(r => {
+      const profileEndsAt = r.user_id ? profileMap[r.user_id]?.trial_ends_at : null;
+      const effectiveEndsAt = profileEndsAt || r.access_ends_at;
+      return [
+        r.full_name, r.email, r.phone,
+        r.access_starts_at ? new Date(r.access_starts_at).toISOString() : '',
+        effectiveEndsAt ? new Date(effectiveEndsAt).toISOString() : '',
+        fmtRelative(effectiveEndsAt),
+        r.access_duration_days ?? '',
+        r.trial_credits ?? '',
+        r.ip_address ?? '',
+        (r.admin_notes ?? '').replace(/\n/g, ' '),
+        r.user_id ?? '',
+        r.id,
+      ].map(esc).join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.href = url;
+    a.download = `active-trial-users-${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`📥 Exported ${approved.length} active trial users`, 'success');
+    logActivity('trial_users_exported', null, null, { count: approved.length });
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -397,8 +438,28 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
               <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16 }}>No active trial users right now</div>
             </div>
           ) : (
-            <div style={{ ...glassCard, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b' }}>
+                  Showing <strong style={{ color: '#0f172a' }}>{approved.length}</strong> active trial {approved.length === 1 ? 'user' : 'users'}
+                </div>
+                <button
+                  onClick={exportActiveTrialsCSV}
+                  style={{
+                    background: 'linear-gradient(135deg,#0891b2,#0e7490)',
+                    color: 'white', border: 'none', borderRadius: 10,
+                    padding: '8px 16px', fontFamily: 'DM Sans', fontWeight: 700,
+                    fontSize: 12.5, cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(8,145,178,0.3)',
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}
+                  title="Export active trial users as CSV"
+                >
+                  📥 Export CSV
+                </button>
+              </div>
+              <div style={{ ...glassCard, overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#f0fdf4' }}>
                     {['Name', 'Email', 'Started', 'Ends', 'Time Left', 'Credits', 'Actions'].map(h => (
@@ -436,6 +497,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </>
       )}
