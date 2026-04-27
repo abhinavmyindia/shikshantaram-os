@@ -497,6 +497,7 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </>
       )}
