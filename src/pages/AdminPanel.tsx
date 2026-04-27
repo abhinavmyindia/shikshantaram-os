@@ -2263,6 +2263,45 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
       )}
 
       {ipLookup && <AdminIpLookupModal ip={ipLookup} onClose={() => setIpLookup(null)} />}
+
+      {/* Rejection reason modal */}
+      {rejectingSignup && (
+        <div onClick={() => { if (!rejecting) { setRejectingSignup(null); setRejectReason(''); } }} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 24, padding: 28, maxWidth: 480, width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: 0 }}>✗ Reject Signup Request</h2>
+              <button onClick={() => { setRejectingSignup(null); setRejectReason(''); }} disabled={rejecting} style={{ background: '#f1f5f9', border: 'none', width: 30, height: 30, borderRadius: '50%', cursor: rejecting ? 'not-allowed' : 'pointer', fontSize: 14, opacity: rejecting ? 0.5 : 1 }}>✕</button>
+            </div>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: 12, marginBottom: 16 }}>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#991b1b', margin: '0 0 4px', fontWeight: 700 }}>{rejectingSignup.full_name}</p>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#7f1d1d', margin: 0 }}>{rejectingSignup.email}</p>
+            </div>
+            <label style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
+              Reason (optional — included in rejection email)
+            </label>
+            <textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              maxLength={500}
+              rows={4}
+              placeholder="e.g. We're at capacity right now. We'll re-open access soon."
+              disabled={rejecting}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#94a3b8', margin: '4px 0 16px', textAlign: 'right' }}>{rejectReason.length}/500</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setRejectingSignup(null); setRejectReason(''); }} disabled={rejecting}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: 'transparent', cursor: rejecting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, color: '#64748b', opacity: rejecting ? 0.5 : 1 }}>
+                Cancel
+              </button>
+              <button onClick={handleSignupReject} disabled={rejecting}
+                style={{ flex: 2, padding: '10px', borderRadius: 10, border: 'none', background: '#dc2626', color: 'white', cursor: rejecting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, opacity: rejecting ? 0.7 : 1 }}>
+                {rejecting ? 'Rejecting…' : '✗ Reject & Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
