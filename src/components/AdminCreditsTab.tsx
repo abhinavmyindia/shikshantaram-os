@@ -1013,6 +1013,29 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
           </div>
         </div>
       )}
+
+      {/* Styled Bulk Gift Confirmation Modal */}
+      {showBulkConfirm && (
+        <div onClick={() => !bulkLoading && setShowBulkConfirm(false)} style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:440, width:'100%', background:'white', borderRadius:20, padding:28, boxShadow:'0 24px 60px rgba(0,0,0,0.25)', fontFamily:'DM Sans, sans-serif' }}>
+            <div style={{ fontSize:42, marginBottom:8, textAlign:'center' }}>⚠️</div>
+            <div style={{ fontFamily:'Sora', fontWeight:800, fontSize:18, color:'#0f172a', textAlign:'center', marginBottom:8 }}>Confirm Bulk Gift</div>
+            <div style={{ fontSize:13.5, color:'#64748b', textAlign:'center', marginBottom:18, lineHeight:1.5 }}>
+              You are about to gift <strong style={{ color:'#0f172a' }}>{bulkAmount} credits</strong> to <strong style={{ color:'#0f172a' }}>{bulkUserCount ?? '…'} active users</strong>. This action cannot be undone.
+            </div>
+            <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:10, padding:12, fontSize:12, color:'#92400e', marginBottom:16 }}>
+              Total credits to be issued: <strong>{bulkUserCount ? bulkUserCount * parseInt(bulkAmount || '0') : 0}</strong>
+              {bulkReason && <div style={{ marginTop:6, color:'#78350f' }}>Reason: "{bulkReason}"</div>}
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setShowBulkConfirm(false)} disabled={bulkLoading} style={{ flex:1, padding:12, borderRadius:12, border:'1.5px solid #e2e8f0', background:'white', cursor: bulkLoading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans', fontWeight:700, fontSize:13, color:'#64748b' }}>Cancel</button>
+              <button onClick={executeBulkGift} disabled={bulkLoading} style={{ flex:2, padding:12, borderRadius:12, border:'none', background: bulkLoading ? '#cbd5e1' : 'linear-gradient(135deg,#f59e0b,#ea580c)', color:'white', cursor: bulkLoading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans', fontWeight:800, fontSize:13 }}>
+                {bulkLoading ? 'Gifting…' : `🚀 Gift to ${bulkUserCount ?? 'All'} Users`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
