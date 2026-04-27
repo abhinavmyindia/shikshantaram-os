@@ -284,10 +284,21 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   const loadTransactions = async () => {
     setTxLoading(true);
     let q = supabase.from('credit_transactions').select('*')
-      .order('created_at', { ascending:false }).limit(100);
+      .order('created_at', { ascending:false })
+      .range(txPage * TX_PAGE_SIZE, (txPage + 1) * TX_PAGE_SIZE - 1);
     if (txFilter === 'deduction') q = q.in('type', ['deduction', 'shadow_deduction']);
     else if (txFilter === 'gift') q = q.in('type', ['gift', 'promo']);
     else if (txFilter !== 'all') q = q.eq('type', txFilter);
+
+    const fromDate =
+      txDateRange === '24h' ? new Date(Date.now() - 86400000).toISOString() :
+      txDateRange === '7days' ? new Date(Date.now() - 7 * 86400000).toISOString() :
+      txDateRange === '30days' ? new Date(Date.now() - 30 * 86400000).toISOString() :
+      null;
+    if (fromDate) q = q.gte('created_at', fromDate);
+
+    if (txSearch.trim()) q = q.or(`user_email.ilike.%${txSearch.trim()}%,description.ilike.%${txSearch.trim()}%`);
+
     const { data } = await q;
 
     // Enrich transactions with user names
@@ -303,6 +314,31 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
       _user_name: userMap[t.user_id] || null,
     })));
     setTxLoading(false);
+  };
+
+  const exportLedgerCSV = () => {
+    if (!transactions.length) return;
+    const rows = [
+      ['Date', 'User', 'Email', 'Type', 'Amount', 'Balance After', 'Description', 'Tool', 'Call Type'],
+      ...transactions.map((t: any) => [
+        new Date(t.created_at).toISOString(),
+        t._user_name || '',
+        t.user_email || '',
+        t.type,
+        t.amount,
+        t.balance_after,
+        t.description || '',
+        t.tool_module || '',
+        t.call_type || '',
+      ]),
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `credit-ledger-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   /* ─── Action handlers ─────────────────────────────────────────────────── */
