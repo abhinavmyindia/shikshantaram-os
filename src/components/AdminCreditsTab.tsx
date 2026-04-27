@@ -121,10 +121,15 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   const [transactions, setTransactions] = useState<any[]>([]);
   const [txFilter, setTxFilter] = useState<'all'|'topup'|'deduction'|'gift'>('all');
   const [txLoading, setTxLoading] = useState(false);
+  const [txSearch, setTxSearch] = useState('');
+  const [txDateRange, setTxDateRange] = useState<'24h'|'7days'|'30days'|'all'>('7days');
+  const [txPage, setTxPage] = useState(0);
+  const TX_PAGE_SIZE = 100;
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (subTab === 'revenue') loadRevenue(); }, [revenueRange]);
-  useEffect(() => { loadTransactions(); }, [txFilter]);
+  useEffect(() => { loadTransactions(); /* eslint-disable-next-line */ }, [txFilter, txDateRange, txPage]);
+  useEffect(() => { const t = setTimeout(() => { setTxPage(0); loadTransactions(); }, 300); return () => clearTimeout(t); /* eslint-disable-next-line */ }, [txSearch]);
 
   // Live auto-refresh: while the Revenue sub-tab is open, poll every 30s
   // so newly captured payments and balance resets show up without a page refresh.
