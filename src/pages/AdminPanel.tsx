@@ -1985,8 +1985,57 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                     })()}
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(u.created_at)}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, fontFamily: 'DM Sans,sans-serif', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    {(u.creditBalance ?? 0) === 0
+                      ? <span style={{ color: '#dc2626' }}>⚠️ 0</span>
+                      : <span style={{ color: '#7c3aed' }}>⚡ {(u.creditBalance ?? 0).toLocaleString('en-IN')}</span>}
+                  </td>
+                  <td style={{ padding: '10px 16px', fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>
+                    {u.lastSeen
+                      ? (() => {
+                          const diff = Date.now() - new Date(u.lastSeen).getTime();
+                          if (diff < 120000) return <span style={{ color: '#059669', fontWeight: 700 }}>🟢 Now</span>;
+                          if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+                          if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+                          return `${Math.floor(diff / 86400000)}d ago`;
+                        })()
+                      : <span style={{ color: '#cbd5e1' }}>—</span>}
+                  </td>
+                  <td style={{ padding: '10px 16px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{u.lastIp || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
                   <td style={{ padding: '10px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {canDo.editUsers(role) && (
+                        <button
+                          onClick={async () => {
+                            const em = emailMap[u.id];
+                            if (!em) { showToast('Email not found for this user', 'error'); return; }
+                            if (!window.confirm(`Send password reset email to ${em}?`)) return;
+                            try {
+                              await supabase.functions.invoke('send-password-reset', { body: { email: em } });
+                              await logActivity('password_reset_sent', u.id, em);
+                              showToast(`🔑 Password reset sent to ${em}`, 'success');
+                            } catch (e: any) {
+                              showToast(`❌ ${e.message || 'Failed to send'}`, 'error');
+                            }
+                          }}
+                          title="Send Password Reset"
+                          style={{ width: 30, height: 30, background: 'rgba(2,132,199,0.06)', border: '1px solid rgba(2,132,199,0.2)', color: '#0284c7', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >🔑</button>
+                      )}
+                      {canDo.editUsers(role) && (
+                        <button
+                          onClick={() => setGiftingUser(u)}
+                          title="Gift Credits"
+                          style={{ width: 30, height: 30, background: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', color: '#059669', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >🎁</button>
+                      )}
+                      {canDo.blockUsers(role) && (
+                        <button
+                          onClick={() => setForceLoggingOutUser(u)}
+                          title="Force Logout"
+                          style={{ width: 30, height: 30, background: 'rgba(234,88,12,0.06)', border: '1px solid rgba(234,88,12,0.2)', color: '#ea580c', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >⚡</button>
+                      )}
                       {canDo.editUsers(role) && <button onClick={() => setEditUser(u)} title="Edit" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✏️</button>}
                       {canDo.blockUsers(role) && <button onClick={() => setSecurityUser(u)} title="View Security" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🛡️</button>}
                       {canDo.deleteUsers(role) && <button onClick={() => setDeleteUser(u)} title="Delete" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🗑</button>}
@@ -1996,7 +2045,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
+              <tr><td colSpan={12} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
             )}
           </tbody>
         </table>
