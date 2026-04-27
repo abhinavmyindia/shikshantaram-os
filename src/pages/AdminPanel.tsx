@@ -2128,6 +2128,60 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         <SecurityProfileModal userId={securityUser.id} userEmail={emailMap[securityUser.id] || ''} userName={securityUser.full_name}
           onClose={() => setSecurityUser(null)} adminId={adminId} showToast={showToast} />
       )}
+
+      {/* Inline Gift Credits modal */}
+      {giftingUser && (
+        <div onClick={() => !giftLoading && setGiftingUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 8888, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 400, width: '100%', background: 'white', borderRadius: 20, padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.2)' }}>
+            <h2 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: '0 0 6px' }}>🎁 Gift Credits</h2>
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#64748b', margin: '0 0 18px' }}>
+              {giftingUser.full_name} · Current balance: ⚡{(giftingUser.creditBalance ?? 0).toLocaleString('en-IN')}
+            </p>
+            <label style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Credits to gift (max 1,000)</label>
+            <input type="number" value={giftAmount} min={1} max={1000} disabled={giftLoading}
+              onChange={e => setGiftAmount(parseInt(e.target.value) || 0)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 14, boxSizing: 'border-box', marginBottom: 14 }} />
+            <label style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Reason (shown in email)</label>
+            <input type="text" value={giftReason} onChange={e => setGiftReason(e.target.value)} disabled={giftLoading} maxLength={200}
+              placeholder="e.g. Compensation for downtime"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, boxSizing: 'border-box', marginBottom: 14 }} />
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 10, marginBottom: 16 }}>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#166534', margin: 0 }}>
+                After gifting: ⚡{((giftingUser.creditBalance ?? 0) + giftAmount).toLocaleString('en-IN')} credits · An email will be sent.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setGiftingUser(null)} disabled={giftLoading}
+                style={{ flex: 1, padding: 11, borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', cursor: giftLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, color: '#64748b', opacity: giftLoading ? 0.5 : 1 }}>Cancel</button>
+              <button onClick={handleInlineGift} disabled={giftLoading || giftAmount < 1 || giftAmount > 1000}
+                style={{ flex: 2, padding: 11, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#059669,#10b981)', color: 'white', cursor: giftLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, opacity: giftLoading ? 0.7 : 1 }}>
+                {giftLoading ? 'Gifting…' : `🎁 Gift ${giftAmount} Credits`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Force Logout modal */}
+      {forceLoggingOutUser && (
+        <div onClick={() => !forceLogoutLoading && setForceLoggingOutUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 8888, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 400, width: '100%', background: 'white', borderRadius: 20, padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>⚡</div>
+            <h2 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: '0 0 8px' }}>Force Logout User</h2>
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
+              <strong>{forceLoggingOutUser.full_name}</strong> ({emailMap[forceLoggingOutUser.id] || '—'}) will be immediately signed out of all active sessions.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setForceLoggingOutUser(null)} disabled={forceLogoutLoading}
+                style={{ flex: 1, padding: 11, borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', cursor: forceLogoutLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, color: '#64748b', opacity: forceLogoutLoading ? 0.5 : 1 }}>Cancel</button>
+              <button onClick={handleInlineForceLogout} disabled={forceLogoutLoading}
+                style={{ flex: 2, padding: 11, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#ea580c,#f97316)', color: 'white', cursor: forceLogoutLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, opacity: forceLogoutLoading ? 0.7 : 1 }}>
+                {forceLogoutLoading ? 'Signing out…' : '⚡ Force Logout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
