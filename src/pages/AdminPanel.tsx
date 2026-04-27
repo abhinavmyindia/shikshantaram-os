@@ -2655,15 +2655,15 @@ export default function AdminPanel() {
 
   // Build visible tabs dynamically based on role
   const tabs = [
-    canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview' },
-    canDo.viewUsers(role) && { id: 'users', label: '👥 Users' },
-    canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups' },
-    canDo.viewSignups(role) && { id: 'trials', label: '🎁 Trials' },
-    canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits' },
-    canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics' },
-    canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security' },
-    canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access' },
-  ].filter(Boolean) as { id: string; label: string }[];
+    canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview', badge: 0 },
+    canDo.viewUsers(role) && { id: 'users', label: '👥 Users', badge: 0 },
+    canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups', badge: tabBadges.signups },
+    canDo.viewSignups(role) && { id: 'trials', label: '🎁 Trials', badge: tabBadges.trials },
+    canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits', badge: 0 },
+    canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics', badge: 0 },
+    canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security', badge: tabBadges.security },
+    canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access', badge: 0 },
+  ].filter(Boolean) as { id: string; label: string; badge: number }[];
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}>
