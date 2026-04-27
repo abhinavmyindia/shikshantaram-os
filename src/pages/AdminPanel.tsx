@@ -2682,11 +2682,26 @@ export default function AdminPanel() {
 
   const loadData = async () => {
     setLoading(true);
-    const [usersRes, emailsRes] = await Promise.all([
+    const [usersRes, emailsRes, creditsRes, presenceRes, sessionsRes] = await Promise.all([
       supabase.from('user_profiles').select('*').neq('access_tier', 'trial').order('created_at', { ascending: false }),
       supabase.functions.invoke('admin-list-emails'),
+      supabase.from('user_credits').select('user_id, balance'),
+      supabase.from('user_presence').select('user_id, last_seen'),
+      supabase.from('login_sessions').select('user_id, ip_address, created_at').order('created_at', { ascending: false }),
     ]);
-    const u = (usersRes.data || []) as unknown as UserRow[];
+    const baseUsers = (usersRes.data || []) as unknown as UserRow[];
+    const creditMap = Object.fromEntries(((creditsRes.data || []) as any[]).map(c => [c.user_id, c.balance]));
+    const presenceMap = Object.fromEntries(((presenceRes.data || []) as any[]).map(p => [p.user_id, p.last_seen]));
+    const ipMap: Record<string, string> = {};
+    ((sessionsRes.data || []) as any[]).forEach(s => {
+      if (s.user_id && s.ip_address && !ipMap[s.user_id]) ipMap[s.user_id] = s.ip_address;
+    });
+    const u: UserRow[] = baseUsers.map(x => ({
+      ...x,
+      creditBalance: creditMap[x.id] ?? 0,
+      lastSeen: presenceMap[x.id] ?? null,
+      lastIp: ipMap[x.id] ?? null,
+    }));
     setUsers(u);
     setEmailMap(emailsRes.data?.emails || {});
     setStats({ total: u.length, basic: u.filter(x => x.access_tier === 'basic').length, premium: u.filter(x => x.access_tier === 'premium').length });
