@@ -265,6 +265,47 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
 
   const iconBtnStyle: React.CSSProperties = { width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 };
 
+  const exportActiveTrialsCSV = () => {
+    if (approved.length === 0) {
+      showToast('No active trial users to export', 'warning');
+      return;
+    }
+    const esc = (v: any) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const headers = ['Name', 'Email', 'Phone', 'Started', 'Ends', 'Time Left', 'Duration (Days)', 'Credits', 'IP Address', 'Admin Notes', 'User ID', 'Trial Request ID'];
+    const rows = approved.map(r => {
+      const profileEndsAt = r.user_id ? profileMap[r.user_id]?.trial_ends_at : null;
+      const effectiveEndsAt = profileEndsAt || r.access_ends_at;
+      return [
+        r.full_name, r.email, r.phone,
+        r.access_starts_at ? new Date(r.access_starts_at).toISOString() : '',
+        effectiveEndsAt ? new Date(effectiveEndsAt).toISOString() : '',
+        fmtRelative(effectiveEndsAt),
+        r.access_duration_days ?? '',
+        r.trial_credits ?? '',
+        r.ip_address ?? '',
+        (r.admin_notes ?? '').replace(/\n/g, ' '),
+        r.user_id ?? '',
+        r.id,
+      ].map(esc).join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.href = url;
+    a.download = `active-trial-users-${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`📥 Exported ${approved.length} active trial users`, 'success');
+    logActivity('trial_users_exported', null, null, { count: approved.length });
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
