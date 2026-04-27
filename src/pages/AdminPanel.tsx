@@ -2714,11 +2714,20 @@ export default function AdminPanel() {
             fontWeight: tab === t.id ? 800 : 500, fontSize: 13,
             background: tab === t.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'transparent',
             color: tab === t.id ? 'white' : '#64748b',
-            transition: 'all 0.2s',
+            transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
             onMouseEnter={e => { if (tab !== t.id) (e.currentTarget.style.color = '#374151'); }}
             onMouseLeave={e => { if (tab !== t.id) (e.currentTarget.style.color = '#64748b'); }}
-          >{t.label}</button>
+          >
+            <span>{t.label}</span>
+            {t.badge > 0 && (
+              <span style={{
+                background: '#dc2626', color: 'white', fontSize: 10, fontWeight: 800,
+                padding: '1px 7px', borderRadius: 20, minWidth: 18, textAlign: 'center',
+                lineHeight: '14px', fontFamily: 'DM Sans,sans-serif',
+              }}>{t.badge > 99 ? '99+' : t.badge}</span>
+            )}
+          </button>
         ))}
       </div>
 
