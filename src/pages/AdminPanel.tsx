@@ -1572,6 +1572,72 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [showDeletionQueue, setShowDeletionQueue] = useState(false);
   const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
 
+  // Inline gift credits modal state
+  const [giftingUser, setGiftingUser] = useState<UserRow | null>(null);
+  const [giftAmount, setGiftAmount] = useState(100);
+  const [giftReason, setGiftReason] = useState('');
+  const [giftLoading, setGiftLoading] = useState(false);
+
+  // Inline force logout modal state
+  const [forceLoggingOutUser, setForceLoggingOutUser] = useState<UserRow | null>(null);
+  const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
+
+  const handleInlineGift = async () => {
+    if (!giftingUser || !giftAmount || giftAmount < 1) return;
+    if (giftAmount > 1000) {
+      showToast('Max 1,000 credits per gift. Use bulk gift for larger amounts.', 'error');
+      return;
+    }
+    const targetEmail = emailMap[giftingUser.id];
+    if (!targetEmail) { showToast('Email not found', 'error'); return; }
+    setGiftLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('gift-credits', {
+        body: { targetEmail, credits: giftAmount, reason: giftReason || 'Admin gift' },
+      });
+      if (error) throw new Error(error.message);
+      try {
+        await supabase.functions.invoke('send-gift-email', {
+          body: { email: targetEmail, fullName: giftingUser.full_name, credits: giftAmount, reason: giftReason },
+        });
+      } catch (e) { console.warn('gift email failed', e); }
+      await logActivity('gift_credits', giftingUser.id, targetEmail, { credits: giftAmount, reason: giftReason || null });
+      showToast(`🎁 ${giftAmount} credits gifted to ${targetEmail}`, 'success');
+      setGiftingUser(null); setGiftAmount(100); setGiftReason('');
+      onRefresh();
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to gift credits'}`, 'error');
+    } finally {
+      setGiftLoading(false);
+    }
+  };
+
+  const handleInlineForceLogout = async () => {
+    if (!forceLoggingOutUser) return;
+    const targetEmail = emailMap[forceLoggingOutUser.id] || '';
+    setForceLogoutLoading(true);
+    try {
+      const { data: { user: admin } } = await supabase.auth.getUser();
+      await supabase.from('login_sessions')
+        .update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'admin_force_logout' } as any)
+        .eq('user_id', forceLoggingOutUser.id)
+        .eq('is_active', true);
+      await supabase.from('security_events').insert({
+        user_id: forceLoggingOutUser.id, user_email: targetEmail,
+        event_type: 'force_logout', severity: 'medium',
+        description: `Admin force-logged out ${targetEmail}`,
+        metadata: { admin_id: admin?.id, action: 'inline_force_logout' },
+      } as any);
+      await logActivity('force_logout', forceLoggingOutUser.id, targetEmail);
+      showToast(`⚡ ${forceLoggingOutUser.full_name} has been force-logged out`, 'success');
+      setForceLoggingOutUser(null);
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to force logout'}`, 'error');
+    } finally {
+      setForceLogoutLoading(false);
+    }
+  };
+
   // Test Trial modal state
   const [showTestTrial, setShowTestTrial] = useState(false);
   const [ttName, setTtName] = useState('');
