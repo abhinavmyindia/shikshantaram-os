@@ -877,7 +877,7 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
                     style={s({ width:'100%', padding:'10px 12px', borderRadius:10, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:13, outline:'none', boxSizing:'border-box' as const })}
                   />
                 </div>
-                <button onClick={handleBulkGift} disabled={bulkLoading || !bulkAmount}
+                <button onClick={openBulkConfirm} disabled={bulkLoading || !bulkAmount}
                   style={s({ background:'linear-gradient(135deg,#f59e0b,#ea580c)', color:'white', border:'none', borderRadius:10, padding:'10px 20px', fontFamily:'DM Sans', fontWeight:800, fontSize:13, cursor: bulkLoading?'not-allowed':'pointer', opacity: bulkLoading?0.5:1, whiteSpace:'nowrap' as const })}
                 >
                   {bulkLoading ? 'Gifting...' : '🚀 Gift to All'}
