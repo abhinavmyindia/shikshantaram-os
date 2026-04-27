@@ -2578,6 +2578,29 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [adminToast, setAdminToast] = useState<{ message: string; type: string } | null>(null);
   const [analyticsDateRange, setAnalyticsDateRange] = useState('30days');
+  const [tabBadges, setTabBadges] = useState<{ signups: number; trials: number; security: number }>({ signups: 0, trials: 0, security: 0 });
+
+  const fetchTabBadges = async () => {
+    try {
+      const [pendingSignupsRes, pendingTrialsRes, critErrRes, secEvtRes] = await Promise.all([
+        supabase.from('signup_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('trial_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false),
+        supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('is_reviewed', false).in('severity', ['high', 'critical']),
+      ]);
+      setTabBadges({
+        signups: pendingSignupsRes.count || 0,
+        trials: pendingTrialsRes.count || 0,
+        security: (critErrRes.count || 0) + (secEvtRes.count || 0),
+      });
+    } catch (e) { console.error('badge fetch error', e); }
+  };
+
+  useEffect(() => {
+    fetchTabBadges();
+    const id = setInterval(fetchTabBadges, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   // Set default tab based on role
   useEffect(() => {
