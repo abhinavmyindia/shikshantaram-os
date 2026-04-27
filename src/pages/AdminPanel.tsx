@@ -1318,6 +1318,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       setUnreviewedSecurityEvents(secEvtRes.count || 0);
       setPaidUserCount(paidRes.count || 0);
       setTrialUserCount(trialRes.count || 0);
+      setPendingTrialCount(pendingTrialsRes.count || 0);
+      setPendingSignupCount(pendingSignupsRes.count || 0);
 
       const tokenData = aiTodayRes.data || [];
       const tokensToday = (tokenData as any[]).reduce((s: number, l: any) => s + (l.total_tokens || 0), 0);
