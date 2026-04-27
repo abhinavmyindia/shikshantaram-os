@@ -116,15 +116,22 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   const [bulkAmount, setBulkAmount] = useState('');
   const [bulkReason, setBulkReason] = useState('');
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkUserCount, setBulkUserCount] = useState<number | null>(null);
 
   // Transactions
   const [transactions, setTransactions] = useState<any[]>([]);
   const [txFilter, setTxFilter] = useState<'all'|'topup'|'deduction'|'gift'>('all');
   const [txLoading, setTxLoading] = useState(false);
+  const [txSearch, setTxSearch] = useState('');
+  const [txDateRange, setTxDateRange] = useState<'24h'|'7days'|'30days'|'all'>('7days');
+  const [txPage, setTxPage] = useState(0);
+  const TX_PAGE_SIZE = 100;
 
   useEffect(() => { loadAll(); }, []);
   useEffect(() => { if (subTab === 'revenue') loadRevenue(); }, [revenueRange]);
-  useEffect(() => { loadTransactions(); }, [txFilter]);
+  useEffect(() => { loadTransactions(); /* eslint-disable-next-line */ }, [txFilter, txDateRange, txPage]);
+  useEffect(() => { const t = setTimeout(() => { setTxPage(0); loadTransactions(); }, 300); return () => clearTimeout(t); /* eslint-disable-next-line */ }, [txSearch]);
 
   // Live auto-refresh: while the Revenue sub-tab is open, poll every 30s
   // so newly captured payments and balance resets show up without a page refresh.
@@ -279,10 +286,21 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   const loadTransactions = async () => {
     setTxLoading(true);
     let q = supabase.from('credit_transactions').select('*')
-      .order('created_at', { ascending:false }).limit(100);
+      .order('created_at', { ascending:false })
+      .range(txPage * TX_PAGE_SIZE, (txPage + 1) * TX_PAGE_SIZE - 1);
     if (txFilter === 'deduction') q = q.in('type', ['deduction', 'shadow_deduction']);
     else if (txFilter === 'gift') q = q.in('type', ['gift', 'promo']);
     else if (txFilter !== 'all') q = q.eq('type', txFilter);
+
+    const fromDate =
+      txDateRange === '24h' ? new Date(Date.now() - 86400000).toISOString() :
+      txDateRange === '7days' ? new Date(Date.now() - 7 * 86400000).toISOString() :
+      txDateRange === '30days' ? new Date(Date.now() - 30 * 86400000).toISOString() :
+      null;
+    if (fromDate) q = q.gte('created_at', fromDate);
+
+    if (txSearch.trim()) q = q.or(`user_email.ilike.%${txSearch.trim()}%,description.ilike.%${txSearch.trim()}%`);
+
     const { data } = await q;
 
     // Enrich transactions with user names
@@ -298,6 +316,31 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
       _user_name: userMap[t.user_id] || null,
     })));
     setTxLoading(false);
+  };
+
+  const exportLedgerCSV = () => {
+    if (!transactions.length) return;
+    const rows = [
+      ['Date', 'User', 'Email', 'Type', 'Amount', 'Balance After', 'Description', 'Tool', 'Call Type'],
+      ...transactions.map((t: any) => [
+        new Date(t.created_at).toISOString(),
+        t._user_name || '',
+        t.user_email || '',
+        t.type,
+        t.amount,
+        t.balance_after,
+        t.description || '',
+        t.tool_module || '',
+        t.call_type || '',
+      ]),
+    ];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `credit-ledger-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   /* ─── Action handlers ─────────────────────────────────────────────────── */
@@ -334,6 +377,17 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
     });
     if (data?.success) {
       setGiftResult({ success:true, message:`✅ ${giftAmount} credits gifted to ${data.giftedTo?.email}` });
+      // Fire-and-forget gift notification email
+      try {
+        await supabase.functions.invoke('send-gift-email', {
+          body: {
+            email: data.giftedTo?.email || giftEmail.trim().toLowerCase(),
+            fullName: data.giftedTo?.full_name || '',
+            credits: parseInt(giftAmount),
+            reason: giftReason || 'Admin gift',
+          },
+        });
+      } catch (_) { /* non-blocking */ }
       setGiftEmail(''); setGiftAmount(''); setGiftReason('');
       await loadGiftHistory();
     } else {
@@ -343,8 +397,15 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
     setTimeout(() => setGiftResult(null), 5000);
   };
 
-  const handleBulkGift = async () => {
-    if (!bulkAmount || !confirm(`Gift ${bulkAmount} credits to ALL active users? This cannot be undone.`)) return;
+  const openBulkConfirm = async () => {
+    if (!bulkAmount || parseInt(bulkAmount) < 1) return;
+    const { count } = await supabase
+      .from('user_profiles').select('id', { count: 'exact', head: true }).neq('access_tier','revoked');
+    setBulkUserCount(count || 0);
+    setShowBulkConfirm(true);
+  };
+
+  const executeBulkGift = async () => {
     setBulkLoading(true);
     const { data: profiles } = await supabase
       .from('user_profiles').select('id').neq('access_tier','revoked');
@@ -358,7 +419,9 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
         success++;
       } catch (_) { failed++; }
     }
-    setBulkLoading(false); setShowBulkGift(false);
+    setBulkLoading(false);
+    setShowBulkConfirm(false);
+    setShowBulkGift(false);
     setBulkAmount(''); setBulkReason('');
     setGiftResult({ success:true, message:`✅ Gifted ${bulkAmount} credits to ${success} users${failed>0?` (${failed} failed)`:''}.` });
     await loadGiftHistory();
@@ -814,7 +877,7 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
                     style={s({ width:'100%', padding:'10px 12px', borderRadius:10, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:13, outline:'none', boxSizing:'border-box' as const })}
                   />
                 </div>
-                <button onClick={handleBulkGift} disabled={bulkLoading || !bulkAmount}
+                <button onClick={openBulkConfirm} disabled={bulkLoading || !bulkAmount}
                   style={s({ background:'linear-gradient(135deg,#f59e0b,#ea580c)', color:'white', border:'none', borderRadius:10, padding:'10px 20px', fontFamily:'DM Sans', fontWeight:800, fontSize:13, cursor: bulkLoading?'not-allowed':'pointer', opacity: bulkLoading?0.5:1, whiteSpace:'nowrap' as const })}
                 >
                   {bulkLoading ? 'Gifting...' : '🚀 Gift to All'}
@@ -858,15 +921,29 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
           {/* Filter + count row */}
           <div style={s({ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' })}>
             {([['all','All'],['topup','Top-ups'],['deduction','Deductions'],['gift','Gifts']] as const).map(([v,l]) => (
-              <button key={v} onClick={() => setTxFilter(v)} style={s({
+              <button key={v} onClick={() => { setTxFilter(v); setTxPage(0); }} style={s({
                 padding:'6px 16px', borderRadius:50, border:'none', cursor:'pointer', fontSize:12,
                 background: txFilter===v ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f8fafc',
                 color: txFilter===v ? 'white' : '#64748b',
                 fontFamily:'DM Sans', fontWeight:700, transition:'all 0.15s',
               })}>{l}</button>
             ))}
+            <select value={txDateRange} onChange={e => { setTxDateRange(e.target.value as any); setTxPage(0); }} style={s({
+              padding:'7px 12px', borderRadius:50, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:12, fontWeight:600, color:'#374151', background:'white', cursor:'pointer',
+            })}>
+              <option value="24h">24h</option>
+              <option value="7days">7 days</option>
+              <option value="30days">30 days</option>
+              <option value="all">All time</option>
+            </select>
+            <input value={txSearch} onChange={e => setTxSearch(e.target.value)} placeholder="Search email or description…" style={s({
+              padding:'7px 14px', borderRadius:50, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:12, color:'#374151', minWidth:200,
+            })} />
+            <button onClick={exportLedgerCSV} disabled={!transactions.length} style={s({
+              padding:'7px 14px', borderRadius:50, border:'1px solid rgba(124,58,237,0.2)', background:'rgba(124,58,237,0.06)', color:'#7c3aed', cursor: transactions.length ? 'pointer' : 'not-allowed', fontFamily:'DM Sans', fontWeight:700, fontSize:12, opacity: transactions.length ? 1 : 0.5,
+            })}>📥 CSV</button>
             <span style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', marginLeft:'auto' })}>
-              {transactions.length} records
+              page {txPage + 1} · {transactions.length} records
             </span>
           </div>
 
@@ -924,6 +1001,38 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
                 ))}
               </>
             )}
+          </div>
+          {/* Pagination */}
+          <div style={s({ display:'flex', justifyContent:'flex-end', gap:8, marginTop:4 })}>
+            <button onClick={() => setTxPage(Math.max(0, txPage - 1))} disabled={txPage === 0} style={s({
+              padding:'6px 14px', borderRadius:8, border:'1px solid #e2e8f0', background: txPage === 0 ? '#f8fafc' : 'white', color: txPage === 0 ? '#cbd5e1' : '#374151', cursor: txPage === 0 ? 'not-allowed' : 'pointer', fontFamily:'DM Sans', fontWeight:600, fontSize:12,
+            })}>← Previous</button>
+            <button onClick={() => setTxPage(txPage + 1)} disabled={transactions.length < TX_PAGE_SIZE} style={s({
+              padding:'6px 14px', borderRadius:8, border:'1px solid #e2e8f0', background: transactions.length < TX_PAGE_SIZE ? '#f8fafc' : 'white', color: transactions.length < TX_PAGE_SIZE ? '#cbd5e1' : '#374151', cursor: transactions.length < TX_PAGE_SIZE ? 'not-allowed' : 'pointer', fontFamily:'DM Sans', fontWeight:600, fontSize:12,
+            })}>Next →</button>
+          </div>
+        </div>
+      )}
+
+      {/* Styled Bulk Gift Confirmation Modal */}
+      {showBulkConfirm && (
+        <div onClick={() => !bulkLoading && setShowBulkConfirm(false)} style={{ position:'fixed', inset:0, zIndex:9000, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth:440, width:'100%', background:'white', borderRadius:20, padding:28, boxShadow:'0 24px 60px rgba(0,0,0,0.25)', fontFamily:'DM Sans, sans-serif' }}>
+            <div style={{ fontSize:42, marginBottom:8, textAlign:'center' }}>⚠️</div>
+            <div style={{ fontFamily:'Sora', fontWeight:800, fontSize:18, color:'#0f172a', textAlign:'center', marginBottom:8 }}>Confirm Bulk Gift</div>
+            <div style={{ fontSize:13.5, color:'#64748b', textAlign:'center', marginBottom:18, lineHeight:1.5 }}>
+              You are about to gift <strong style={{ color:'#0f172a' }}>{bulkAmount} credits</strong> to <strong style={{ color:'#0f172a' }}>{bulkUserCount ?? '…'} active users</strong>. This action cannot be undone.
+            </div>
+            <div style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:10, padding:12, fontSize:12, color:'#92400e', marginBottom:16 }}>
+              Total credits to be issued: <strong>{bulkUserCount ? bulkUserCount * parseInt(bulkAmount || '0') : 0}</strong>
+              {bulkReason && <div style={{ marginTop:6, color:'#78350f' }}>Reason: "{bulkReason}"</div>}
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setShowBulkConfirm(false)} disabled={bulkLoading} style={{ flex:1, padding:12, borderRadius:12, border:'1.5px solid #e2e8f0', background:'white', cursor: bulkLoading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans', fontWeight:700, fontSize:13, color:'#64748b' }}>Cancel</button>
+              <button onClick={executeBulkGift} disabled={bulkLoading} style={{ flex:2, padding:12, borderRadius:12, border:'none', background: bulkLoading ? '#cbd5e1' : 'linear-gradient(135deg,#f59e0b,#ea580c)', color:'white', cursor: bulkLoading ? 'not-allowed' : 'pointer', fontFamily:'DM Sans', fontWeight:800, fontSize:13 }}>
+                {bulkLoading ? 'Gifting…' : `🚀 Gift to ${bulkUserCount ?? 'All'} Users`}
+              </button>
+            </div>
           </div>
         </div>
       )}

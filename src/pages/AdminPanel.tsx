@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import SecurityTab from '@/components/AdminSecurityTab';
 import AdminCreditsTab from '@/components/AdminCreditsTab';
 import AdminTrialTab from '@/components/AdminTrialTab';
+import AdminActivityLogTab from '@/components/AdminActivityLogTab';
 import AdminIpLookupModal from '@/components/AdminIpLookupModal';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 export interface UserRow {
@@ -1126,7 +1127,15 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div style={{ ...glassCard, padding: 20 }}>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 14 }}>Top Users by Cost</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' }}>Top Users by Cost</div>
+            <button onClick={() => {
+              const rows = [['Rank', 'User', 'Email', 'Calls', 'Tokens', 'Cost USD', 'Last Active'], ...userEntries.map((u: any, i: number) => [i + 1, u.name || '', u.email || '', u.calls, u.tokens, u.cost.toFixed(6), u.lastActive])];
+              const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+              const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+              const a = document.createElement('a'); a.href = url; a.download = `ai-top-users-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+            }} style={{ padding: '5px 11px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)', background: 'rgba(124,58,237,0.06)', color: '#7c3aed', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11 }}>📥 CSV</button>
+          </div>
           <div style={{ overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 60px 70px 80px', gap: 0, background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
               {['#', 'User', 'Calls', 'Tokens', 'Cost'].map(h => (
@@ -1153,7 +1162,15 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
         </div>
 
         <div style={{ ...glassCard, padding: 20 }}>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 16 }}>Daily AI Usage</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' }}>Daily AI Usage</div>
+            <button onClick={() => {
+              const rows = [['Date', 'Calls', 'Tokens', 'Cost USD'], ...dayEntries.map(([d, v]: [string, any]) => [d, v.calls, v.tokens, v.cost.toFixed(6)])];
+              const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+              const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+              const a = document.createElement('a'); a.href = url; a.download = `ai-daily-trend-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+            }} style={{ padding: '5px 11px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)', background: 'rgba(124,58,237,0.06)', color: '#7c3aed', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11 }}>📥 CSV</button>
+          </div>
           <div style={{ width: '100%', height: 180, display: 'flex', alignItems: 'flex-end', gap: 4 }}>
             {dayEntries.map(([day, data]) => {
               const pct = (data.tokens / maxDayTokens) * 100;
@@ -2806,7 +2823,10 @@ export default function AdminPanel() {
   const [stats, setStats] = useState({ total: 0, basic: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
   const [adminToast, setAdminToast] = useState<{ message: string; type: string } | null>(null);
-  const [analyticsDateRange, setAnalyticsDateRange] = useState('30days');
+  const [analyticsDateRange, setAnalyticsDateRange] = useState(() => {
+    try { return localStorage.getItem('admin_analytics_date_range') || '30days'; } catch { return '30days'; }
+  });
+  useEffect(() => { try { localStorage.setItem('admin_analytics_date_range', analyticsDateRange); } catch {} }, [analyticsDateRange]);
   const [tabBadges, setTabBadges] = useState<{ signups: number; trials: number; security: number }>({ signups: 0, trials: 0, security: 0 });
 
   const fetchTabBadges = async () => {
@@ -2906,6 +2926,7 @@ export default function AdminPanel() {
     canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits', badge: 0 },
     canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics', badge: 0 },
     canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security', badge: tabBadges.security },
+    canDo.viewSecurity(role) && { id: 'activity_log', label: '📋 Activity Log', badge: 0 },
     canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access', badge: 0 },
   ].filter(Boolean) as { id: string; label: string; badge: number }[];
 
@@ -2990,6 +3011,7 @@ export default function AdminPanel() {
             {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
             {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
             {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
+            {tab === 'activity_log' && canDo.viewSecurity(role) && <AdminActivityLogTab showToast={showAdminToast} />}
             {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
           </>
         )}
