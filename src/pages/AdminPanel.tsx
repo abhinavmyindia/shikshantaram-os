@@ -2807,7 +2807,10 @@ export default function AdminPanel() {
   const [stats, setStats] = useState({ total: 0, basic: 0, premium: 0 });
   const [loading, setLoading] = useState(true);
   const [adminToast, setAdminToast] = useState<{ message: string; type: string } | null>(null);
-  const [analyticsDateRange, setAnalyticsDateRange] = useState('30days');
+  const [analyticsDateRange, setAnalyticsDateRange] = useState(() => {
+    try { return localStorage.getItem('admin_analytics_date_range') || '30days'; } catch { return '30days'; }
+  });
+  useEffect(() => { try { localStorage.setItem('admin_analytics_date_range', analyticsDateRange); } catch {} }, [analyticsDateRange]);
   const [tabBadges, setTabBadges] = useState<{ signups: number; trials: number; security: number }>({ signups: 0, trials: 0, security: 0 });
 
   const fetchTabBadges = async () => {
