@@ -2003,6 +2003,11 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
   const [loading, setLoading] = useState(true);
   const [approveRequest, setApproveRequest] = useState<SignupRow | null>(null);
   const [ipLookup, setIpLookup] = useState<string | null>(null);
+  const [signupsFilter, setSignupsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [signupsSearch, setSignupsSearch] = useState('');
+  const [rejectingSignup, setRejectingSignup] = useState<SignupRow | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
 
   useEffect(() => { fetchSignups(); }, []);
 
@@ -2023,20 +2028,73 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
     setLoading(false);
   };
 
-  const pendingSignups = signups.filter(s => s.status === 'pending');
-  const otherSignups = signups.filter(s => s.status !== 'pending');
-  const pendingCount = pendingSignups.length;
+  const filteredSignups = signups.filter(s => {
+    if (signupsFilter !== 'all' && s.status !== signupsFilter) return false;
+    const q = signupsSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (s.full_name?.toLowerCase().includes(q)) ||
+           (s.email?.toLowerCase().includes(q)) ||
+           (s.phone?.includes(signupsSearch.trim()));
+  });
+
+  const pendingSignups = filteredSignups.filter(s => s.status === 'pending');
+  const otherSignups = filteredSignups.filter(s => s.status !== 'pending');
+  const pendingCount = signups.filter(s => s.status === 'pending').length;
   const approvedCount = signups.filter(s => s.status === 'approved').length;
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
   const approvedThisWeek = signups.filter(s => s.status === 'approved' && s.reviewed_at && s.reviewed_at >= weekAgo).length;
 
-  const rejectSignup = async (requestId: string) => {
-    const req = signups.find(s => s.id === requestId);
-    if (!confirm(`Reject ${req?.full_name}?`)) return;
-    await supabase.from('signup_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString() } as any).eq('id', requestId);
-    await logActivity('signup_rejected', null, req?.full_name || null, { email: req?.email });
-    fetchSignups();
-    showToast('❌ Request rejected.', 'warning');
+  const handleSignupReject = async () => {
+    if (!rejectingSignup) return;
+    setRejecting(true);
+    try {
+      await supabase.from('signup_requests').update({
+        status: 'rejected',
+        reviewed_at: new Date().toISOString(),
+        notes: rejectReason.trim() || null,
+      } as any).eq('id', rejectingSignup.id);
+
+      try {
+        await supabase.functions.invoke('send-rejection-email', {
+          body: { email: rejectingSignup.email, fullName: rejectingSignup.full_name, reason: rejectReason.trim() || null },
+        });
+      } catch (e) { console.error('rejection email failed', e); }
+
+      await logActivity('signup_rejected', null, rejectingSignup.full_name || null, { email: rejectingSignup.email, reason: rejectReason.trim() || null });
+      setRejectingSignup(null);
+      setRejectReason('');
+      fetchSignups();
+      showToast('Request rejected — email sent.', 'warning');
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to reject'}`, 'error');
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  const exportSignupsCSV = () => {
+    if (filteredSignups.length === 0) { showToast('No signups to export', 'warning'); return; }
+    const rows = filteredSignups.map(s => ({
+      Name: s.full_name || '',
+      Email: s.email || '',
+      Phone: s.phone || '',
+      Payment: s.payment_type || '',
+      IP: s.ip_address || '',
+      Device: s.user_agent ? (s.user_agent.includes('Mobile') ? 'Mobile' : 'Desktop') : '',
+      Submitted: s.submitted_at ? new Date(s.submitted_at).toLocaleString('en-IN') : '',
+      Status: s.status || '',
+      Notes: (s.notes || '').replace(/\n/g, ' '),
+    }));
+    const headers = Object.keys(rows[0]).join(',');
+    const csv = [headers, ...rows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `signups-${signupsFilter}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`📥 Exported ${filteredSignups.length} signup${filteredSignups.length === 1 ? '' : 's'}`, 'success');
   };
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
@@ -2062,11 +2120,24 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
           )}
         </td>
         <td style={{ padding: '10px 16px' }}>
-          <span style={{
-            fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
-            background: s.payment_type === 'full' ? '#ede9fe' : '#fef9c3',
-            color: s.payment_type === 'full' ? '#7c3aed' : '#92400e',
-          }}>{s.payment_type === 'full' ? 'FULL' : 'RESERVE'}</span>
+          {(() => {
+            const PAYMENT_CHIP: Record<string, { label: string; color: string; bg: string }> = {
+              full:    { label: 'FULL',    color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+              beta:    { label: 'BETA',    color: '#ea580c', bg: 'rgba(234,88,12,0.1)'  },
+              reserve: { label: 'RESERVE', color: '#b45309', bg: 'rgba(180,83,9,0.1)'   },
+              trial:   { label: 'TRIAL',   color: '#0284c7', bg: 'rgba(2,132,199,0.1)'  },
+            };
+            const chip = PAYMENT_CHIP[s.payment_type] || PAYMENT_CHIP.reserve;
+            return (
+              <span style={{
+                fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
+                background: chip.bg, color: chip.color,
+              }}>{chip.label}</span>
+            );
+          })()}
+        </td>
+        <td style={{ padding: '10px 16px', fontSize: 11, color: '#64748b' }} title={s.user_agent || ''}>
+          {s.user_agent ? (s.user_agent.includes('Mobile') ? '📱 Mobile' : '💻 Desktop') : '—'}
         </td>
         <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(s.submitted_at)}</td>
         <td style={{ padding: '10px 16px' }}>
@@ -2080,7 +2151,7 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
           {s.status === 'pending' && (
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={() => setApproveRequest(s)} style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✅ Approve</button>
-              <button onClick={() => rejectSignup(s.id)} style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✗ Reject</button>
+              <button onClick={() => setRejectingSignup(s)} style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca', borderRadius: 8, padding: '6px 14px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✗ Reject</button>
             </div>
           )}
         </td>
@@ -2096,7 +2167,31 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
         <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#f0f9ff', color: '#0891b2' }}>📊 {approvedCount} All Time Approved</span>
       </div>
 
-      {/* Pending Section */}
+      {/* Filter pills + Search + Export */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {([
+            { id: 'pending', label: '⏳ Pending' },
+            { id: 'approved', label: '✅ Approved' },
+            { id: 'rejected', label: '✗ Rejected' },
+            { id: 'all', label: '📋 All' },
+          ] as const).map(f => (
+            <button key={f.id} onClick={() => setSignupsFilter(f.id)} style={{
+              padding: '6px 14px', borderRadius: 50, border: 'none', cursor: 'pointer',
+              background: signupsFilter === f.id ? '#0f172a' : '#f8fafc',
+              color: signupsFilter === f.id ? 'white' : '#64748b',
+              fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12,
+            }}>{f.label}</button>
+          ))}
+        </div>
+        <input value={signupsSearch} onChange={e => setSignupsSearch(e.target.value)} placeholder="Search name, email, or phone..."
+          style={{ padding: '8px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, width: 240, outline: 'none' }} />
+        <button onClick={exportSignupsCSV} style={{
+          marginLeft: 'auto', padding: '8px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0',
+          background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#0f172a',
+          fontFamily: 'DM Sans,sans-serif', display: 'flex', alignItems: 'center', gap: 6,
+        }}>📥 Export CSV</button>
+      </div>
       {pendingSignups.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>⏳ Pending Approval</div>
@@ -2104,7 +2199,7 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#fffbeb' }}>
-                  {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
+                  {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Device', 'Submitted', 'Status', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -2125,7 +2220,7 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
+                  {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Device', 'Submitted', 'Status', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>

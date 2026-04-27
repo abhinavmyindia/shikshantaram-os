@@ -260,10 +260,17 @@ ${JSON.stringify(err.additional_data || {}, null, 2)}
           }}>{s}</button>
         ))}
         <div style={{ width: 1, height: 20, background: '#e2e8f0', margin: '0 4px' }} />
-        <button onClick={resolveAll} style={{
-          padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(5,150,105,0.2)',
-          background: 'rgba(5,150,105,0.06)', color: '#059669', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-        }}>✓ Resolve All</button>
+        {(() => {
+          const unresolvedCount = errors.filter(e => !e.is_resolved).length;
+          return (
+            <button onClick={resolveAll} disabled={unresolvedCount === 0} style={{
+              padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(5,150,105,0.2)',
+              background: 'rgba(5,150,105,0.06)', color: '#059669', fontSize: 11, fontWeight: 700,
+              cursor: unresolvedCount === 0 ? 'not-allowed' : 'pointer',
+              opacity: unresolvedCount === 0 ? 0.5 : 1,
+            }}>{`✓ Resolve All (${unresolvedCount})`}</button>
+          );
+        })()}
         <button onClick={clearResolved} style={{
           padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(239,68,68,0.15)',
           background: 'rgba(239,68,68,0.05)', color: '#dc2626', fontSize: 11, fontWeight: 700, cursor: 'pointer',
