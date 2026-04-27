@@ -438,8 +438,28 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
               <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 16 }}>No active trial users right now</div>
             </div>
           ) : (
-            <div style={{ ...glassCard, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#64748b' }}>
+                  Showing <strong style={{ color: '#0f172a' }}>{approved.length}</strong> active trial {approved.length === 1 ? 'user' : 'users'}
+                </div>
+                <button
+                  onClick={exportActiveTrialsCSV}
+                  style={{
+                    background: 'linear-gradient(135deg,#0891b2,#0e7490)',
+                    color: 'white', border: 'none', borderRadius: 10,
+                    padding: '8px 16px', fontFamily: 'DM Sans', fontWeight: 700,
+                    fontSize: 12.5, cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(8,145,178,0.3)',
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}
+                  title="Export active trial users as CSV"
+                >
+                  📥 Export CSV
+                </button>
+              </div>
+              <div style={{ ...glassCard, overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#f0fdf4' }}>
                     {['Name', 'Email', 'Started', 'Ends', 'Time Left', 'Credits', 'Actions'].map(h => (
