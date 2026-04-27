@@ -980,6 +980,15 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
               </>
             )}
           </div>
+          {/* Pagination */}
+          <div style={s({ display:'flex', justifyContent:'flex-end', gap:8, marginTop:4 })}>
+            <button onClick={() => setTxPage(Math.max(0, txPage - 1))} disabled={txPage === 0} style={s({
+              padding:'6px 14px', borderRadius:8, border:'1px solid #e2e8f0', background: txPage === 0 ? '#f8fafc' : 'white', color: txPage === 0 ? '#cbd5e1' : '#374151', cursor: txPage === 0 ? 'not-allowed' : 'pointer', fontFamily:'DM Sans', fontWeight:600, fontSize:12,
+            })}>← Previous</button>
+            <button onClick={() => setTxPage(txPage + 1)} disabled={transactions.length < TX_PAGE_SIZE} style={s({
+              padding:'6px 14px', borderRadius:8, border:'1px solid #e2e8f0', background: transactions.length < TX_PAGE_SIZE ? '#f8fafc' : 'white', color: transactions.length < TX_PAGE_SIZE ? '#cbd5e1' : '#374151', cursor: transactions.length < TX_PAGE_SIZE ? 'not-allowed' : 'pointer', fontFamily:'DM Sans', fontWeight:600, fontSize:12,
+            })}>Next →</button>
+          </div>
         </div>
       )}
     </div>
