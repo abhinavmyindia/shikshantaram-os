@@ -116,6 +116,8 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
   const [bulkAmount, setBulkAmount] = useState('');
   const [bulkReason, setBulkReason] = useState('');
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkUserCount, setBulkUserCount] = useState<number | null>(null);
 
   // Transactions
   const [transactions, setTransactions] = useState<any[]>([]);
