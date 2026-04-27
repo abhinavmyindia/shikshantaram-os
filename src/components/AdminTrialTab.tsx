@@ -538,22 +538,24 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#f0fdf4' }}>
-                    {['Name', 'Email', 'Started', 'Ends', 'Time Left', 'Credits', 'Actions'].map(h => (
+                    {['Status', 'Name', 'Email', 'Started', 'Ends', 'Time Left', 'Credits', 'Actions'].map(h => (
                       <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#15803d', textTransform: 'uppercase' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {approved.map(r => {
-                    // Single source of truth: user_profiles.trial_ends_at.
-                    // Fall back to access_ends_at only if the profile hasn't loaded yet.
                     const profileEndsAt = r.user_id ? profileMap[r.user_id]?.trial_ends_at : null;
                     const effectiveEndsAt = profileEndsAt || r.access_ends_at;
                     const ms = effectiveEndsAt ? new Date(effectiveEndsAt).getTime() - Date.now() : 0;
                     const urgent = ms > 0 && ms < 86400000;
+                    const expired = ms <= 0;
                     const hasUser = !!r.user_id;
+                    const badgeStyle = expired ? statusBadge('expired') : urgent ? { ...statusBadge('approved'), background: '#fef3c7', color: '#92400e' } : statusBadge('approved');
+                    const badgeLabel = expired ? 'EXPIRED' : urgent ? 'EXPIRING' : 'ACTIVE';
                     return (
                       <tr key={r.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 16px' }}><span style={badgeStyle}>{badgeLabel}</span></td>
                         <td style={{ padding: '10px 16px', fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>{r.full_name}</td>
                         <td style={{ padding: '10px 16px', fontSize: 12.5, color: '#64748b' }}>{r.email}</td>
                         <td style={{ padding: '10px 16px', fontSize: 11.5, color: '#94a3b8' }}>{fmt(r.access_starts_at)}</td>
@@ -561,7 +563,16 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
                         <td style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: urgent ? '#991b1b' : '#0f172a' }}>{fmtRelative(effectiveEndsAt)}</td>
                         <td style={{ padding: '10px 16px', fontSize: 12, color: '#0f172a' }}>{r.trial_credits ?? '—'}</td>
                         <td style={{ padding: '10px 16px' }}>
-                          <div style={{ display: 'flex', gap: 6 }}>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {canDo.editUsers(role) && hasUser && (
+                              <button onClick={() => handleTrialResetPw(r)} disabled={resettingPwId === r.id} title="Send password reset" style={{ ...iconBtnStyle, color: '#0284c7', borderColor: 'rgba(2,132,199,0.3)', background: 'rgba(2,132,199,0.06)' }}>🔑</button>
+                            )}
+                            {canDo.editUsers(role) && hasUser && (
+                              <button onClick={() => openUpgradeModal(r)} title="Upgrade to paid tier" style={{ ...iconBtnStyle, color: '#7c3aed', borderColor: 'rgba(124,58,237,0.3)', background: 'rgba(124,58,237,0.06)' }}>🚀</button>
+                            )}
+                            {canDo.editUsers(role) && hasUser && (
+                              <button onClick={() => handleExtendTrial(r, 7)} disabled={extendingId === r.id} title="Extend trial by 7 days" style={{ ...iconBtnStyle, color: '#d97706', borderColor: 'rgba(217,119,6,0.3)', background: 'rgba(217,119,6,0.06)' }}>⏰</button>
+                            )}
                             {canDo.editUsers(role) && <button onClick={() => openEdit(r)} disabled={!hasUser} title={hasUser ? 'Edit' : 'No linked user'} style={{ ...iconBtnStyle, opacity: hasUser ? 1 : 0.4, cursor: hasUser ? 'pointer' : 'not-allowed' }}>✏️</button>}
                             {canDo.blockUsers(role) && <button onClick={() => openSecurity(r)} disabled={!hasUser} title={hasUser ? 'View Security' : 'No linked user'} style={{ ...iconBtnStyle, opacity: hasUser ? 1 : 0.4, cursor: hasUser ? 'pointer' : 'not-allowed' }}>🛡️</button>}
                             {canDo.deleteUsers(role) && <button onClick={() => openDelete(r)} disabled={!hasUser} title={hasUser ? 'Delete' : 'No linked user'} style={{ ...iconBtnStyle, opacity: hasUser ? 1 : 0.4, cursor: hasUser ? 'pointer' : 'not-allowed' }}>🗑</button>}
