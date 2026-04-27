@@ -22,6 +22,10 @@ export interface UserRow {
   notes: string;
   created_at: string;
   updated_at: string;
+  // Enriched fields
+  creditBalance?: number;
+  lastSeen?: string | null;
+  lastIp?: string | null;
 }
 
 interface SignupRow {
@@ -1568,6 +1572,72 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [showDeletionQueue, setShowDeletionQueue] = useState(false);
   const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
 
+  // Inline gift credits modal state
+  const [giftingUser, setGiftingUser] = useState<UserRow | null>(null);
+  const [giftAmount, setGiftAmount] = useState(100);
+  const [giftReason, setGiftReason] = useState('');
+  const [giftLoading, setGiftLoading] = useState(false);
+
+  // Inline force logout modal state
+  const [forceLoggingOutUser, setForceLoggingOutUser] = useState<UserRow | null>(null);
+  const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
+
+  const handleInlineGift = async () => {
+    if (!giftingUser || !giftAmount || giftAmount < 1) return;
+    if (giftAmount > 1000) {
+      showToast('Max 1,000 credits per gift. Use bulk gift for larger amounts.', 'error');
+      return;
+    }
+    const targetEmail = emailMap[giftingUser.id];
+    if (!targetEmail) { showToast('Email not found', 'error'); return; }
+    setGiftLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('gift-credits', {
+        body: { targetEmail, credits: giftAmount, reason: giftReason || 'Admin gift' },
+      });
+      if (error) throw new Error(error.message);
+      try {
+        await supabase.functions.invoke('send-gift-email', {
+          body: { email: targetEmail, fullName: giftingUser.full_name, credits: giftAmount, reason: giftReason },
+        });
+      } catch (e) { console.warn('gift email failed', e); }
+      await logActivity('gift_credits', giftingUser.id, targetEmail, { credits: giftAmount, reason: giftReason || null });
+      showToast(`🎁 ${giftAmount} credits gifted to ${targetEmail}`, 'success');
+      setGiftingUser(null); setGiftAmount(100); setGiftReason('');
+      onRefresh();
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to gift credits'}`, 'error');
+    } finally {
+      setGiftLoading(false);
+    }
+  };
+
+  const handleInlineForceLogout = async () => {
+    if (!forceLoggingOutUser) return;
+    const targetEmail = emailMap[forceLoggingOutUser.id] || '';
+    setForceLogoutLoading(true);
+    try {
+      const { data: { user: admin } } = await supabase.auth.getUser();
+      await supabase.from('login_sessions')
+        .update({ is_active: false, logged_out_at: new Date().toISOString(), logout_reason: 'admin_force_logout' } as any)
+        .eq('user_id', forceLoggingOutUser.id)
+        .eq('is_active', true);
+      await supabase.from('security_events').insert({
+        user_id: forceLoggingOutUser.id, user_email: targetEmail,
+        event_type: 'force_logout', severity: 'medium',
+        description: `Admin force-logged out ${targetEmail}`,
+        metadata: { admin_id: admin?.id, action: 'inline_force_logout' },
+      } as any);
+      await logActivity('force_logout', forceLoggingOutUser.id, targetEmail);
+      showToast(`⚡ ${forceLoggingOutUser.full_name} has been force-logged out`, 'success');
+      setForceLoggingOutUser(null);
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to force logout'}`, 'error');
+    } finally {
+      setForceLogoutLoading(false);
+    }
+  };
+
   // Test Trial modal state
   const [showTestTrial, setShowTestTrial] = useState(false);
   const [ttName, setTtName] = useState('');
@@ -1926,8 +1996,8 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
-              {['Avatar', 'Name', 'Email', 'Phone', 'Tier', 'Paid (₹)', 'BYOK', 'Joined', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+              {['Avatar', 'Name', 'Email', 'Phone', 'Tier', 'Paid (₹)', 'BYOK', 'Joined', 'Credits', 'Last Active', 'Last IP', 'Actions'].map(h => (
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -1981,8 +2051,57 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                     })()}
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(u.created_at)}</td>
+                  <td style={{ padding: '10px 16px', fontSize: 12, fontFamily: 'DM Sans,sans-serif', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    {(u.creditBalance ?? 0) === 0
+                      ? <span style={{ color: '#dc2626' }}>⚠️ 0</span>
+                      : <span style={{ color: '#7c3aed' }}>⚡ {(u.creditBalance ?? 0).toLocaleString('en-IN')}</span>}
+                  </td>
+                  <td style={{ padding: '10px 16px', fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>
+                    {u.lastSeen
+                      ? (() => {
+                          const diff = Date.now() - new Date(u.lastSeen).getTime();
+                          if (diff < 120000) return <span style={{ color: '#059669', fontWeight: 700 }}>🟢 Now</span>;
+                          if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+                          if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+                          return `${Math.floor(diff / 86400000)}d ago`;
+                        })()
+                      : <span style={{ color: '#cbd5e1' }}>—</span>}
+                  </td>
+                  <td style={{ padding: '10px 16px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{u.lastIp || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
                   <td style={{ padding: '10px 16px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {canDo.editUsers(role) && (
+                        <button
+                          onClick={async () => {
+                            const em = emailMap[u.id];
+                            if (!em) { showToast('Email not found for this user', 'error'); return; }
+                            if (!window.confirm(`Send password reset email to ${em}?`)) return;
+                            try {
+                              await supabase.functions.invoke('send-password-reset', { body: { email: em } });
+                              await logActivity('password_reset_sent', u.id, em);
+                              showToast(`🔑 Password reset sent to ${em}`, 'success');
+                            } catch (e: any) {
+                              showToast(`❌ ${e.message || 'Failed to send'}`, 'error');
+                            }
+                          }}
+                          title="Send Password Reset"
+                          style={{ width: 30, height: 30, background: 'rgba(2,132,199,0.06)', border: '1px solid rgba(2,132,199,0.2)', color: '#0284c7', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >🔑</button>
+                      )}
+                      {canDo.editUsers(role) && (
+                        <button
+                          onClick={() => setGiftingUser(u)}
+                          title="Gift Credits"
+                          style={{ width: 30, height: 30, background: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', color: '#059669', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >🎁</button>
+                      )}
+                      {canDo.blockUsers(role) && (
+                        <button
+                          onClick={() => setForceLoggingOutUser(u)}
+                          title="Force Logout"
+                          style={{ width: 30, height: 30, background: 'rgba(234,88,12,0.06)', border: '1px solid rgba(234,88,12,0.2)', color: '#ea580c', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >⚡</button>
+                      )}
                       {canDo.editUsers(role) && <button onClick={() => setEditUser(u)} title="Edit" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>✏️</button>}
                       {canDo.blockUsers(role) && <button onClick={() => setSecurityUser(u)} title="View Security" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🛡️</button>}
                       {canDo.deleteUsers(role) && <button onClick={() => setDeleteUser(u)} title="Delete" style={{ width: 30, height: 30, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>🗑</button>}
@@ -1992,7 +2111,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
+              <tr><td colSpan={12} style={{ textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 }}>No users found.</td></tr>
             )}
           </tbody>
         </table>
@@ -2008,6 +2127,60 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
       {securityUser && (
         <SecurityProfileModal userId={securityUser.id} userEmail={emailMap[securityUser.id] || ''} userName={securityUser.full_name}
           onClose={() => setSecurityUser(null)} adminId={adminId} showToast={showToast} />
+      )}
+
+      {/* Inline Gift Credits modal */}
+      {giftingUser && (
+        <div onClick={() => !giftLoading && setGiftingUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 8888, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 400, width: '100%', background: 'white', borderRadius: 20, padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.2)' }}>
+            <h2 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: '0 0 6px' }}>🎁 Gift Credits</h2>
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#64748b', margin: '0 0 18px' }}>
+              {giftingUser.full_name} · Current balance: ⚡{(giftingUser.creditBalance ?? 0).toLocaleString('en-IN')}
+            </p>
+            <label style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Credits to gift (max 1,000)</label>
+            <input type="number" value={giftAmount} min={1} max={1000} disabled={giftLoading}
+              onChange={e => setGiftAmount(parseInt(e.target.value) || 0)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 14, boxSizing: 'border-box', marginBottom: 14 }} />
+            <label style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>Reason (shown in email)</label>
+            <input type="text" value={giftReason} onChange={e => setGiftReason(e.target.value)} disabled={giftLoading} maxLength={200}
+              placeholder="e.g. Compensation for downtime"
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, boxSizing: 'border-box', marginBottom: 14 }} />
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 10, marginBottom: 16 }}>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#166534', margin: 0 }}>
+                After gifting: ⚡{((giftingUser.creditBalance ?? 0) + giftAmount).toLocaleString('en-IN')} credits · An email will be sent.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setGiftingUser(null)} disabled={giftLoading}
+                style={{ flex: 1, padding: 11, borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', cursor: giftLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, color: '#64748b', opacity: giftLoading ? 0.5 : 1 }}>Cancel</button>
+              <button onClick={handleInlineGift} disabled={giftLoading || giftAmount < 1 || giftAmount > 1000}
+                style={{ flex: 2, padding: 11, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#059669,#10b981)', color: 'white', cursor: giftLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, opacity: giftLoading ? 0.7 : 1 }}>
+                {giftLoading ? 'Gifting…' : `🎁 Gift ${giftAmount} Credits`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Force Logout modal */}
+      {forceLoggingOutUser && (
+        <div onClick={() => !forceLogoutLoading && setForceLoggingOutUser(null)} style={{ position: 'fixed', inset: 0, zIndex: 8888, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 400, width: '100%', background: 'white', borderRadius: 20, padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>⚡</div>
+            <h2 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: '0 0 8px' }}>Force Logout User</h2>
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#64748b', margin: '0 0 20px', lineHeight: 1.5 }}>
+              <strong>{forceLoggingOutUser.full_name}</strong> ({emailMap[forceLoggingOutUser.id] || '—'}) will be immediately signed out of all active sessions.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setForceLoggingOutUser(null)} disabled={forceLogoutLoading}
+                style={{ flex: 1, padding: 11, borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', cursor: forceLogoutLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, color: '#64748b', opacity: forceLogoutLoading ? 0.5 : 1 }}>Cancel</button>
+              <button onClick={handleInlineForceLogout} disabled={forceLogoutLoading}
+                style={{ flex: 2, padding: 11, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#ea580c,#f97316)', color: 'white', cursor: forceLogoutLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, opacity: forceLogoutLoading ? 0.7 : 1 }}>
+                {forceLogoutLoading ? 'Signing out…' : '⚡ Force Logout'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -2678,11 +2851,26 @@ export default function AdminPanel() {
 
   const loadData = async () => {
     setLoading(true);
-    const [usersRes, emailsRes] = await Promise.all([
+    const [usersRes, emailsRes, creditsRes, presenceRes, sessionsRes] = await Promise.all([
       supabase.from('user_profiles').select('*').neq('access_tier', 'trial').order('created_at', { ascending: false }),
       supabase.functions.invoke('admin-list-emails'),
+      supabase.from('user_credits').select('user_id, balance'),
+      supabase.from('user_presence').select('user_id, last_seen'),
+      supabase.from('login_sessions').select('user_id, ip_address, created_at').order('created_at', { ascending: false }),
     ]);
-    const u = (usersRes.data || []) as unknown as UserRow[];
+    const baseUsers = (usersRes.data || []) as unknown as UserRow[];
+    const creditMap = Object.fromEntries(((creditsRes.data || []) as any[]).map(c => [c.user_id, c.balance]));
+    const presenceMap = Object.fromEntries(((presenceRes.data || []) as any[]).map(p => [p.user_id, p.last_seen]));
+    const ipMap: Record<string, string> = {};
+    ((sessionsRes.data || []) as any[]).forEach(s => {
+      if (s.user_id && s.ip_address && !ipMap[s.user_id]) ipMap[s.user_id] = s.ip_address;
+    });
+    const u: UserRow[] = baseUsers.map(x => ({
+      ...x,
+      creditBalance: creditMap[x.id] ?? 0,
+      lastSeen: presenceMap[x.id] ?? null,
+      lastIp: ipMap[x.id] ?? null,
+    }));
     setUsers(u);
     setEmailMap(emailsRes.data?.emails || {});
     setStats({ total: u.length, basic: u.filter(x => x.access_tier === 'basic').length, premium: u.filter(x => x.access_tier === 'premium').length });
