@@ -2167,7 +2167,31 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
         <span style={{ padding: '6px 16px', borderRadius: 50, fontSize: 12, fontWeight: 700, background: '#f0f9ff', color: '#0891b2' }}>📊 {approvedCount} All Time Approved</span>
       </div>
 
-      {/* Pending Section */}
+      {/* Filter pills + Search + Export */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {([
+            { id: 'pending', label: '⏳ Pending' },
+            { id: 'approved', label: '✅ Approved' },
+            { id: 'rejected', label: '✗ Rejected' },
+            { id: 'all', label: '📋 All' },
+          ] as const).map(f => (
+            <button key={f.id} onClick={() => setSignupsFilter(f.id)} style={{
+              padding: '6px 14px', borderRadius: 50, border: 'none', cursor: 'pointer',
+              background: signupsFilter === f.id ? '#0f172a' : '#f8fafc',
+              color: signupsFilter === f.id ? 'white' : '#64748b',
+              fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12,
+            }}>{f.label}</button>
+          ))}
+        </div>
+        <input value={signupsSearch} onChange={e => setSignupsSearch(e.target.value)} placeholder="Search name, email, or phone..."
+          style={{ padding: '8px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, width: 240, outline: 'none' }} />
+        <button onClick={exportSignupsCSV} style={{
+          marginLeft: 'auto', padding: '8px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0',
+          background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#0f172a',
+          fontFamily: 'DM Sans,sans-serif', display: 'flex', alignItems: 'center', gap: 6,
+        }}>📥 Export CSV</button>
+      </div>
       {pendingSignups.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>⏳ Pending Approval</div>
