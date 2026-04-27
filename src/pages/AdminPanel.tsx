@@ -22,6 +22,10 @@ export interface UserRow {
   notes: string;
   created_at: string;
   updated_at: string;
+  // Enriched fields
+  creditBalance?: number;
+  lastSeen?: string | null;
+  lastIp?: string | null;
 }
 
 interface SignupRow {
