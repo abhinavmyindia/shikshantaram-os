@@ -2138,7 +2138,7 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
-                  {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Submitted', 'Status', 'Actions'].map(h => (
+                  {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Device', 'Submitted', 'Status', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
