@@ -375,6 +375,17 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
     });
     if (data?.success) {
       setGiftResult({ success:true, message:`✅ ${giftAmount} credits gifted to ${data.giftedTo?.email}` });
+      // Fire-and-forget gift notification email
+      try {
+        await supabase.functions.invoke('send-gift-email', {
+          body: {
+            email: data.giftedTo?.email || giftEmail.trim().toLowerCase(),
+            fullName: data.giftedTo?.full_name || '',
+            credits: parseInt(giftAmount),
+            reason: giftReason || 'Admin gift',
+          },
+        });
+      } catch (_) { /* non-blocking */ }
       setGiftEmail(''); setGiftAmount(''); setGiftReason('');
       await loadGiftHistory();
     } else {
