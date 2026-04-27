@@ -1809,6 +1809,17 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         >
           📥 Export CSV
         </button>
+        <button
+          onClick={() => { seedTestTrial(); setShowTestTrial(true); }}
+          style={{
+            padding: '7px 14px', borderRadius: 10, border: '1.5px solid #fde68a', background: '#fffbeb',
+            cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#92400e', fontFamily: 'DM Sans,sans-serif',
+            display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+          }}
+          title="Provision a sandbox trial user end-to-end (auth + profile + credits + trial_request). Bypasses OTP."
+        >
+          🧪 Test Trial
+        </button>
       </div>
 
       {/* Test Trial modal */}
