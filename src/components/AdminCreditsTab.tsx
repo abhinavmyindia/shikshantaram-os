@@ -899,15 +899,29 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
           {/* Filter + count row */}
           <div style={s({ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' })}>
             {([['all','All'],['topup','Top-ups'],['deduction','Deductions'],['gift','Gifts']] as const).map(([v,l]) => (
-              <button key={v} onClick={() => setTxFilter(v)} style={s({
+              <button key={v} onClick={() => { setTxFilter(v); setTxPage(0); }} style={s({
                 padding:'6px 16px', borderRadius:50, border:'none', cursor:'pointer', fontSize:12,
                 background: txFilter===v ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f8fafc',
                 color: txFilter===v ? 'white' : '#64748b',
                 fontFamily:'DM Sans', fontWeight:700, transition:'all 0.15s',
               })}>{l}</button>
             ))}
+            <select value={txDateRange} onChange={e => { setTxDateRange(e.target.value as any); setTxPage(0); }} style={s({
+              padding:'7px 12px', borderRadius:50, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:12, fontWeight:600, color:'#374151', background:'white', cursor:'pointer',
+            })}>
+              <option value="24h">24h</option>
+              <option value="7days">7 days</option>
+              <option value="30days">30 days</option>
+              <option value="all">All time</option>
+            </select>
+            <input value={txSearch} onChange={e => setTxSearch(e.target.value)} placeholder="Search email or description…" style={s({
+              padding:'7px 14px', borderRadius:50, border:'1.5px solid #e2e8f0', fontFamily:'DM Sans', fontSize:12, color:'#374151', minWidth:200,
+            })} />
+            <button onClick={exportLedgerCSV} disabled={!transactions.length} style={s({
+              padding:'7px 14px', borderRadius:50, border:'1px solid rgba(124,58,237,0.2)', background:'rgba(124,58,237,0.06)', color:'#7c3aed', cursor: transactions.length ? 'pointer' : 'not-allowed', fontFamily:'DM Sans', fontWeight:700, fontSize:12, opacity: transactions.length ? 1 : 0.5,
+            })}>📥 CSV</button>
             <span style={s({ fontFamily:'DM Sans', fontSize:11, color:'#94a3b8', marginLeft:'auto' })}>
-              {transactions.length} records
+              page {txPage + 1} · {transactions.length} records
             </span>
           </div>
 
