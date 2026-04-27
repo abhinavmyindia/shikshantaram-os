@@ -1290,7 +1290,7 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const day24hAgo = new Date(now.getTime() - 86400000).toISOString();
 
-      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes, revTodayRes, revWeekRes, deductionsRes, critErrRes, secEvtRes, paidRes, trialRes] = await Promise.all([
+      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes, revTodayRes, revWeekRes, deductionsRes, critErrRes, secEvtRes, paidRes, trialRes, pendingTrialsRes, pendingSignupsRes] = await Promise.all([
         supabase.from('user_presence').select('user_id, user_email, user_name, last_seen, current_page, session_start').gte('last_seen', twoMinAgo).order('last_seen', { ascending: false }),
         supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', todayStart),
         supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', weekStart),
@@ -1304,6 +1304,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
         supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('is_reviewed', false).in('severity', ['high', 'critical']),
         supabase.from('user_profiles').select('*', { count: 'exact', head: true }).in('access_tier', ['basic', 'premium', 'beta']),
         supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('access_tier', 'trial'),
+        supabase.from('trial_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('signup_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
       setPresenceData(presRes.data || []);
