@@ -397,8 +397,15 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
     setTimeout(() => setGiftResult(null), 5000);
   };
 
-  const handleBulkGift = async () => {
-    if (!bulkAmount || !confirm(`Gift ${bulkAmount} credits to ALL active users? This cannot be undone.`)) return;
+  const openBulkConfirm = async () => {
+    if (!bulkAmount || parseInt(bulkAmount) < 1) return;
+    const { count } = await supabase
+      .from('user_profiles').select('id', { count: 'exact', head: true }).neq('access_tier','revoked');
+    setBulkUserCount(count || 0);
+    setShowBulkConfirm(true);
+  };
+
+  const executeBulkGift = async () => {
     setBulkLoading(true);
     const { data: profiles } = await supabase
       .from('user_profiles').select('id').neq('access_tier','revoked');
@@ -412,7 +419,9 @@ export default function AdminCreditsTab({ showToast }: { showToast: (msg: string
         success++;
       } catch (_) { failed++; }
     }
-    setBulkLoading(false); setShowBulkGift(false);
+    setBulkLoading(false);
+    setShowBulkConfirm(false);
+    setShowBulkGift(false);
     setBulkAmount(''); setBulkReason('');
     setGiftResult({ success:true, message:`✅ Gifted ${bulkAmount} credits to ${success} users${failed>0?` (${failed} failed)`:''}.` });
     await loadGiftHistory();
