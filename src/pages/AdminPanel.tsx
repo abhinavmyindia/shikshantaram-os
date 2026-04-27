@@ -1363,7 +1363,7 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
   const maxHourly = Math.max(...hourlyData, 1);
   const currentHour = new Date().getHours();
   const hourLabels = ['12am', '', '', '', '4am', '', '', '', '8am', '', '', '', '12pm', '', '', '', '4pm', '', '', '', '8pm', '', '', ''];
-  const pendingReview = (unreviewedSecurityEvents || 0) + (criticalErrors || 0);
+  const pendingReview = (unreviewedSecurityEvents || 0) + (criticalErrors || 0) + (pendingTrialCount || 0) + (pendingSignupCount || 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
