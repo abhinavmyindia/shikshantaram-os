@@ -127,6 +127,82 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     } catch (e) { console.error('audit log failed:', e); }
   };
 
+  // ── Quick actions for active trial users ────────────────────────────
+  const [resettingPwId, setResettingPwId] = useState<string | null>(null);
+  const handleTrialResetPw = async (r: TrialRequest) => {
+    if (!r.email) return;
+    if (!window.confirm(`Send password reset email to ${r.email}?`)) return;
+    setResettingPwId(r.id);
+    try {
+      await supabase.functions.invoke('send-password-reset', { body: { email: r.email } });
+      await logActivity('password_reset_sent', r.user_id, r.full_name, { context: 'trial' });
+      showToast(`Password reset sent to ${r.email}`, 'success');
+    } catch {
+      showToast('Failed to send password reset', 'error');
+    } finally { setResettingPwId(null); }
+  };
+
+  const [extendingId, setExtendingId] = useState<string | null>(null);
+  const handleExtendTrial = async (r: TrialRequest, days: number) => {
+    if (!r.user_id) return;
+    if (!window.confirm(`Extend ${r.full_name}'s trial by ${days} days?`)) return;
+    setExtendingId(r.id);
+    try {
+      const profile = profileMap[r.user_id];
+      const baseEnd = profile?.trial_ends_at || r.access_ends_at;
+      const newEnd = new Date(Math.max(Date.now(), new Date(baseEnd || Date.now()).getTime()) + days * 86400000).toISOString();
+      await supabase.from('user_profiles').update({ trial_ends_at: newEnd } as any).eq('id', r.user_id);
+      await supabase.from('trial_requests').update({ access_ends_at: newEnd } as any).eq('id', r.id);
+      await logActivity('trial_extended', r.user_id, r.full_name, { days, new_end: newEnd });
+      showToast(`Trial extended by ${days} days`, 'success');
+      load();
+    } catch {
+      showToast('Failed to extend trial', 'error');
+    } finally { setExtendingId(null); }
+  };
+
+  // Upgrade modal
+  const [upgradingTrial, setUpgradingTrial] = useState<TrialRequest | null>(null);
+  const [upgradeTier, setUpgradeTier] = useState<'basic' | 'premium' | 'beta'>('premium');
+  const [upgradeAmount, setUpgradeAmount] = useState<number>(0);
+  const [upgradeBonusCredits, setUpgradeBonusCredits] = useState<number>(500);
+  const [upgrading, setUpgrading] = useState(false);
+
+  const openUpgradeModal = (r: TrialRequest) => {
+    setUpgradingTrial(r);
+    setUpgradeTier('premium');
+    setUpgradeAmount(0);
+    setUpgradeBonusCredits(500);
+  };
+
+  const handleUpgradeTrial = async () => {
+    if (!upgradingTrial?.user_id) return;
+    setUpgrading(true);
+    try {
+      const { error } = await supabase.functions.invoke('admin-upgrade-trial-user', {
+        body: {
+          userId: upgradingTrial.user_id,
+          email: upgradingTrial.email,
+          fullName: upgradingTrial.full_name,
+          newTier: upgradeTier,
+          paymentAmount: upgradeAmount,
+          bonusCredits: upgradeBonusCredits,
+          trialRequestId: upgradingTrial.id,
+        },
+      });
+      if (error) throw error;
+      await logActivity('trial_upgraded', upgradingTrial.user_id, upgradingTrial.full_name, {
+        tier: upgradeTier, amount: upgradeAmount, credits: upgradeBonusCredits,
+      });
+      showToast(`${upgradingTrial.full_name} upgraded to ${upgradeTier}`, 'success');
+      setUpgradingTrial(null);
+      load();
+    } catch (e: any) {
+      showToast(`Upgrade failed: ${e?.message || 'unknown error'}`, 'error');
+    } finally { setUpgrading(false); }
+  };
+
+
   // Active trials: status approved OR profile.access_tier === 'trial'
   const pending = requests.filter(r => r.status === 'pending');
   const approved = requests.filter(r =>
