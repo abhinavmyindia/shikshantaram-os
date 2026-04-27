@@ -2009,8 +2009,8 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         </div>
       )}
 
-      <div style={{ ...glassCard, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ ...glassCard, overflowX: 'auto', overflowY: 'visible' }}>
+        <table style={{ width: '100%', minWidth: 1400, borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
               {['Avatar', 'Name', 'Email', 'Phone', 'Tier', 'Paid (₹)', 'BYOK', 'Joined', 'Credits', 'Last Active', 'Last IP', 'Actions'].map(h => (
@@ -2085,8 +2085,8 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                       : <span style={{ color: '#cbd5e1' }}>—</span>}
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{u.lastIp || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
                       {canDo.editUsers(role) && (
                         <button
                           onClick={async () => {
