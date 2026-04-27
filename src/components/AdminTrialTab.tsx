@@ -689,6 +689,53 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         </div>
         );
       })()}
+
+      {/* Upgrade Trial Modal */}
+      {upgradingTrial && (
+        <div onClick={() => !upgrading && setUpgradingTrial(null)} style={{ position: 'fixed', inset: 0, zIndex: 8888, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 440, width: '100%', background: 'white', borderRadius: 20, padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.2)', fontFamily: 'DM Sans, sans-serif' }}>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a', marginBottom: 4 }}>🚀 Upgrade Trial User</div>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 18 }}>Convert <strong>{upgradingTrial.full_name}</strong> to a paid tier</div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>New Tier</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['basic', 'premium', 'beta'] as const).map(t => (
+                  <button key={t} onClick={() => setUpgradeTier(t)} style={{
+                    flex: 1, padding: '10px', borderRadius: 10, border: upgradeTier === t ? '2px solid #7c3aed' : '1.5px solid #e2e8f0',
+                    background: upgradeTier === t ? 'rgba(124,58,237,0.06)' : 'white', cursor: 'pointer',
+                    fontFamily: 'DM Sans', fontWeight: upgradeTier === t ? 800 : 600, fontSize: 13,
+                    color: upgradeTier === t ? '#7c3aed' : '#64748b', textTransform: 'capitalize',
+                  }}>{t}</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Payment Amount (₹)</div>
+              <input type="number" value={upgradeAmount} onChange={e => setUpgradeAmount(parseInt(e.target.value) || 0)} min={0}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Bonus Credits on Upgrade</div>
+              <input type="number" value={upgradeBonusCredits} onChange={e => setUpgradeBonusCredits(parseInt(e.target.value) || 0)} min={0} max={5000}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box' }} />
+            </div>
+
+            <div style={{ background: 'rgba(124,58,237,0.04)', border: '1px solid rgba(124,58,237,0.12)', borderRadius: 10, padding: 12, fontSize: 12, color: '#5b21b6', marginBottom: 16 }}>
+              ✨ User will be upgraded to <strong>{upgradeTier}</strong>, granted <strong>{upgradeBonusCredits} bonus credits</strong>, and notified via email.
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setUpgradingTrial(null)} disabled={upgrading} style={{ flex: 1, padding: 11, borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', cursor: upgrading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#64748b' }}>Cancel</button>
+              <button onClick={handleUpgradeTrial} disabled={upgrading} style={{ flex: 2, padding: 11, borderRadius: 12, border: 'none', background: upgrading ? '#cbd5e1' : 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', cursor: upgrading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13 }}>
+                {upgrading ? 'Upgrading…' : `🚀 Upgrade to ${upgradeTier}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
