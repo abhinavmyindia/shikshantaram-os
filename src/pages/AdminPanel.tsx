@@ -1265,6 +1265,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
   const [unreviewedSecurityEvents, setUnreviewedSecurityEvents] = useState(0);
   const [paidUserCount, setPaidUserCount] = useState(0);
   const [trialUserCount, setTrialUserCount] = useState(0);
+  const [pendingTrialCount, setPendingTrialCount] = useState(0);
+  const [pendingSignupCount, setPendingSignupCount] = useState(0);
 
   const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed', copywriting_suite: '#ec4899' };
   const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity', copywriting_suite: 'Copy Suite' };
