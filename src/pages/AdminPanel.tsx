@@ -1127,7 +1127,15 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div style={{ ...glassCard, padding: 20 }}>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 14 }}>Top Users by Cost</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' }}>Top Users by Cost</div>
+            <button onClick={() => {
+              const rows = [['Rank', 'User', 'Email', 'Calls', 'Tokens', 'Cost USD', 'Last Active'], ...userEntries.map((u: any, i: number) => [i + 1, u.name || '', u.email || '', u.calls, u.tokens, u.cost.toFixed(6), u.lastActive])];
+              const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+              const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+              const a = document.createElement('a'); a.href = url; a.download = `ai-top-users-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+            }} style={{ padding: '5px 11px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)', background: 'rgba(124,58,237,0.06)', color: '#7c3aed', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11 }}>📥 CSV</button>
+          </div>
           <div style={{ overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '30px 1fr 60px 70px 80px', gap: 0, background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
               {['#', 'User', 'Calls', 'Tokens', 'Cost'].map(h => (
