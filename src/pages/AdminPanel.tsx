@@ -1162,7 +1162,15 @@ function AIAnalyticsTab({ dateRange, onDateRangeChange }: { dateRange: string; o
         </div>
 
         <div style={{ ...glassCard, padding: 20 }}>
-          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 16 }}>Daily AI Usage</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a' }}>Daily AI Usage</div>
+            <button onClick={() => {
+              const rows = [['Date', 'Calls', 'Tokens', 'Cost USD'], ...dayEntries.map(([d, v]: [string, any]) => [d, v.calls, v.tokens, v.cost.toFixed(6)])];
+              const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+              const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+              const a = document.createElement('a'); a.href = url; a.download = `ai-daily-trend-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+            }} style={{ padding: '5px 11px', borderRadius: 8, border: '1px solid rgba(124,58,237,0.2)', background: 'rgba(124,58,237,0.06)', color: '#7c3aed', cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11 }}>📥 CSV</button>
+          </div>
           <div style={{ width: '100%', height: 180, display: 'flex', alignItems: 'flex-end', gap: 4 }}>
             {dayEntries.map(([day, data]) => {
               const pct = (data.tokens / maxDayTokens) * 100;
