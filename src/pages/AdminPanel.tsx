@@ -2062,11 +2062,24 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
           )}
         </td>
         <td style={{ padding: '10px 16px' }}>
-          <span style={{
-            fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
-            background: s.payment_type === 'full' ? '#ede9fe' : '#fef9c3',
-            color: s.payment_type === 'full' ? '#7c3aed' : '#92400e',
-          }}>{s.payment_type === 'full' ? 'FULL' : 'RESERVE'}</span>
+          {(() => {
+            const PAYMENT_CHIP: Record<string, { label: string; color: string; bg: string }> = {
+              full:    { label: 'FULL',    color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+              beta:    { label: 'BETA',    color: '#ea580c', bg: 'rgba(234,88,12,0.1)'  },
+              reserve: { label: 'RESERVE', color: '#b45309', bg: 'rgba(180,83,9,0.1)'   },
+              trial:   { label: 'TRIAL',   color: '#0284c7', bg: 'rgba(2,132,199,0.1)'  },
+            };
+            const chip = PAYMENT_CHIP[s.payment_type] || PAYMENT_CHIP.reserve;
+            return (
+              <span style={{
+                fontSize: 9, fontWeight: 800, padding: '2px 8px', borderRadius: 20, textTransform: 'uppercase',
+                background: chip.bg, color: chip.color,
+              }}>{chip.label}</span>
+            );
+          })()}
+        </td>
+        <td style={{ padding: '10px 16px', fontSize: 11, color: '#64748b' }} title={s.user_agent || ''}>
+          {s.user_agent ? (s.user_agent.includes('Mobile') ? '📱 Mobile' : '💻 Desktop') : '—'}
         </td>
         <td style={{ padding: '10px 16px', fontSize: 12, color: '#94a3b8' }}>{formatDate(s.submitted_at)}</td>
         <td style={{ padding: '10px 16px' }}>
