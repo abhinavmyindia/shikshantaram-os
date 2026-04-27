@@ -2907,6 +2907,7 @@ export default function AdminPanel() {
     canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits', badge: 0 },
     canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics', badge: 0 },
     canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security', badge: tabBadges.security },
+    canDo.viewSecurity(role) && { id: 'activity_log', label: '📋 Activity Log', badge: 0 },
     canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access', badge: 0 },
   ].filter(Boolean) as { id: string; label: string; badge: number }[];
 
