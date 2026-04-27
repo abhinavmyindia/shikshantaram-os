@@ -2085,8 +2085,8 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                       : <span style={{ color: '#cbd5e1' }}>—</span>}
                   </td>
                   <td style={{ padding: '10px 16px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{u.lastIp || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
                       {canDo.editUsers(role) && (
                         <button
                           onClick={async () => {
