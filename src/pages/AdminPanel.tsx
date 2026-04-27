@@ -1265,6 +1265,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
   const [unreviewedSecurityEvents, setUnreviewedSecurityEvents] = useState(0);
   const [paidUserCount, setPaidUserCount] = useState(0);
   const [trialUserCount, setTrialUserCount] = useState(0);
+  const [pendingTrialCount, setPendingTrialCount] = useState(0);
+  const [pendingSignupCount, setPendingSignupCount] = useState(0);
 
   const moduleColors: Record<string, string> = { product_navigator: '#ea580c', offer_creation: '#f59e0b', funnel_builder: '#06b6d4', niche_clarity: '#7c3aed', copywriting_suite: '#ec4899' };
   const moduleNames: Record<string, string> = { product_navigator: 'Product Navigator', offer_creation: 'Offer Creation', funnel_builder: 'Funnel Builder', niche_clarity: 'Niche Clarity', copywriting_suite: 'Copy Suite' };
@@ -1290,7 +1292,7 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const day24hAgo = new Date(now.getTime() - 86400000).toISOString();
 
-      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes, revTodayRes, revWeekRes, deductionsRes, critErrRes, secEvtRes, paidRes, trialRes] = await Promise.all([
+      const [presRes, activeTodayRes, activeWeekRes, totalRes, aiTodayRes, recentRes, revTodayRes, revWeekRes, deductionsRes, critErrRes, secEvtRes, paidRes, trialRes, pendingTrialsRes, pendingSignupsRes] = await Promise.all([
         supabase.from('user_presence').select('user_id, user_email, user_name, last_seen, current_page, session_start').gte('last_seen', twoMinAgo).order('last_seen', { ascending: false }),
         supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', todayStart),
         supabase.from('user_presence').select('*', { count: 'exact', head: true }).gte('last_seen', weekStart),
@@ -1304,6 +1306,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
         supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('is_reviewed', false).in('severity', ['high', 'critical']),
         supabase.from('user_profiles').select('*', { count: 'exact', head: true }).in('access_tier', ['basic', 'premium', 'beta']),
         supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('access_tier', 'trial'),
+        supabase.from('trial_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('signup_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
       setPresenceData(presRes.data || []);
@@ -1314,6 +1318,8 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
       setUnreviewedSecurityEvents(secEvtRes.count || 0);
       setPaidUserCount(paidRes.count || 0);
       setTrialUserCount(trialRes.count || 0);
+      setPendingTrialCount(pendingTrialsRes.count || 0);
+      setPendingSignupCount(pendingSignupsRes.count || 0);
 
       const tokenData = aiTodayRes.data || [];
       const tokensToday = (tokenData as any[]).reduce((s: number, l: any) => s + (l.total_tokens || 0), 0);
@@ -1357,7 +1363,7 @@ function OverviewTab({ stats, users, emailMap, setAdminTab }: { stats: any; user
   const maxHourly = Math.max(...hourlyData, 1);
   const currentHour = new Date().getHours();
   const hourLabels = ['12am', '', '', '', '4am', '', '', '', '8am', '', '', '', '12pm', '', '', '', '4pm', '', '', '', '8pm', '', '', ''];
-  const pendingReview = (unreviewedSecurityEvents || 0) + (criticalErrors || 0);
+  const pendingReview = (unreviewedSecurityEvents || 0) + (criticalErrors || 0) + (pendingTrialCount || 0) + (pendingSignupCount || 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -1803,6 +1809,17 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         >
           📥 Export CSV
         </button>
+        <button
+          onClick={() => { seedTestTrial(); setShowTestTrial(true); }}
+          style={{
+            padding: '7px 14px', borderRadius: 10, border: '1.5px solid #fde68a', background: '#fffbeb',
+            cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#92400e', fontFamily: 'DM Sans,sans-serif',
+            display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+          }}
+          title="Provision a sandbox trial user end-to-end (auth + profile + credits + trial_request). Bypasses OTP."
+        >
+          🧪 Test Trial
+        </button>
       </div>
 
       {/* Test Trial modal */}
@@ -2246,6 +2263,45 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
       )}
 
       {ipLookup && <AdminIpLookupModal ip={ipLookup} onClose={() => setIpLookup(null)} />}
+
+      {/* Rejection reason modal */}
+      {rejectingSignup && (
+        <div onClick={() => { if (!rejecting) { setRejectingSignup(null); setRejectReason(''); } }} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 24, padding: 28, maxWidth: 480, width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: 0 }}>✗ Reject Signup Request</h2>
+              <button onClick={() => { setRejectingSignup(null); setRejectReason(''); }} disabled={rejecting} style={{ background: '#f1f5f9', border: 'none', width: 30, height: 30, borderRadius: '50%', cursor: rejecting ? 'not-allowed' : 'pointer', fontSize: 14, opacity: rejecting ? 0.5 : 1 }}>✕</button>
+            </div>
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: 12, marginBottom: 16 }}>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#991b1b', margin: '0 0 4px', fontWeight: 700 }}>{rejectingSignup.full_name}</p>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#7f1d1d', margin: 0 }}>{rejectingSignup.email}</p>
+            </div>
+            <label style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>
+              Reason (optional — included in rejection email)
+            </label>
+            <textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              maxLength={500}
+              rows={4}
+              placeholder="e.g. We're at capacity right now. We'll re-open access soon."
+              disabled={rejecting}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'DM Sans,sans-serif', fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+            />
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#94a3b8', margin: '4px 0 16px', textAlign: 'right' }}>{rejectReason.length}/500</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { setRejectingSignup(null); setRejectReason(''); }} disabled={rejecting}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: 'transparent', cursor: rejecting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, color: '#64748b', opacity: rejecting ? 0.5 : 1 }}>
+                Cancel
+              </button>
+              <button onClick={handleSignupReject} disabled={rejecting}
+                style={{ flex: 2, padding: '10px', borderRadius: 10, border: 'none', background: '#dc2626', color: 'white', cursor: rejecting ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, opacity: rejecting ? 0.7 : 1 }}>
+                {rejecting ? 'Rejecting…' : '✗ Reject & Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2578,6 +2634,29 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [adminToast, setAdminToast] = useState<{ message: string; type: string } | null>(null);
   const [analyticsDateRange, setAnalyticsDateRange] = useState('30days');
+  const [tabBadges, setTabBadges] = useState<{ signups: number; trials: number; security: number }>({ signups: 0, trials: 0, security: 0 });
+
+  const fetchTabBadges = async () => {
+    try {
+      const [pendingSignupsRes, pendingTrialsRes, critErrRes, secEvtRes] = await Promise.all([
+        supabase.from('signup_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('trial_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false),
+        supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('is_reviewed', false).in('severity', ['high', 'critical']),
+      ]);
+      setTabBadges({
+        signups: pendingSignupsRes.count || 0,
+        trials: pendingTrialsRes.count || 0,
+        security: (critErrRes.count || 0) + (secEvtRes.count || 0),
+      });
+    } catch (e) { console.error('badge fetch error', e); }
+  };
+
+  useEffect(() => {
+    fetchTabBadges();
+    const id = setInterval(fetchTabBadges, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   // Set default tab based on role
   useEffect(() => {
@@ -2632,15 +2711,15 @@ export default function AdminPanel() {
 
   // Build visible tabs dynamically based on role
   const tabs = [
-    canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview' },
-    canDo.viewUsers(role) && { id: 'users', label: '👥 Users' },
-    canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups' },
-    canDo.viewSignups(role) && { id: 'trials', label: '🎁 Trials' },
-    canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits' },
-    canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics' },
-    canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security' },
-    canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access' },
-  ].filter(Boolean) as { id: string; label: string }[];
+    canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview', badge: 0 },
+    canDo.viewUsers(role) && { id: 'users', label: '👥 Users', badge: 0 },
+    canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups', badge: tabBadges.signups },
+    canDo.viewSignups(role) && { id: 'trials', label: '🎁 Trials', badge: tabBadges.trials },
+    canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits', badge: 0 },
+    canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics', badge: 0 },
+    canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security', badge: tabBadges.security },
+    canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access', badge: 0 },
+  ].filter(Boolean) as { id: string; label: string; badge: number }[];
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}>
@@ -2691,11 +2770,20 @@ export default function AdminPanel() {
             fontWeight: tab === t.id ? 800 : 500, fontSize: 13,
             background: tab === t.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'transparent',
             color: tab === t.id ? 'white' : '#64748b',
-            transition: 'all 0.2s',
+            transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: 6,
           }}
             onMouseEnter={e => { if (tab !== t.id) (e.currentTarget.style.color = '#374151'); }}
             onMouseLeave={e => { if (tab !== t.id) (e.currentTarget.style.color = '#64748b'); }}
-          >{t.label}</button>
+          >
+            <span>{t.label}</span>
+            {t.badge > 0 && (
+              <span style={{
+                background: '#dc2626', color: 'white', fontSize: 10, fontWeight: 800,
+                padding: '1px 7px', borderRadius: 20, minWidth: 18, textAlign: 'center',
+                lineHeight: '14px', fontFamily: 'DM Sans,sans-serif',
+              }}>{t.badge > 99 ? '99+' : t.badge}</span>
+            )}
+          </button>
         ))}
       </div>
 
