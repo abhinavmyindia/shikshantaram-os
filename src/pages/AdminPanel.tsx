@@ -1930,8 +1930,8 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f8fafc' }}>
-              {['Avatar', 'Name', 'Email', 'Phone', 'Tier', 'Paid (₹)', 'BYOK', 'Joined', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+              {['Avatar', 'Name', 'Email', 'Phone', 'Tier', 'Paid (₹)', 'BYOK', 'Joined', 'Credits', 'Last Active', 'Last IP', 'Actions'].map(h => (
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
