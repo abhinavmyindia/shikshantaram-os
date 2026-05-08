@@ -237,8 +237,8 @@ Return ONLY a JSON object:
     // ─── PLATFORM PATH (unchanged) ───────────────────────────────────────────
     const aiResult = await callLovableAI(prompt, system, model, 8000);
 
-    // Log usage
-    logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'copywriting_suite', callType: `generate_${copyTypeKey}`, model, usage: aiResult.usage });
+    // Log usage (awaited so the insert completes before the response closes the runtime)
+    await logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'copywriting_suite', callType: `generate_${copyTypeKey}`, model, usage: aiResult.usage });
 
     const parsed = parseJsonResponse(aiResult.content);
     return new Response(JSON.stringify({ ...parsed, usage: aiResult.usage, byok: false }), {

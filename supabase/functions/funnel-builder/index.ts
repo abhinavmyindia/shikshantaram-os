@@ -310,8 +310,8 @@ serve(async (req) => {
     // ─── PLATFORM PATH (unchanged) ───────────────────────────────────────────
     const aiResult = await callLovableAI(prompt, model, maxTokens);
 
-    // Log usage (fire-and-forget)
-    logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'funnel_builder', callType, model, usage: aiResult.usage });
+    // Log usage (awaited so the insert completes before the response closes the runtime)
+    await logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'funnel_builder', callType, model, usage: aiResult.usage });
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
