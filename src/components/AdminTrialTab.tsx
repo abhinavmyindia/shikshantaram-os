@@ -702,6 +702,47 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
         );
       })()}
 
+      {/* Reject Trial Modal */}
+      {rejecting && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 0, maxWidth: 480, width: '100%', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 2 }}>
+              <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 17, color: 'white' }}>✕ Reject Trial Request</div>
+              <button onClick={() => !working && setRejecting(null)} style={{ background: 'rgba(255,255,255,0.25)', border: 'none', color: 'white', width: 28, height: 28, borderRadius: '50%', cursor: 'pointer', fontSize: 14 }}>×</button>
+            </div>
+            <div style={{ padding: 24 }}>
+              <div style={{ background: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 14 }}>
+                  {rejecting.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>{rejecting.full_name}</div>
+                  <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b' }}>{rejecting.email}</div>
+                </div>
+              </div>
+              <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 12, color: '#991b1b', lineHeight: 1.55 }}>
+                The applicant will receive a polite rejection email. This action is logged and reversible only by re-inviting them manually.
+              </div>
+              <label style={{ display: 'block', fontFamily: 'DM Sans', fontSize: 11, fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Internal reason (optional)</label>
+              <textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="e.g. duplicate request, suspicious IP, off-topic niche"
+                rows={3}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'DM Sans', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }}
+              />
+              <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8', marginTop: 6 }}>Only stored in admin notes — not sent to the user.</div>
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', background: '#fafbfc', position: 'sticky', bottom: 0 }}>
+              <button disabled={working} onClick={() => setRejecting(null)} style={{ background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer' }}>Cancel</button>
+              <button disabled={working} onClick={confirmReject} style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: 'white', border: 'none', borderRadius: 10, padding: '11px 22px', fontFamily: 'DM Sans', fontWeight: 800, fontSize: 13, cursor: working ? 'not-allowed' : 'pointer', opacity: working ? 0.6 : 1, boxShadow: '0 4px 14px rgba(239,68,68,0.35)' }}>
+                {working ? 'Rejecting…' : '✕ Reject & Send Email'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Upgrade Trial Modal */}
       {upgradingTrial && (
         <div onClick={() => !upgrading && setUpgradingTrial(null)} style={{ position: 'fixed', inset: 0, zIndex: 8888, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
