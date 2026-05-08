@@ -829,11 +829,11 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
                 <span style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 42 })}>{offerScore}</span>
               </div>
               {[
-                { label: 'Value-Price Ratio', val: offerData.offerScore.valuePriceRatio },
-                { label: 'Bonus Relevance', val: offerData.offerScore.bonusRelevance },
-                { label: 'Guarantee Strength', val: offerData.offerScore.guaranteeStrength },
-                { label: 'Urgency', val: offerData.offerScore.urgencyMechanism },
-                { label: 'Positioning', val: offerData.offerScore.positioningClarity },
+                { label: 'Value-Price Ratio', val: offerData.offerScore?.valuePriceRatio ?? 0 },
+                { label: 'Bonus Relevance', val: offerData.offerScore?.bonusRelevance ?? 0 },
+                { label: 'Guarantee Strength', val: offerData.offerScore?.guaranteeStrength ?? 0 },
+                { label: 'Urgency', val: offerData.offerScore?.urgencyMechanism ?? 0 },
+                { label: 'Positioning', val: offerData.offerScore?.positioningClarity ?? 0 },
               ].map(d => (
                 <div key={d.label} style={s({ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 })}>
                   <span style={s({ fontFamily: 'DM Sans', fontSize: 10, opacity: 0.8, width: 120 })}>{d.label}</span>
