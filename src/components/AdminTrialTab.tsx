@@ -77,6 +77,10 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [approveDays, setApproveDays] = useState<2 | 7 | 14 | 30>(7);
   const [approveNotes, setApproveNotes] = useState('');
 
+  // Reject modal
+  const [rejecting, setRejecting] = useState<TrialRequest | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
   // Trial-row actions (reuse Users tab modals)
   const [editUser, setEditUser] = useState<{ user: UserRow; trialStartedAt: string | null; email: string } | null>(null);
   const [securityUser, setSecurityUser] = useState<{ user: UserRow; email: string } | null>(null);
