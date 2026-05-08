@@ -142,7 +142,17 @@ export default function TrialPage() {
       const { data, error: fnError } = await supabase.functions.invoke('verify-trial-otp', {
         body: { trial_request_id: trialRequestId, otp_code: otp.trim() },
       });
-      if (fnError) throw new Error(fnError.message || 'Verification failed.');
+      if (fnError) {
+        let realMsg = fnError.message || 'Verification failed.';
+        try {
+          const ctxResp: Response | undefined = (fnError as any).context?.response ?? (fnError as any).context;
+          if (ctxResp && typeof ctxResp.json === 'function') {
+            const body = await ctxResp.clone().json();
+            if (body?.error) realMsg = body.error;
+          }
+        } catch { /* ignore */ }
+        throw new Error(realMsg);
+      }
       if ((data as any)?.error) throw new Error((data as any).error);
       setStep('success');
     } catch (e: any) {
