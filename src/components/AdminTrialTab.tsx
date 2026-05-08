@@ -247,19 +247,27 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
     }
   };
 
-  const reject = async (req: TrialRequest) => {
-    const reason = prompt(`Reject trial request from ${req.full_name}?\n\nOptional internal reason (leave blank to skip):`, '');
-    if (reason === null) return;
+  const reject = (req: TrialRequest) => {
+    setRejectReason('');
+    setRejecting(req);
+  };
+
+  const confirmReject = async () => {
+    if (!rejecting) return;
+    const req = rejecting;
+    const reason = rejectReason.trim();
     setWorking(true);
     try {
       const { data, error } = await supabase.functions.invoke('reject-trial-request', {
-        body: { requestId: req.id, reason: reason.trim() || null, adminId },
+        body: { requestId: req.id, reason: reason || null, adminId },
       });
       if (error || (data as any)?.error) {
         const msg = (data as any)?.error || error?.message || 'Failed to reject';
         showToast(msg, 'error');
       } else {
         showToast(`Request from ${req.full_name} rejected.`, 'warning');
+        setRejecting(null);
+        setRejectReason('');
         load();
       }
     } catch (e: any) {
