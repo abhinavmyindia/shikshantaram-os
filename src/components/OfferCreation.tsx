@@ -843,10 +843,10 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
                   <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, width: 30, textAlign: 'right' })}>{d.val}/20</span>
                 </div>
               ))}
-              {offerData.offerScore.improvements.length > 0 && (
+              {(offerData.offerScore?.improvements?.length ?? 0) > 0 && (
                 <>
                   <div style={s({ fontFamily: 'DM Sans', fontSize: 10, opacity: 0.8, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 })}>How to reach 90+:</div>
-                  {offerData.offerScore.improvements.map((imp, i) => (
+                  {(offerData.offerScore?.improvements ?? []).map((imp, i) => (
                     <div key={i} style={s({ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontSize: 11, marginBottom: 4 })}>{imp}</div>
                   ))}
                 </>
