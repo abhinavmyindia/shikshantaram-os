@@ -218,7 +218,8 @@ export default function ProfilePage({
   // Tab 6 — API Keys (BYOK)
   const [byokStatus, setByokStatus] = useState<any[]>([]);
   const [byokPreferred, setByokPreferred] = useState<string | null>(null);
-  const [byokLoading, setByokLoading] = useState(true);
+  const [byokLoading, setByokLoading] = useState(false);
+  const [byokLoaded, setByokLoaded] = useState(false);
   const [keyInputs, setKeyInputs] = useState<Record<string, string>>({});
   const [savingKey, setSavingKey] = useState<Record<string, boolean>>({});
   const [saveResults, setSaveResults] = useState<Record<string, { success: boolean; message: string } | null>>({});
@@ -401,10 +402,11 @@ export default function ProfilePage({
       setByokStatus(data?.status || []);
       setByokPreferred(data?.preferredProvider || null);
     } catch (_) {}
+    setByokLoaded(true);
     setByokLoading(false);
   };
 
-  useEffect(() => { if (activeTab === 'apikeys') loadByokStatus(); }, [activeTab, user]);
+  useEffect(() => { if (activeTab === 'apikeys' && user && !byokLoaded) loadByokStatus(); }, [activeTab, user, byokLoaded]);
 
   const handleSaveKey = async (provider: string) => {
     const rawKey = keyInputs[provider]?.trim();
@@ -1268,7 +1270,7 @@ export default function ProfilePage({
           </div>
 
           {/* Provider cards */}
-          {byokLoading ? (
+          {byokLoading && !byokLoaded ? (
             <div style={{ display:'flex', justifyContent:'center', padding:'32px' }}>
               <div style={{ width:'28px', height:'28px', border:'3px solid #e2e8f0', borderTopColor:'#7c3aed', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
             </div>
