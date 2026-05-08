@@ -201,6 +201,31 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    if (action === 'resend_invitation') {
+      const { invitationId } = payload;
+      const { data: inv } = await supabase
+        .from('team_invitations')
+        .select('email, role, status')
+        .eq('id', invitationId)
+        .single();
+
+      if (!inv) throw new Error('Invitation not found.');
+      if (inv.status !== 'pending') throw new Error(`Cannot resend a ${inv.status} invitation.`);
+
+      // Refresh expiry to 7 days from now
+      await supabase
+        .from('team_invitations')
+        .update({ expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+        .eq('id', invitationId);
+
+      await sendTeamInviteEmail(inv.email, inv.role, ownerName);
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Invitation re-sent to ${inv.email}. Expiry extended by 7 days.`
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     throw new Error(`Unknown action: ${action}`);
   } catch (err: any) {
     return new Response(
