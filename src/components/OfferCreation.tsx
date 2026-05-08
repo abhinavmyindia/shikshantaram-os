@@ -1001,11 +1001,11 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
           <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20, padding: 24, border: '1px solid rgba(255,255,255,0.95)', marginBottom: 24 })}>
             <h3 style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 16 })}>Offer Score Breakdown</h3>
             {[
-              { icon: '📊', label: 'Value-Price Ratio', val: offerData.offerScore.valuePriceRatio, color: '#f59e0b' },
-              { icon: '🎁', label: 'Bonus Relevance', val: offerData.offerScore.bonusRelevance, color: '#059669' },
-              { icon: '🛡', label: 'Guarantee Strength', val: offerData.offerScore.guaranteeStrength, color: '#0891b2' },
-              { icon: '⏰', label: 'Urgency Mechanism', val: offerData.offerScore.urgencyMechanism, color: '#ef4444' },
-              { icon: '🎯', label: 'Positioning Clarity', val: offerData.offerScore.positioningClarity, color: '#7c3aed' },
+              { icon: '📊', label: 'Value-Price Ratio', val: offerData.offerScore?.valuePriceRatio ?? 0, color: '#f59e0b' },
+              { icon: '🎁', label: 'Bonus Relevance', val: offerData.offerScore?.bonusRelevance ?? 0, color: '#059669' },
+              { icon: '🛡', label: 'Guarantee Strength', val: offerData.offerScore?.guaranteeStrength ?? 0, color: '#0891b2' },
+              { icon: '⏰', label: 'Urgency Mechanism', val: offerData.offerScore?.urgencyMechanism ?? 0, color: '#ef4444' },
+              { icon: '🎯', label: 'Positioning Clarity', val: offerData.offerScore?.positioningClarity ?? 0, color: '#7c3aed' },
             ].map(d => (
               <div key={d.label} style={s({ display: 'flex', gap: 16, alignItems: 'center', padding: '14px 0', borderBottom: '1px solid #f1f5f9' })}>
                 <span style={s({ fontSize: 16, width: 24 })}>{d.icon}</span>
