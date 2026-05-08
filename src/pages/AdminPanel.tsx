@@ -2402,8 +2402,8 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
       {pendingSignups.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>⏳ Pending Approval</div>
-          <div style={{ ...glassCard, overflow: 'hidden', border: '1.5px solid #fde68a' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ ...glassCard, overflowX: 'auto', border: '1.5px solid #fde68a' }}>
+            <table style={{ width: '100%', minWidth: 1100, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#fffbeb' }}>
                   {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Device', 'Submitted', 'Status', 'Actions'].map(h => (
@@ -2423,8 +2423,8 @@ function SignupsTab({ onRefresh, showToast, logActivity }: { onRefresh: () => vo
       {otherSignups.length > 0 && (
         <div>
           <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>📋 Approved / Rejected</div>
-          <div style={{ ...glassCard, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ ...glassCard, overflowX: 'auto' }}>
+            <table style={{ width: '100%', minWidth: 1100, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   {['Name', 'Email', 'Phone', 'IP', 'Payment', 'Device', 'Submitted', 'Status', 'Actions'].map(h => (
