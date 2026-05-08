@@ -2834,7 +2834,7 @@ export default function AdminPanel() {
       const [pendingSignupsRes, pendingTrialsRes, critErrRes, secEvtRes] = await Promise.all([
         supabase.from('signup_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('trial_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false),
+        supabase.from('error_logs').select('*', { count: 'exact', head: true }).eq('severity', 'critical').eq('is_resolved', false).neq('module', 'health_monitor'),
         supabase.from('security_events').select('*', { count: 'exact', head: true }).eq('is_reviewed', false).in('severity', ['high', 'critical']),
       ]);
       setTabBadges({
