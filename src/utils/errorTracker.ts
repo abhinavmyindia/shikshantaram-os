@@ -65,8 +65,14 @@ const SUPPRESS_MESSAGES = [
   'lock broken',
   'lock was not granted',
   'lock was stolen by another request',
+  'lock "lock:sb-',
+  'was released because another request stole it',
   'navigator.locks',
   'the operation was aborted',
+  'resizeobserver loop',
+  'resizeobserver loop completed',
+  'resizeobserver loop limit exceeded',
+  'non-error promise rejection captured',
 ];
 
 const shouldSuppressError = (message: string): boolean => {
