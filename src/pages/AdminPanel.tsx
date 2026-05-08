@@ -2917,104 +2917,187 @@ export default function AdminPanel() {
     </div>
   );
 
-  // Build visible tabs dynamically based on role
-  const tabs = [
-    canDo.viewOverview(role) && { id: 'overview', label: '📊 Overview', badge: 0 },
-    canDo.viewUsers(role) && { id: 'users', label: '👥 Users', badge: 0 },
-    canDo.viewSignups(role) && { id: 'signups', label: '📝 Signups', badge: tabBadges.signups },
-    canDo.viewSignups(role) && { id: 'trials', label: '🎁 Trials', badge: tabBadges.trials },
-    canDo.viewAnalytics(role) && { id: 'credits', label: '💰 Credits', badge: 0 },
-    canDo.viewAnalytics(role) && { id: 'ai-analytics', label: '⚡ AI Analytics', badge: 0 },
-    canDo.viewSecurity(role) && { id: 'security', label: '🔒 Security', badge: tabBadges.security },
-    canDo.viewSecurity(role) && { id: 'activity_log', label: '📋 Activity Log', badge: 0 },
-    canDo.viewTeam(role) && { id: 'team', label: '🔑 Team Access', badge: 0 },
-  ].filter(Boolean) as { id: string; label: string; badge: number }[];
+  // Build visible nav items dynamically based on role, grouped by section
+  type NavItem = { id: string; label: string; icon: string; badge: number };
+  type NavGroup = { title: string; items: NavItem[] };
+  const navGroups: NavGroup[] = [
+    {
+      title: 'Operations',
+      items: [
+        canDo.viewOverview(role) && { id: 'overview', label: 'Overview', icon: '📊', badge: 0 },
+        canDo.viewUsers(role) && { id: 'users', label: 'Users', icon: '👥', badge: 0 },
+        canDo.viewSignups(role) && { id: 'signups', label: 'Signups', icon: '📝', badge: tabBadges.signups },
+        canDo.viewSignups(role) && { id: 'trials', label: 'Trials', icon: '🎁', badge: tabBadges.trials },
+      ].filter(Boolean) as NavItem[],
+    },
+    {
+      title: 'Analytics',
+      items: [
+        canDo.viewAnalytics(role) && { id: 'credits', label: 'Credits', icon: '💰', badge: 0 },
+        canDo.viewAnalytics(role) && { id: 'ai-analytics', label: 'AI Analytics', icon: '⚡', badge: 0 },
+      ].filter(Boolean) as NavItem[],
+    },
+    {
+      title: 'Governance',
+      items: [
+        canDo.viewSecurity(role) && { id: 'security', label: 'Security', icon: '🔒', badge: tabBadges.security },
+        canDo.viewSecurity(role) && { id: 'activity_log', label: 'Activity Log', icon: '📋', badge: 0 },
+        canDo.viewTeam(role) && { id: 'team', label: 'Team Access', icon: '🔑', badge: 0 },
+      ].filter(Boolean) as NavItem[],
+    },
+  ].filter(g => g.items.length > 0);
+
+  const allItems = navGroups.flatMap(g => g.items);
+  const activeItem = allItems.find(i => i.id === tab);
+
+  const SIDEBAR_W = 248;
+
+  const NavButton = ({ item }: { item: NavItem }) => {
+    const active = tab === item.id;
+    return (
+      <button
+        onClick={() => setTab(item.id)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+          padding: '10px 14px', borderRadius: 12, border: 'none', cursor: 'pointer',
+          fontFamily: 'DM Sans', fontWeight: active ? 700 : 500, fontSize: 13.5,
+          background: active ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'transparent',
+          color: active ? 'white' : '#475569',
+          boxShadow: active ? '0 8px 24px -8px rgba(124,58,237,0.55)' : 'none',
+          transition: 'all 0.18s ease', textAlign: 'left',
+        }}
+        onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(124,58,237,0.08)'; e.currentTarget.style.color = '#0f172a'; } }}
+        onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#475569'; } }}
+      >
+        <span style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{item.icon}</span>
+        <span style={{ flex: 1 }}>{item.label}</span>
+        {item.badge > 0 && (
+          <span style={{
+            background: active ? 'rgba(255,255,255,0.25)' : '#dc2626',
+            color: 'white', fontSize: 10, fontWeight: 800,
+            padding: '2px 8px', borderRadius: 20, minWidth: 20, textAlign: 'center',
+            lineHeight: '14px', fontFamily: 'DM Sans,sans-serif',
+          }}>{item.badge > 99 ? '99+' : item.badge}</span>
+        )}
+      </button>
+    );
+  };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', background: 'linear-gradient(150deg, #f5f3ff 0%, #fdf4ff 20%, #fff7ed 45%, #f0fdf4 70%, #f0f9ff 100%)' }}>
       <style>{popInKeyframes}</style>
       <AdminToast toast={adminToast} onClose={() => setAdminToast(null)} />
 
-      {/* Top bar */}
-      <div style={{
-        height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 24px', background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(24px)',
-        borderBottom: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 1px 16px rgba(0,0,0,0.06)',
+      {/* Sidebar */}
+      <aside style={{
+        width: SIDEBAR_W, flexShrink: 0, position: 'sticky', top: 0, height: '100vh',
+        display: 'flex', flexDirection: 'column',
+        background: 'rgba(255,255,255,0.78)', backdropFilter: 'blur(24px)',
+        borderRight: '1px solid rgba(15,23,42,0.06)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <svg width="28" height="28" viewBox="0 0 50 50" fill="none">
+        {/* Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 18px 18px' }}>
+          <svg width="30" height="30" viewBox="0 0 50 50" fill="none">
             <path d="M25 4C16 4 11 10 11 16c0 3.5 1.5 6 4.5 7.5L9 28c-3 1.5-4 4.5-2 6.5L12 33l2 4.5 5-5c1.5 1.5 3.5 2.5 6 2.5s4.5-1 6-2.5l5 5 2-4.5 4.5 1.5c2-2-.8-5-2.8-6.5l-6-9C36.5 22 38 19.5 38 16 38 10 34 4 25 4z" fill="#0f172a"/>
             <circle cx="21" cy="14" r="2" fill="white"/>
             <circle cx="29" cy="14" r="2" fill="white"/>
           </svg>
-          <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#0f172a' }}>Shikshantaram OS — Admin Panel</span>
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+            <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 13.5, color: '#0f172a' }}>Shikshantaram OS</span>
+            <span style={{ fontFamily: 'DM Sans', fontWeight: 600, fontSize: 11, color: '#7c3aed', letterSpacing: 0.4, textTransform: 'uppercase' }}>Admin Panel</span>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <RoleBadge role={role} displayName={displayName || user?.email || ''} />
-          <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Back to App</button>
-          <button onClick={signOut} style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Sign Out</button>
-        </div>
-      </div>
 
-      {/* Role welcome strip for non-owner roles */}
-      {role !== 'owner' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 24px', background: 'rgba(124,58,237,0.04)', borderBottom: '1px solid rgba(124,58,237,0.08)' }}>
-          <span style={{ fontSize: 20 }}>{role === 'admin' ? '🔧' : role === 'manager' ? '📋' : '⚡'}</span>
-          <div>
-            <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>You have {role} access</div>
-            <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' }}>
-              {role === 'operator' && 'You can approve or reject new signup requests below.'}
+        {/* Role badge */}
+        <div style={{ padding: '0 14px 14px' }}>
+          <RoleBadge role={role} displayName={displayName || user?.email || ''} />
+        </div>
+
+        {/* Nav groups */}
+        <nav style={{ flex: 1, overflowY: 'auto', padding: '4px 12px 12px' }}>
+          {navGroups.map((group, gi) => (
+            <div key={group.title} style={{ marginBottom: gi === navGroups.length - 1 ? 0 : 18 }}>
+              <div style={{
+                fontFamily: 'DM Sans', fontWeight: 700, fontSize: 10, letterSpacing: 1.2,
+                textTransform: 'uppercase', color: '#94a3b8', padding: '8px 14px 6px',
+              }}>{group.title}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {group.items.map(item => <NavButton key={item.id} item={item} />)}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer actions */}
+        <div style={{ padding: 12, borderTop: '1px solid rgba(15,23,42,0.06)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <button onClick={() => navigate('/')} style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10,
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12.5, color: '#7c3aed', textAlign: 'left',
+          }}>
+            <span style={{ fontSize: 14 }}>←</span> Back to App
+          </button>
+          <button onClick={signOut} style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10,
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            fontFamily: 'DM Sans', fontWeight: 600, fontSize: 12.5, color: '#ef4444', textAlign: 'left',
+          }}>
+            <span style={{ fontSize: 14 }}>⎋</span> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main column */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Section header */}
+        <header style={{
+          height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 32px', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(15,23,42,0.05)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 22 }}>{activeItem?.icon || '✨'}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+              <span style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a' }}>{activeItem?.label || 'Admin'}</span>
+              <span style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#94a3b8' }}>
+                {role === 'owner' ? 'Full owner access' : `Signed in as ${role}`}
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* Role welcome strip for non-owner roles */}
+        {role !== 'owner' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 32px', background: 'rgba(124,58,237,0.04)', borderBottom: '1px solid rgba(124,58,237,0.08)' }}>
+            <span style={{ fontSize: 18 }}>{role === 'admin' ? '🔧' : role === 'manager' ? '📋' : '⚡'}</span>
+            <div style={{ fontFamily: 'DM Sans', fontSize: 12.5, color: '#475569' }}>
+              {role === 'operator' && 'You can approve or reject new signup requests.'}
               {role === 'manager' && 'You can manage signups and user details.'}
               {role === 'admin' && 'You have full operational access.'}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 4, padding: '8px 24px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'DM Sans',
-            fontWeight: tab === t.id ? 800 : 500, fontSize: 13,
-            background: tab === t.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'transparent',
-            color: tab === t.id ? 'white' : '#64748b',
-            transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: 6,
-          }}
-            onMouseEnter={e => { if (tab !== t.id) (e.currentTarget.style.color = '#374151'); }}
-            onMouseLeave={e => { if (tab !== t.id) (e.currentTarget.style.color = '#64748b'); }}
-          >
-            <span>{t.label}</span>
-            {t.badge > 0 && (
-              <span style={{
-                background: '#dc2626', color: 'white', fontSize: 10, fontWeight: 800,
-                padding: '1px 7px', borderRadius: 20, minWidth: 18, textAlign: 'center',
-                lineHeight: '14px', fontFamily: 'DM Sans,sans-serif',
-              }}>{t.badge > 99 ? '99+' : t.badge}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }}>
-        {loading && tab !== 'team' ? (
-          <div style={{ textAlign: 'center', padding: 60 }}>
-            <div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} />
-          </div>
-        ) : (
-          <>
-            {tab === 'overview' && canDo.viewOverview(role) && <OverviewTab stats={stats} users={users} emailMap={emailMap} setAdminTab={setTab} />}
-            {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
-            {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
-            {tab === 'trials' && canDo.viewSignups(role) && <AdminTrialTab showToast={showAdminToast} />}
-            {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
-            {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
-            {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
-            {tab === 'activity_log' && canDo.viewSecurity(role) && <AdminActivityLogTab showToast={showAdminToast} />}
-            {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
-          </>
         )}
+
+        {/* Content */}
+        <div id="main-content-area" style={{ flex: 1, overflowY: 'auto', padding: '28px 32px', maxWidth: 1280, width: '100%', margin: '0 auto' }}>
+          {loading && tab !== 'team' ? (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} />
+            </div>
+          ) : (
+            <>
+              {tab === 'overview' && canDo.viewOverview(role) && <OverviewTab stats={stats} users={users} emailMap={emailMap} setAdminTab={setTab} />}
+              {tab === 'users' && canDo.viewUsers(role) && <UsersTab users={users} emailMap={emailMap} onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} adminId={adminId} role={role} />}
+              {tab === 'signups' && canDo.viewSignups(role) && <SignupsTab onRefresh={loadData} showToast={showAdminToast} logActivity={logActivity} />}
+              {tab === 'trials' && canDo.viewSignups(role) && <AdminTrialTab showToast={showAdminToast} />}
+              {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
+              {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
+              {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
+              {tab === 'activity_log' && canDo.viewSecurity(role) && <AdminActivityLogTab showToast={showAdminToast} />}
+              {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
