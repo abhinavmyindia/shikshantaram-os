@@ -2557,6 +2557,10 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [rolePickerFor, setRolePickerFor] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<any | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
   const roleBtnRef = useRef<HTMLButtonElement>(null);
 
   const fetchTeam = async () => {
@@ -2585,16 +2589,19 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
     setRolePickerFor(null);
   };
 
-  const removeMember = async (targetUserId: string) => {
+  const confirmRemoveMember = async () => {
+    if (!removeTarget) return;
+    setRemoving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const result = await supabase.functions.invoke('manage-team', {
-        body: { action: 'remove_member', targetUserId },
+        body: { action: 'remove_member', targetUserId: removeTarget.user_id },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      if (result.data?.success) { showToast(`✅ ${result.data.message}`); fetchTeam(); }
+      if (result.data?.success) { showToast(`✅ ${result.data.message}`); fetchTeam(); setRemoveTarget(null); }
       else showToast(`❌ ${result.data?.error || 'Failed'}`, 'error');
     } catch (err: any) { showToast(`❌ ${err.message}`, 'error'); }
+    setRemoving(false);
   };
 
   const cancelInvite = async (invitationId: string) => {
@@ -2609,7 +2616,42 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
     } catch (err: any) { showToast(`❌ ${err.message}`, 'error'); }
   };
 
+  const resendInvite = async (invitationId: string) => {
+    setResendingId(invitationId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const result = await supabase.functions.invoke('manage-team', {
+        body: { action: 'resend_invitation', invitationId },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (result.data?.success) { showToast(`✅ ${result.data.message}`); fetchTeam(); }
+      else showToast(`❌ ${result.data?.error || 'Failed to resend'}`, 'error');
+    } catch (err: any) { showToast(`❌ ${err.message}`, 'error'); }
+    setResendingId(null);
+  };
+
+  const copyInviteLink = async (inv: any) => {
+    const url = `${window.location.origin}/?invite=${inv.token || inv.id}&email=${encodeURIComponent(inv.email)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedInviteId(inv.id);
+      setTimeout(() => setCopiedInviteId(null), 2000);
+    } catch {
+      showToast('❌ Could not copy to clipboard', 'error');
+    }
+  };
+
   const handleAddSuccess = (msg: string) => { showToast(`✅ ${msg}`); fetchTeam(); };
+
+  const formatLastActive = (dateStr: string | null) => {
+    if (!dateStr) return 'Never signed in';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    if (diff < 60_000) return 'Active now';
+    if (diff < 3_600_000) return `Active ${Math.floor(diff / 60_000)}m ago`;
+    if (diff < 86_400_000) return `Active ${Math.floor(diff / 3_600_000)}h ago`;
+    if (diff < 604_800_000) return `Active ${Math.floor(diff / 86_400_000)}d ago`;
+    return `Active ${new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
+  };
 
   if (loading) return <div style={{ textAlign: 'center', padding: 60 }}><div style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spinSlow 0.8s linear infinite', margin: '0 auto' }} /></div>;
 
@@ -2628,79 +2670,93 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
       </div>
 
       {/* Current Team */}
-      <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>Current Team ({teamMembers.length} members)</div>
-      <div style={{ ...glassCard, marginBottom: 20 }}>
-        {teamMembers.map((member: any, i: number) => {
-          const meta = roleMeta[member.role] || roleMeta.operator;
-          const isOwnerRow = member.is_owner;
-          return (
-            <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: 'white', flexShrink: 0 }}>
-                {(member.display_name || member.email || 'U')[0].toUpperCase()}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13.5, color: '#0f172a' }}>{member.display_name || member.email?.split('@')[0] || 'Unknown'}</span>
-                  {isOwnerRow && <span style={{ fontSize: 10, color: '#7c3aed', fontWeight: 700 }}>(You)</span>}
+      <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 10 }}>Current Team ({teamMembers.length} {teamMembers.length === 1 ? 'member' : 'members'})</div>
+
+      {teamMembers.length === 0 ? (
+        <div style={{ ...glassCard, padding: 40, textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 36, marginBottom: 10 }}>👥</div>
+          <div style={{ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', marginBottom: 6 }}>No team members yet</div>
+          <div style={{ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' }}>Click <strong>+ Add Team Member</strong> above to invite an admin, manager or operator.</div>
+        </div>
+      ) : (
+        <div style={{ ...glassCard, marginBottom: 20 }}>
+          {teamMembers.map((member: any, i: number) => {
+            const meta = roleMeta[member.role] || roleMeta.operator;
+            const isOwnerRow = member.is_owner;
+            return (
+              <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 12, color: 'white', flexShrink: 0 }}>
+                  {(member.display_name || member.email || 'U')[0].toUpperCase()}
                 </div>
-                <div style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#94a3b8' }}>{member.email || '—'} · Added {formatDate(member.invited_at || member.created_at)}</div>
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: meta.bg, color: meta.color, fontFamily: 'DM Sans', flexShrink: 0 }}>{meta.label}</span>
-              {isOwnerRow ? (
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', background: '#f1f5f9', padding: '4px 10px', borderRadius: 8 }}>🔒 Protected</span>
-              ) : (
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0, position: 'relative' }}>
-                  <div style={{ position: 'relative' }}>
-                    <button ref={roleBtnRef} onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
-                      background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
-                      fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151',
-                    }}>Change Role ▾</button>
-                    {rolePickerFor === member.user_id && createPortal(
-                      <>
-                        <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }} />
-                        <div style={{
-                          position: 'fixed',
-                          top: (roleBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
-                          left: (roleBtnRef.current?.getBoundingClientRect().right ?? 200) - 200,
-                          zIndex: 99999,
-                          background: 'white',
-                          borderRadius: 12,
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-                          border: '1px solid #e2e8f0',
-                          padding: 6,
-                          width: 200,
-                        }}>
-                          {(['admin', 'manager', 'operator'] as const).map(r => {
-                            const isCurrent = member.role === r;
-                            return (
-                              <div key={r} onClick={() => { if (!isCurrent) { changeRole(member.user_id, r); } setRolePickerFor(null); }} style={{
-                                display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left' as const, padding: '10px 14px', borderRadius: 8,
-                                cursor: isCurrent ? 'default' : 'pointer',
-                                background: isCurrent ? (r === 'admin' ? 'rgba(124,58,237,0.08)' : r === 'manager' ? 'rgba(37,99,235,0.08)' : 'rgba(100,116,139,0.08)') : 'transparent',
-                                fontFamily: 'DM Sans', fontWeight: isCurrent ? 700 : 500, fontSize: 13,
-                                color: isCurrent ? (r === 'admin' ? '#7c3aed' : r === 'manager' ? '#2563eb' : '#64748b') : '#374151',
-                              }}>
-                                <span style={{ fontSize: 16 }}>{r === 'admin' ? '🔧' : r === 'manager' ? '📋' : '⚙️'}</span>
-                                <span style={{ textTransform: 'capitalize' as const }}>{r}</span>
-                                {isCurrent && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>,
-                      document.body
-                    )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13.5, color: '#0f172a' }}>{member.display_name || member.email?.split('@')[0] || 'Unknown'}</span>
+                    {isOwnerRow && <span style={{ fontSize: 10, color: '#7c3aed', fontWeight: 700 }}>(You)</span>}
                   </div>
-                  <button onClick={() => { if (confirm(`Remove ${member.display_name || member.email} from the team?`)) removeMember(member.user_id); }} style={{
-                    background: 'rgba(239,68,68,0.08)', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
-                    fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#dc2626',
-                  }}>Remove</button>
+                  <div style={{ fontFamily: 'DM Sans', fontSize: 11.5, color: '#94a3b8' }}>
+                    {member.email || '—'} · Added {formatDate(member.invited_at || member.created_at)}
+                    <span style={{ marginLeft: 8, color: member.last_active ? '#059669' : '#cbd5e1', fontWeight: 600 }}>
+                      · {formatLastActive(member.last_active)}
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: meta.bg, color: meta.color, fontFamily: 'DM Sans', flexShrink: 0 }}>{meta.label}</span>
+                {isOwnerRow ? (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', background: '#f1f5f9', padding: '4px 10px', borderRadius: 8 }}>🔒 Protected</span>
+                ) : (
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0, position: 'relative' }}>
+                    <div style={{ position: 'relative' }}>
+                      <button ref={roleBtnRef} onClick={() => setRolePickerFor(rolePickerFor === member.user_id ? null : member.user_id)} style={{
+                        background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                        fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#374151',
+                      }}>Change Role ▾</button>
+                      {rolePickerFor === member.user_id && createPortal(
+                        <>
+                          <div onClick={() => setRolePickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 99998, background: 'transparent' }} />
+                          <div style={{
+                            position: 'fixed',
+                            top: (roleBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
+                            left: (roleBtnRef.current?.getBoundingClientRect().right ?? 200) - 200,
+                            zIndex: 99999,
+                            background: 'white',
+                            borderRadius: 12,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                            border: '1px solid #e2e8f0',
+                            padding: 6,
+                            width: 200,
+                          }}>
+                            {(['admin', 'manager', 'operator'] as const).map(r => {
+                              const isCurrent = member.role === r;
+                              return (
+                                <div key={r} onClick={() => { if (!isCurrent) { changeRole(member.user_id, r); } setRolePickerFor(null); }} style={{
+                                  display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left' as const, padding: '10px 14px', borderRadius: 8,
+                                  cursor: isCurrent ? 'default' : 'pointer',
+                                  background: isCurrent ? (r === 'admin' ? 'rgba(124,58,237,0.08)' : r === 'manager' ? 'rgba(37,99,235,0.08)' : 'rgba(100,116,139,0.08)') : 'transparent',
+                                  fontFamily: 'DM Sans', fontWeight: isCurrent ? 700 : 500, fontSize: 13,
+                                  color: isCurrent ? (r === 'admin' ? '#7c3aed' : r === 'manager' ? '#2563eb' : '#64748b') : '#374151',
+                                }}>
+                                  <span style={{ fontSize: 16 }}>{r === 'admin' ? '🔧' : r === 'manager' ? '📋' : '⚙️'}</span>
+                                  <span style={{ textTransform: 'capitalize' as const }}>{r}</span>
+                                  {isCurrent && <span style={{ marginLeft: 'auto', fontSize: 14 }}>✓</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>,
+                        document.body
+                      )}
+                    </div>
+                    <button onClick={() => setRemoveTarget(member)} style={{
+                      background: 'rgba(239,68,68,0.08)', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                      fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#dc2626',
+                    }}>Remove</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Pending Invitations */}
       {pendingInvites.length > 0 && (
@@ -2709,15 +2765,28 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
           <div style={{ ...glassCard, overflow: 'hidden', marginBottom: 20 }}>
             {pendingInvites.map((inv: any, i: number) => {
               const meta = roleMeta[inv.role] || roleMeta.operator;
+              const isResending = resendingId === inv.id;
+              const isCopied = copiedInviteId === inv.id;
               return (
-                <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none' }}>
+                <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap' }}>
                   <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>📧</div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
                     <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{inv.email}</div>
-                    <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' }}>Expires {formatDate(inv.expires_at)}</div>
+                    <div style={{ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' }}>
+                      Sent {formatDate(inv.created_at)} · Expires {formatDate(inv.expires_at)}
+                    </div>
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: meta.bg, color: meta.color, fontFamily: 'DM Sans' }}>{meta.label}</span>
-                  <button onClick={() => cancelInvite(inv.id)} style={{ background: '#fee2e2', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, color: '#dc2626' }}>Cancel</button>
+                  <button onClick={() => copyInviteLink(inv)} style={{
+                    background: isCopied ? '#dcfce7' : '#f1f5f9', border: 'none', padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                    fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: isCopied ? '#15803d' : '#475569',
+                  }}>{isCopied ? '✓ Copied' : '🔗 Copy link'}</button>
+                  <button onClick={() => resendInvite(inv.id)} disabled={isResending} style={{
+                    background: 'rgba(124,58,237,0.08)', border: 'none', padding: '6px 10px', borderRadius: 8,
+                    cursor: isResending ? 'wait' : 'pointer', opacity: isResending ? 0.6 : 1,
+                    fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#7c3aed',
+                  }}>{isResending ? 'Sending…' : '↻ Resend'}</button>
+                  <button onClick={() => cancelInvite(inv.id)} style={{ background: '#fee2e2', border: 'none', padding: '6px 10px', borderRadius: 8, cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11, color: '#dc2626' }}>Cancel</button>
                 </div>
               );
             })}
@@ -2728,6 +2797,39 @@ function TeamAccessTab({ showToast }: { showToast: (msg: string, type?: string) 
       <PermissionsTable />
 
       {showAddModal && <AddTeamMemberModal onClose={() => setShowAddModal(false)} onSuccess={handleAddSuccess} />}
+
+      {/* ─── Remove Member Modal ───────────────────────────────── */}
+      {removeTarget && (
+        <div onClick={() => !removing && setRemoveTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 20, maxWidth: 440, width: '100%', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', padding: '20px 24px', color: 'white' }}>
+              <div style={{ fontFamily: 'Sora', fontWeight: 900, fontSize: 17 }}>✕ Remove Team Member</div>
+              <div style={{ fontFamily: 'DM Sans', fontSize: 12, opacity: 0.85, marginTop: 4 }}>This action revokes their admin access immediately.</div>
+            </div>
+            <div style={{ padding: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: '#f8fafc', borderRadius: 12, marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: (roleMeta[removeTarget.role] || roleMeta.operator).bg, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>
+                  {(removeTarget.display_name || removeTarget.email || 'U')[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'DM Sans', fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{removeTarget.display_name || removeTarget.email}</div>
+                  <div style={{ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' }}>{removeTarget.email}</div>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: (roleMeta[removeTarget.role] || roleMeta.operator).bg, color: (roleMeta[removeTarget.role] || roleMeta.operator).color, fontFamily: 'DM Sans' }}>{(roleMeta[removeTarget.role] || roleMeta.operator).label}</span>
+              </div>
+              <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '10px 14px', fontFamily: 'DM Sans', fontSize: 12.5, color: '#92400e', marginBottom: 18 }}>
+                ⚠️ They will be signed out of the admin panel on their next request. Their user account and content remain intact — only admin privileges are revoked. You can re-invite them later.
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setRemoveTarget(null)} disabled={removing} style={{ background: '#f1f5f9', border: 'none', padding: '10px 18px', borderRadius: 10, cursor: 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13, color: '#475569' }}>Cancel</button>
+                <button onClick={confirmRemoveMember} disabled={removing} style={{ background: removing ? '#fca5a5' : 'linear-gradient(135deg,#dc2626,#b91c1c)', color: 'white', border: 'none', padding: '10px 18px', borderRadius: 10, cursor: removing ? 'wait' : 'pointer', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13 }}>
+                  {removing ? 'Removing…' : '✕ Remove from team'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
