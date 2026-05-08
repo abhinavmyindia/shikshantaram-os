@@ -985,11 +985,11 @@ Return ONLY a JSON array of exactly 5 objects:
       console.warn(`${action} truncated (finish_reason=length), retrying with conciseness prompt...`);
       const concisePrompt = prompt + '\n\nCRITICAL: Your previous response was TRUNCATED because it was too long. Keep ALL text values SHORT and concise (1 sentence max per field). Use abbreviated descriptions. Prioritize completing the ENTIRE JSON structure over verbose descriptions. Return COMPLETE, VALID JSON.';
       aiResult = await callLovableAI(concisePrompt, model, Math.min(maxTokens + 4000, 32000));
-      logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_retry', model, usage: aiResult.usage });
+      await logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_retry', model, usage: aiResult.usage });
     }
 
-    // Log usage (fire-and-forget)
-    logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType, model, usage: aiResult.usage });
+    // Log usage (awaited so the insert completes before the response closes the runtime)
+    await logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType, model, usage: aiResult.usage });
 
     try {
       const parsed = parseJsonResponse(aiResult.content);
@@ -1033,7 +1033,7 @@ Return ONLY a JSON array of exactly 5 objects:
         try {
           const recoveryPrompt = prompt + '\n\nCRITICAL JSON VALIDITY RULES: Return STRICT VALID JSON only. Keep each value short. Escape internal quotes. Do not include markdown or commentary.';
           const recovered = await callLovableAI(recoveryPrompt, model, Math.min(maxTokens, 22000));
-          logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_parse_recovery', model, usage: recovered.usage });
+          await logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_parse_recovery', model, usage: recovered.usage });
           const repairedParsed = parseJsonResponse(recovered.content);
           return new Response(JSON.stringify({ result: repairedParsed }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1056,7 +1056,7 @@ Return ONLY a JSON array of exactly 5 objects:
         console.warn(`${action} parse failed, retrying with strict JSON prompt...`);
         const recoveryPrompt = prompt + '\n\nCRITICAL: Return ONLY valid JSON. No markdown, no commentary. Keep values concise. Escape all quotes inside strings.';
         const recovered = await callLovableAI(recoveryPrompt, model, Math.min(maxTokens, 20000));
-        logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_parse_recovery', model, usage: recovered.usage });
+        await logUsage({ supabaseAdmin, userId: userInfo.userId, userEmail: userInfo.userEmail, userName: userInfo.userName, module: 'product_navigator', callType: callType + '_parse_recovery', model, usage: recovered.usage });
         const repairedParsed = parseJsonResponse(recovered.content);
         return new Response(JSON.stringify({ result: repairedParsed }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
