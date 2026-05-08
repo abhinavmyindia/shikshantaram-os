@@ -110,7 +110,18 @@ export default function TrialPage() {
           phone: `${countryCode} ${phoneDigits}`.trim(),
         },
       });
-      if (fnError) throw new Error(fnError.message || 'Could not submit. Please try again.');
+      if (fnError) {
+        // Try to extract the real error message from the function response body
+        let realMsg = fnError.message || 'Could not submit. Please try again.';
+        try {
+          const ctxResp: Response | undefined = (fnError as any).context?.response ?? (fnError as any).context;
+          if (ctxResp && typeof ctxResp.json === 'function') {
+            const body = await ctxResp.clone().json();
+            if (body?.error) realMsg = body.error;
+          }
+        } catch { /* ignore parse errors */ }
+        throw new Error(realMsg);
+      }
       if ((data as any)?.error) throw new Error((data as any).error);
       setTrialRequestId((data as any).trial_request_id);
       setResendCooldown(60);
