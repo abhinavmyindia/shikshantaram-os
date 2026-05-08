@@ -998,10 +998,11 @@ function HealthMonitorCard() {
         const h24Ago = new Date(now.getTime() - 86400000).toISOString();
         const h48Ago = new Date(now.getTime() - 172800000).toISOString();
 
+        // Exclude self-generated health_monitor entries to prevent feedback loop
         const [r1h, r24h, rPrev24h] = await Promise.all([
-          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h1Ago).eq('is_resolved', false),
-          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h24Ago).eq('is_resolved', false),
-          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h48Ago).lt('created_at', h24Ago).eq('is_resolved', false),
+          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h1Ago).eq('is_resolved', false).neq('module', 'health_monitor'),
+          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h24Ago).eq('is_resolved', false).neq('module', 'health_monitor'),
+          supabase.from('error_logs').select('*', { count: 'exact', head: true }).gte('created_at', h48Ago).lt('created_at', h24Ago).eq('is_resolved', false).neq('module', 'health_monitor'),
         ]);
 
         const last1h = r1h.count || 0;
