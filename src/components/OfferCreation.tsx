@@ -829,11 +829,11 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
                 <span style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 42 })}>{offerScore}</span>
               </div>
               {[
-                { label: 'Value-Price Ratio', val: offerData.offerScore.valuePriceRatio },
-                { label: 'Bonus Relevance', val: offerData.offerScore.bonusRelevance },
-                { label: 'Guarantee Strength', val: offerData.offerScore.guaranteeStrength },
-                { label: 'Urgency', val: offerData.offerScore.urgencyMechanism },
-                { label: 'Positioning', val: offerData.offerScore.positioningClarity },
+                { label: 'Value-Price Ratio', val: offerData.offerScore?.valuePriceRatio ?? 0 },
+                { label: 'Bonus Relevance', val: offerData.offerScore?.bonusRelevance ?? 0 },
+                { label: 'Guarantee Strength', val: offerData.offerScore?.guaranteeStrength ?? 0 },
+                { label: 'Urgency', val: offerData.offerScore?.urgencyMechanism ?? 0 },
+                { label: 'Positioning', val: offerData.offerScore?.positioningClarity ?? 0 },
               ].map(d => (
                 <div key={d.label} style={s({ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 })}>
                   <span style={s({ fontFamily: 'DM Sans', fontSize: 10, opacity: 0.8, width: 120 })}>{d.label}</span>
@@ -843,10 +843,10 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
                   <span style={s({ fontFamily: 'DM Sans', fontSize: 10, fontWeight: 700, width: 30, textAlign: 'right' })}>{d.val}/20</span>
                 </div>
               ))}
-              {offerData.offerScore.improvements.length > 0 && (
+              {(offerData.offerScore?.improvements?.length ?? 0) > 0 && (
                 <>
                   <div style={s({ fontFamily: 'DM Sans', fontSize: 10, opacity: 0.8, textTransform: 'uppercase', marginTop: 10, marginBottom: 6 })}>How to reach 90+:</div>
-                  {offerData.offerScore.improvements.map((imp, i) => (
+                  {(offerData.offerScore?.improvements ?? []).map((imp, i) => (
                     <div key={i} style={s({ background: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 10px', fontFamily: 'DM Sans', fontSize: 11, marginBottom: 4 })}>{imp}</div>
                   ))}
                 </>
@@ -1001,11 +1001,11 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
           <div style={s({ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 20, padding: 24, border: '1px solid rgba(255,255,255,0.95)', marginBottom: 24 })}>
             <h3 style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 16, color: '#0f172a', marginBottom: 16 })}>Offer Score Breakdown</h3>
             {[
-              { icon: '📊', label: 'Value-Price Ratio', val: offerData.offerScore.valuePriceRatio, color: '#f59e0b' },
-              { icon: '🎁', label: 'Bonus Relevance', val: offerData.offerScore.bonusRelevance, color: '#059669' },
-              { icon: '🛡', label: 'Guarantee Strength', val: offerData.offerScore.guaranteeStrength, color: '#0891b2' },
-              { icon: '⏰', label: 'Urgency Mechanism', val: offerData.offerScore.urgencyMechanism, color: '#ef4444' },
-              { icon: '🎯', label: 'Positioning Clarity', val: offerData.offerScore.positioningClarity, color: '#7c3aed' },
+              { icon: '📊', label: 'Value-Price Ratio', val: offerData.offerScore?.valuePriceRatio ?? 0, color: '#f59e0b' },
+              { icon: '🎁', label: 'Bonus Relevance', val: offerData.offerScore?.bonusRelevance ?? 0, color: '#059669' },
+              { icon: '🛡', label: 'Guarantee Strength', val: offerData.offerScore?.guaranteeStrength ?? 0, color: '#0891b2' },
+              { icon: '⏰', label: 'Urgency Mechanism', val: offerData.offerScore?.urgencyMechanism ?? 0, color: '#ef4444' },
+              { icon: '🎯', label: 'Positioning Clarity', val: offerData.offerScore?.positioningClarity ?? 0, color: '#7c3aed' },
             ].map(d => (
               <div key={d.label} style={s({ display: 'flex', gap: 16, alignItems: 'center', padding: '14px 0', borderBottom: '1px solid #f1f5f9' })}>
                 <span style={s({ fontSize: 16, width: 24 })}>{d.icon}</span>

@@ -11,6 +11,12 @@ const APP_URL = Deno.env.get('APP_URL') || 'https://os.shikshantaram.in';
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const jsonResp = (status: number, body: any) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   try {
     const body = await req.json().catch(() => ({}));
     const requestId = String(body.requestId ?? body.trial_request_id ?? '').trim();
@@ -19,9 +25,9 @@ Deno.serve(async (req) => {
     const adminNotes = body.adminNotes ? String(body.adminNotes) : null;
     const adminId = body.adminId ? String(body.adminId) : null;
 
-    if (!requestId) throw new Error('requestId is required.');
+    if (!requestId) return jsonResp(400, { error: 'requestId is required.' });
     if (!Number.isFinite(durationDays) || ![2, 7, 14, 30].includes(durationDays)) {
-      throw new Error(`Duration must be 2, 7, 14, or 30 days. Received: ${JSON.stringify(rawDuration)}`);
+      return jsonResp(400, { error: `Duration must be 2, 7, 14, or 30 days. Received: ${JSON.stringify(rawDuration)}` });
     }
 
     const supabase = createClient(
@@ -36,10 +42,11 @@ Deno.serve(async (req) => {
       .eq('id', requestId)
       .maybeSingle();
 
-    if (recErr || !record) throw new Error('Trial request not found.');
-    if (!record.otp_verified) throw new Error('Email not verified for this request.');
-    if (record.status === 'approved') throw new Error('This trial is already approved.');
-    if (record.status === 'upgraded') throw new Error('This user is already upgraded.');
+    if (recErr) return jsonResp(500, { error: `DB error: ${recErr.message}` });
+    if (!record) return jsonResp(404, { error: 'Trial request not found.' });
+    if (!record.otp_verified) return jsonResp(409, { error: 'Email not verified for this request.' });
+    if (record.status === 'approved') return jsonResp(409, { error: 'This trial is already approved.' });
+    if (record.status === 'upgraded') return jsonResp(409, { error: 'This user is already upgraded.' });
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
@@ -60,19 +67,27 @@ Deno.serve(async (req) => {
       userId = created.user.id;
       isNewUser = true;
     } else if (authErr && (authErr.message || '').toLowerCase().includes('already')) {
-      // User already exists — find them and reset password so trial credentials still work
-      const { data: list } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
-      const found = list?.users?.find((u: any) => u.email?.toLowerCase() === record.email.toLowerCase());
-      if (found) {
-        userId = found.id;
-        // Reset password so the credentials we email are valid for returning trialers
-        await supabase.auth.admin.updateUserById(found.id, { password: tempPassword });
+      // User already exists — paginate through admin list to locate them
+      const target = record.email.toLowerCase();
+      let page = 1;
+      while (page <= 20 && !userId) {
+        const { data: list } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+        const users = list?.users || [];
+        const found = users.find((u: any) => u.email?.toLowerCase() === target);
+        if (found) {
+          userId = found.id;
+          await supabase.auth.admin.updateUserById(found.id, { password: tempPassword });
+          break;
+        }
+        if (users.length < 200) break;
+        page++;
       }
+      if (!userId) return jsonResp(404, { error: `Existing auth user not found for ${record.email}` });
     } else if (authErr) {
-      throw new Error(`Auth user creation failed: ${authErr.message}`);
+      return jsonResp(500, { error: `Auth user creation failed: ${authErr.message}` });
     }
 
-    if (!userId) throw new Error('Could not resolve user ID after auth provisioning.');
+    if (!userId) return jsonResp(500, { error: 'Could not resolve user ID after auth provisioning.' });
 
     // Upsert profile with trial flags — access_tier MUST be 'trial'
     await supabase
