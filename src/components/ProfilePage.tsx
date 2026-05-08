@@ -87,11 +87,21 @@ const fmtRelative = (dateStr: string) => {
 };
 
 const toolLabel: Record<string, string> = {
+  // Long-form module names (from ai_usage_logs.module)
   product_navigator: '🧭 Product Navigator',
   niche_clarity: '🎯 Niche Clarity',
   offer_creation: '🎁 Offer Creation',
   funnel_builder: '🔀 Funnel Builder',
   copywriting_suite: '✍️ Copy Suite',
+  copy_suite: '✍️ Copy Suite',
+  knowledge_base: '📚 Knowledge Base',
+  // Short-form tool ids (from tool_usage.tool_id)
+  product: '🧭 Product Navigator',
+  niche: '🎯 Niche Clarity',
+  offer: '🎁 Offer Creation',
+  funnel: '🔀 Funnel Builder',
+  copy: '✍️ Copy Suite',
+  saved: '💾 My Saved',
 };
 
 const deviceIcon = (type: string) =>
