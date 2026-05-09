@@ -225,6 +225,15 @@ const NEVER_LOG_URLS = [
   'supabase.co/rest/v1/error_logs',
   '/token',       // auth token refresh — never log
   '/auth/v1/',    // auth endpoints — lock contention noise
+  // AI tool endpoints — they surface their own user-facing errors and retry; no need to double-log transient 5xx
+  'find-my-niche',
+  'offer-creation',
+  'funnel-builder',
+  'generate-copy',
+  'ai-product-research',
+  'analyze-document-expertise',
+  'save-knowledge-doc',
+  'delete-knowledge-doc',
 ];
 
 const shouldLogUrl = (url: string): boolean => {
