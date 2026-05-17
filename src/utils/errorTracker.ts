@@ -73,7 +73,20 @@ const SUPPRESS_MESSAGES = [
   'resizeobserver loop completed',
   'resizeobserver loop limit exceeded',
   'non-error promise rejection captured',
+  // Generic cross-origin script errors — browser strips details, unactionable
+  'script error.',
+  'script error',
+  // Transient network failures bubbling up as unhandled rejections —
+  // the fetch interceptor already dampens these on the network_error path;
+  // logging them again as critical unhandled_rejection adds noise without signal.
+  'failed to fetch',
+  'networkerror when attempting to fetch resource',
+  'load failed',
+  'network request failed',
+  'the network connection was lost',
+  'the internet connection appears to be offline',
 ];
+
 
 const shouldSuppressError = (message: string): boolean => {
   const msg = String(message).toLowerCase();
