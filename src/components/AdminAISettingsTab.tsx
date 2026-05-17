@@ -240,11 +240,16 @@ const HealthWidget = ({ data, loading, onRefresh, onInspect }: { data: HealthRes
       <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 })}>
         {(data?.providers || []).map(p => {
           const sc = statusColors[p.status];
+          const clickable = p.status !== 'connected';
           return (
-            <div key={p.provider} style={s({
-              background: 'rgba(255,255,255,0.85)', borderRadius: 12, padding: 14,
-              border: `1px solid ${sc.dot}33`,
-            })}>
+            <div key={p.provider}
+              onClick={() => clickable && onInspect(p)}
+              title={clickable ? 'Click for diagnostics' : undefined}
+              style={s({
+                background: 'rgba(255,255,255,0.85)', borderRadius: 12, padding: 14,
+                border: `1px solid ${sc.dot}33`, cursor: clickable ? 'pointer' : 'default',
+                transition: 'transform 0.12s, box-shadow 0.12s',
+              })}>
               <div style={s({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 })}>
                 <span style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13.5, color: '#0f172a' })}>{p.label}</span>
                 <span style={s({
@@ -262,7 +267,12 @@ const HealthWidget = ({ data, loading, onRefresh, onInspect }: { data: HealthRes
               </div>
               {p.error && (
                 <div style={s({ marginTop: 8, padding: 8, borderRadius: 8, background: '#fef2f2', fontFamily: 'JetBrains Mono, monospace', fontSize: 10.5, color: '#991b1b', wordBreak: 'break-word', maxHeight: 80, overflow: 'auto' })}>
-                  {p.error}
+                  {String(p.error).slice(0, 180)}
+                </div>
+              )}
+              {clickable && (
+                <div style={s({ marginTop: 8, fontFamily: 'DM Sans', fontSize: 10.5, color: '#7c3aed', fontWeight: 700 })}>
+                  View diagnostics →
                 </div>
               )}
             </div>
