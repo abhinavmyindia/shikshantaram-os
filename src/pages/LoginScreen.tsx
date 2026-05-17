@@ -149,10 +149,16 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
         </span>
       </div>
 
+      {justReset && (
+        <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#065f46', lineHeight: 1.5 }}>
+          ✅ Password updated. Sign in below with your <strong>new password</strong>.
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Email Address</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+          <input type="email" value={email} onChange={e => { setEmail(e.target.value); setJustReset(false); }} required
             style={inputStyle} placeholder="you@example.com" onFocus={focusInput} onBlur={blurInput} />
         </div>
         <div style={{ marginBottom: 8 }}>
