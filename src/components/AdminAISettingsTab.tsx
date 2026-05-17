@@ -506,19 +506,25 @@ export default function AdminAISettingsTab() {
   const [health, setHealth] = useState<HealthResult>(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0);
+  const [alertDismissedAt, setAlertDismissedAt] = useState<number>(0);
+  const [drawerProvider, setDrawerProvider] = useState<ProviderStatus | null>(null);
 
   const fetchHealth = useCallback(async () => {
     setHealthLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('ai-health-check');
       if (error) throw error;
-      setHealth(data as HealthResult);
+      const result = data as HealthResult;
+      setHealth(result);
+      setConsecutiveFailures(prev => result?.overallStatus === 'healthy' ? 0 : prev + 1);
     } catch (err: any) {
       setHealth({
         overallStatus: 'degraded',
         providers: [{ provider: 'health', label: 'Health check', configured: true, ok: false, latencyMs: null, status: 'error', error: err?.message || 'unknown', checkedAt: new Date().toISOString() }],
         checkedAt: new Date().toISOString(),
       });
+      setConsecutiveFailures(prev => prev + 1);
     } finally {
       setHealthLoading(false);
     }
@@ -530,6 +536,11 @@ export default function AdminAISettingsTab() {
     return () => clearInterval(interval);
   }, [fetchHealth]);
 
+  const failingProvider = (health?.providers || []).find(p => p.status === 'error');
+  const lastError = failingProvider?.error || null;
+  const showAlert = consecutiveFailures >= 2 &&
+    (!alertDismissedAt || (health?.checkedAt ? new Date(health.checkedAt).getTime() > alertDismissedAt : false));
+
   return (
     <div>
       <div style={s({ marginBottom: 20 })}>
@@ -539,7 +550,17 @@ export default function AdminAISettingsTab() {
         </div>
       </div>
 
-      <HealthWidget data={health} loading={healthLoading} onRefresh={fetchHealth} />
+      {showAlert && (
+        <FailureAlert
+          failures={consecutiveFailures}
+          lastError={lastError}
+          lastCheckedAt={health?.checkedAt || null}
+          onDismiss={() => setAlertDismissedAt(Date.now())}
+          onInspect={() => failingProvider && setDrawerProvider(failingProvider)}
+        />
+      )}
+
+      <HealthWidget data={health} loading={healthLoading} onRefresh={fetchHealth} onInspect={setDrawerProvider} />
 
       <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20 })}>
         <ClaudeKeySection providers={health?.providers || []} />
@@ -547,6 +568,8 @@ export default function AdminAISettingsTab() {
       </div>
 
       <UsageLog reloadKey={reloadKey} />
+
+      <ErrorDrawer provider={drawerProvider} onClose={() => setDrawerProvider(null)} />
     </div>
   );
 }
