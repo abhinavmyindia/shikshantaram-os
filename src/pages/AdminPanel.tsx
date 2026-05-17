@@ -3196,6 +3196,7 @@ export default function AdminPanel() {
               {tab === 'trials' && canDo.viewSignups(role) && <AdminTrialTab showToast={showAdminToast} />}
               {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
               {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
+              {tab === 'ai-settings' && role === 'owner' && <AdminAISettingsTab />}
               {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
               {tab === 'activity_log' && canDo.viewSecurity(role) && <AdminActivityLogTab showToast={showAdminToast} />}
               {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
