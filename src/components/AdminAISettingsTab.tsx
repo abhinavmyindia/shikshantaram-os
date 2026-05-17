@@ -49,8 +49,164 @@ const statusColors = {
   not_configured: { bg: '#f1f5f9', text: '#475569', dot: '#94a3b8', label: 'Not configured' },
 };
 
+/* ─── Error categorization ───────────────────────────────────────────────── */
+type ErrorCategory = 'timeout' | 'auth' | 'rate_limit' | 'network' | 'server' | 'not_configured' | 'unknown';
+
+const categorizeError = (p: ProviderStatus): { category: ErrorCategory; title: string; explanation: string; suggestion: string; color: string } => {
+  const raw = (p.error || '').toLowerCase();
+  if (!p.configured || p.status === 'not_configured') {
+    return { category: 'not_configured', title: 'Not configured', color: '#64748b',
+      explanation: `No API key is set for ${p.label}. The provider cannot be reached because credentials are missing.`,
+      suggestion: 'Add the relevant secret in Lovable Cloud → Secrets, then re-run the health check.' };
+  }
+  if (raw.includes('timeout') || raw.includes('timed out') || raw.includes('etimedout') || raw.includes('aborted')) {
+    return { category: 'timeout', title: 'Request timed out', color: '#d97706',
+      explanation: `${p.label} did not respond within the allotted time. This usually indicates provider-side latency, regional slowdown, or a temporary outage.`,
+      suggestion: 'Wait 30–60s and re-check. If it persists across multiple runs, check the provider status page.' };
+  }
+  if (raw.includes('401') || raw.includes('unauthorized') || raw.includes('invalid api key') || raw.includes('authentication') || raw.includes('invalid_api_key') || raw.includes('forbidden') || raw.includes('403')) {
+    return { category: 'auth', title: 'Authentication failed', color: '#dc2626',
+      explanation: `${p.label} rejected the request because the API key is invalid, revoked, or lacks permission.`,
+      suggestion: 'Rotate the API key from the provider dashboard and update the matching secret in Lovable Cloud → Secrets.' };
+  }
+  if (raw.includes('429') || raw.includes('rate limit') || raw.includes('rate_limit') || raw.includes('too many') || raw.includes('quota')) {
+    return { category: 'rate_limit', title: 'Rate limit / quota exceeded', color: '#ea580c',
+      explanation: `${p.label} is throttling requests. You have hit the per-minute or per-day request/token quota for this account.`,
+      suggestion: 'Reduce request volume, wait for the rate-limit window to reset, or upgrade your provider plan.' };
+  }
+  if (raw.includes('fetch') || raw.includes('network') || raw.includes('enotfound') || raw.includes('econnrefused') || raw.includes('dns')) {
+    return { category: 'network', title: 'Network unreachable', color: '#7c3aed',
+      explanation: `The edge function could not establish a network connection to ${p.label}. Possible causes: DNS failure, egress block, or transient internet issue.`,
+      suggestion: 'Retry shortly. If repeated, verify there are no outbound network restrictions on the backend.' };
+  }
+  if (raw.includes('500') || raw.includes('502') || raw.includes('503') || raw.includes('504') || raw.includes('internal server')) {
+    return { category: 'server', title: 'Provider server error', color: '#b91c1c',
+      explanation: `${p.label} returned a 5xx server error. This is an issue on the provider's side, not your app.`,
+      suggestion: 'Check the provider status page. Re-run the health check once the provider recovers.' };
+  }
+  if (p.status === 'error') {
+    return { category: 'unknown', title: 'Unknown error', color: '#475569',
+      explanation: `${p.label} reported a failure that does not match any known pattern. See the raw error payload below for details.`,
+      suggestion: 'Inspect the raw error and edge function logs for more context.' };
+  }
+  return { category: 'unknown', title: 'Healthy', color: '#16a34a',
+    explanation: `${p.label} is responding normally.`, suggestion: 'No action needed.' };
+};
+
+/* ─── Consecutive-failure alert banner ───────────────────────────────────── */
+const FailureAlert = ({ failures, lastError, lastCheckedAt, onDismiss, onInspect }: {
+  failures: number; lastError: string | null; lastCheckedAt: string | null;
+  onDismiss: () => void; onInspect: () => void;
+}) => {
+  if (failures < 2) return null;
+  return (
+    <div style={s({
+      background: 'linear-gradient(135deg, #fee2e2, #fecaca)',
+      border: '1px solid rgba(220,38,38,0.3)', borderRadius: 14, padding: '14px 18px', marginBottom: 16,
+      display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 6px 20px rgba(220,38,38,0.12)',
+    })}>
+      <div style={s({
+        width: 38, height: 38, borderRadius: '50%', background: '#dc2626', color: 'white',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontFamily: 'Sora', fontSize: 18, flexShrink: 0,
+      })}>!</div>
+      <div style={s({ flex: 1, minWidth: 0 })}>
+        <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 14, color: '#7f1d1d' })}>
+          AI health checks failing — {failures} consecutive runs
+        </div>
+        <div style={s({ fontFamily: 'DM Sans', fontSize: 11.5, color: '#991b1b', marginTop: 3 }) }>
+          {lastCheckedAt && <>Last check at {new Date(lastCheckedAt).toLocaleTimeString()} · </>}
+          <span style={s({ fontFamily: 'JetBrains Mono, monospace' })}>{lastError ? String(lastError).slice(0, 160) : 'Unknown error'}</span>
+        </div>
+      </div>
+      <button onClick={onInspect} style={s({
+        background: '#dc2626', color: 'white', border: 'none', borderRadius: 9, padding: '8px 14px',
+        fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0,
+      })}>Inspect</button>
+      <button onClick={onDismiss} style={s({
+        background: 'transparent', border: '1px solid rgba(127,29,29,0.3)', color: '#7f1d1d',
+        borderRadius: 9, padding: '8px 12px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0,
+      })}>Dismiss</button>
+    </div>
+  );
+};
+
+/* ─── Provider error drawer ──────────────────────────────────────────────── */
+const ErrorDrawer = ({ provider, onClose }: { provider: ProviderStatus | null; onClose: () => void }) => {
+  if (!provider) return null;
+  const info = categorizeError(provider);
+  return (
+    <div onClick={onClose} style={s({
+      position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)',
+      zIndex: 9999, display: 'flex', justifyContent: 'flex-end',
+    })}>
+      <div onClick={e => e.stopPropagation()} style={s({
+        width: '100%', maxWidth: 520, height: '100%', background: 'white', padding: 28,
+        overflowY: 'auto', boxShadow: '-12px 0 40px rgba(0,0,0,0.18)',
+        animation: 'slideIn 0.2s ease-out',
+      })}>
+        <div style={s({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 })}>
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.8 })}>
+            Provider Diagnostics
+          </div>
+          <button onClick={onClose} style={s({
+            background: '#f1f5f9', border: 'none', borderRadius: 8, width: 32, height: 32,
+            cursor: 'pointer', fontSize: 16, color: '#475569', fontWeight: 700,
+          })}>✕</button>
+        </div>
+
+        <div style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: '#0f172a', marginBottom: 6 })}>
+          {provider.label}
+        </div>
+        <div style={s({
+          display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 11px', borderRadius: 999,
+          background: `${info.color}18`, color: info.color, fontFamily: 'DM Sans', fontWeight: 700, fontSize: 11.5, marginBottom: 20,
+        })}>
+          <span style={s({ width: 7, height: 7, borderRadius: '50%', background: info.color })} />
+          {info.title} · {info.category.replace('_', ' ')}
+        </div>
+
+        <div style={s({ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 })}>
+          <div style={s({ padding: 12, background: '#f8fafc', borderRadius: 10 })}>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 10.5, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 })}>Latency</div>
+            <div style={s({ fontFamily: 'JetBrains Mono, monospace', fontSize: 16, color: '#0f172a', fontWeight: 700, marginTop: 4 })}>
+              {provider.latencyMs != null ? `${provider.latencyMs} ms` : '—'}
+            </div>
+          </div>
+          <div style={s({ padding: 12, background: '#f8fafc', borderRadius: 10 })}>
+            <div style={s({ fontFamily: 'DM Sans', fontSize: 10.5, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 })}>Checked at</div>
+            <div style={s({ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#0f172a', fontWeight: 700, marginTop: 6 })}>
+              {new Date(provider.checkedAt).toLocaleString()}
+            </div>
+          </div>
+        </div>
+
+        <div style={s({ marginBottom: 18 })}>
+          <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: '#0f172a', marginBottom: 6 })}>What this means</div>
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#334155', lineHeight: '1.6' })}>{info.explanation}</div>
+        </div>
+
+        <div style={s({ marginBottom: 18, padding: 14, background: 'linear-gradient(135deg, rgba(124,58,237,0.06), rgba(236,72,153,0.04))', borderRadius: 12 })}>
+          <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: '#0f172a', marginBottom: 6 })}>Recommended next step</div>
+          <div style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#334155', lineHeight: '1.6' })}>{info.suggestion}</div>
+        </div>
+
+        {provider.error && (
+          <div>
+            <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 13, color: '#0f172a', marginBottom: 6 })}>Raw error payload</div>
+            <pre style={s({
+              fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5, color: '#7f1d1d',
+              background: '#fef2f2', padding: 14, borderRadius: 10, overflow: 'auto', maxHeight: 240,
+              border: '1px solid rgba(220,38,38,0.15)', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            })}>{provider.error}</pre>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 /* ─── Health Widget ──────────────────────────────────────────────────────── */
-const HealthWidget = ({ data, loading, onRefresh }: { data: HealthResult; loading: boolean; onRefresh: () => void }) => {
+const HealthWidget = ({ data, loading, onRefresh, onInspect }: { data: HealthResult; loading: boolean; onRefresh: () => void; onInspect: (p: ProviderStatus) => void }) => {
   const overall = data?.overallStatus;
   const overallBg = overall === 'healthy' ? 'linear-gradient(135deg,#dcfce7,#bbf7d0)'
     : overall === 'degraded' ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
