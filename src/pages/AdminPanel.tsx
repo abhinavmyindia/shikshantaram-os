@@ -7,6 +7,7 @@ import SecurityTab from '@/components/AdminSecurityTab';
 import AdminCreditsTab from '@/components/AdminCreditsTab';
 import AdminTrialTab from '@/components/AdminTrialTab';
 import AdminActivityLogTab from '@/components/AdminActivityLogTab';
+import AdminAISettingsTab from '@/components/AdminAISettingsTab';
 import AdminIpLookupModal from '@/components/AdminIpLookupModal';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 export interface UserRow {
@@ -3037,6 +3038,7 @@ export default function AdminPanel() {
       items: [
         canDo.viewAnalytics(role) && { id: 'credits', label: 'Credits', icon: '💰', badge: 0 },
         canDo.viewAnalytics(role) && { id: 'ai-analytics', label: 'AI Analytics', icon: '⚡', badge: 0 },
+        role === 'owner' && { id: 'ai-settings', label: 'AI Settings', icon: '🤖', badge: 0 },
       ].filter(Boolean) as NavItem[],
     },
     {
@@ -3194,6 +3196,7 @@ export default function AdminPanel() {
               {tab === 'trials' && canDo.viewSignups(role) && <AdminTrialTab showToast={showAdminToast} />}
               {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
               {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
+              {tab === 'ai-settings' && role === 'owner' && <AdminAISettingsTab />}
               {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
               {tab === 'activity_log' && canDo.viewSecurity(role) && <AdminActivityLogTab showToast={showAdminToast} />}
               {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
