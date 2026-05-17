@@ -71,10 +71,20 @@ export default function LoginScreen() {
 /* ─── LOGIN FORM ─── */
 function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
+  // Prefill email if the user just reset their password — prevents the common
+  // "wrong password" loop where the user retypes their email with different casing.
+  const initialEmail = (() => {
+    try {
+      const e = sessionStorage.getItem('post_reset_email');
+      if (e) sessionStorage.removeItem('post_reset_email');
+      return e || '';
+    } catch { return ''; }
+  })();
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [justReset, setJustReset] = useState(!!initialEmail);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
