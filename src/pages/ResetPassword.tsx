@@ -143,6 +143,10 @@ const ResetPassword = () => {
       return;
     }
 
+    // Capture the email BEFORE signOut so we can prefill the login form.
+    const { data: { user: recoveryUser } } = await supabase.auth.getUser();
+    const userEmail = recoveryUser?.email || '';
+
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
@@ -153,9 +157,14 @@ const ResetPassword = () => {
 
     // Success — wipe recovery state, sign the user out so they log in fresh.
     cleanupRecoveryStorage();
+    if (userEmail) {
+      // Persist normalized email so LoginScreen can prefill it — prevents the
+      // common "wrong password" loop caused by typing a different email casing.
+      try { sessionStorage.setItem('post_reset_email', userEmail.trim().toLowerCase()); } catch {}
+    }
     setSuccess(true);
     await supabase.auth.signOut();
-    setTimeout(() => { window.location.href = '/'; }, 3000);
+    setTimeout(() => { window.location.href = '/'; }, 2500);
   };
 
   // ── Invalid / expired link ──

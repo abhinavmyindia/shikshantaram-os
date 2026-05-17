@@ -112,7 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile, checkAdmin]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Normalize email: trim whitespace + lowercase. Supabase stores emails
+    // lowercased, so any casing/whitespace mismatch causes "Invalid login
+    // credentials" — common after mobile autofill or password-reset flows.
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
     return { error: error?.message ?? null };
   };
 

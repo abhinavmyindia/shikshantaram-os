@@ -71,10 +71,20 @@ export default function LoginScreen() {
 /* ─── LOGIN FORM ─── */
 function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
+  // Prefill email if the user just reset their password — prevents the common
+  // "wrong password" loop where the user retypes their email with different casing.
+  const initialEmail = (() => {
+    try {
+      const e = sessionStorage.getItem('post_reset_email');
+      if (e) sessionStorage.removeItem('post_reset_email');
+      return e || '';
+    } catch { return ''; }
+  })();
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [justReset, setJustReset] = useState(!!initialEmail);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
@@ -139,10 +149,16 @@ function LoginForm({ onSwitchToSignup }: { onSwitchToSignup: () => void }) {
         </span>
       </div>
 
+      {justReset && (
+        <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontFamily: 'DM Sans', fontSize: 13, color: '#065f46', lineHeight: 1.5 }}>
+          ✅ Password updated. Sign in below with your <strong>new password</strong>.
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Email Address</label>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+          <input type="email" value={email} onChange={e => { setEmail(e.target.value); setJustReset(false); }} required
             style={inputStyle} placeholder="you@example.com" onFocus={focusInput} onBlur={blurInput} />
         </div>
         <div style={{ marginBottom: 8 }}>
