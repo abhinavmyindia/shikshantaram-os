@@ -2110,21 +2110,11 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
                       {canDo.editUsers(role) && (
                         <button
-                          onClick={async () => {
-                            const em = emailMap[u.id];
-                            if (!em) { showToast('Email not found for this user', 'error'); return; }
-                            if (!window.confirm(`Send password reset email to ${em}?`)) return;
-                            try {
-                              await supabase.functions.invoke('send-password-reset', { body: { email: em } });
-                              await logActivity('password_reset_sent', u.id, em);
-                              showToast(`🔑 Password reset sent to ${em}`, 'success');
-                            } catch (e: any) {
-                              showToast(`❌ ${e.message || 'Failed to send'}`, 'error');
-                            }
-                          }}
-                          title="Send Password Reset"
-                          style={{ width: 30, height: 30, background: 'rgba(2,132,199,0.06)', border: '1px solid rgba(2,132,199,0.2)', color: '#0284c7', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
-                        >🔑</button>
+                          onClick={() => handleSendPasswordReset(u)}
+                          disabled={resettingPasswordId === u.id}
+                          title="Send Password Reset Link"
+                          style={{ width: 30, height: 30, background: 'rgba(2,132,199,0.06)', border: '1px solid rgba(2,132,199,0.2)', color: '#0284c7', borderRadius: 8, cursor: resettingPasswordId === u.id ? 'wait' : 'pointer', opacity: resettingPasswordId === u.id ? 0.65 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >{resettingPasswordId === u.id ? '…' : '🔑'}</button>
                       )}
                       {canDo.editUsers(role) && (
                         <button
