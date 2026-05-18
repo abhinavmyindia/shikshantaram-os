@@ -39,14 +39,16 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Not an admin' }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: { users }, error } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
     const emailMap: Record<string, string> = {};
-    for (const u of users) {
-      emailMap[u.id] = u.email || '';
+    for (let page = 1; page <= 25; page++) {
+      const { data: { users }, error } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      for (const u of users) {
+        emailMap[u.id] = u.email || '';
+      }
+      if (users.length < 1000) break;
     }
 
     return new Response(JSON.stringify({ emails: emailMap }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
