@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { logEmailDelivery } from "../_shared/email-log.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -65,9 +66,24 @@ serve(async (req) => {
 
     const data = await res.json();
     if (!res.ok) {
+      await logEmailDelivery({
+        email_type: 'rejection',
+        recipient_email: email,
+        status: 'failed',
+        error_message: data?.message || `Resend status ${res.status}`,
+        context: 'signup_rejected',
+      });
       return new Response(JSON.stringify({ error: data?.message || 'Failed to send email', detail: data }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
+    await logEmailDelivery({
+      email_type: 'rejection',
+      recipient_email: email,
+      status: 'sent',
+      provider_message_id: data?.id || null,
+      context: 'signup_rejected',
+      metadata: { reason: reason || null },
+    });
     return new Response(JSON.stringify({ success: true, id: data?.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {

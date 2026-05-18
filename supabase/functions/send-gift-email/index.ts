@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { logEmailDelivery } from '../_shared/email-log.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,11 +70,31 @@ Deno.serve(async (req) => {
 
     if (!res.ok) {
       const txt = await res.text();
+      await logEmailDelivery({
+        email_type: 'gift_credits',
+        recipient_email: email,
+        status: 'failed',
+        error_message: `Resend ${res.status}: ${txt}`.slice(0, 1000),
+        context: 'gift_credits',
+        metadata: { credits, reason: reason || null },
+      });
       return new Response(JSON.stringify({ error: `Resend error: ${txt}` }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    let giftProviderId: string | null = null;
+    try { const j = await res.json(); giftProviderId = j?.id || null; } catch { /* ignore */ }
+
+    await logEmailDelivery({
+      email_type: 'gift_credits',
+      recipient_email: email,
+      status: 'sent',
+      provider_message_id: giftProviderId,
+      context: 'gift_credits',
+      metadata: { credits, reason: reason || null },
+    });
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

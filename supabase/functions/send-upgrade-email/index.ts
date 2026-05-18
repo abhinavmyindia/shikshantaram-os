@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { logEmailDelivery } from "../_shared/email-log.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,5 +62,14 @@ serve(async (req) => {
   });
 
   const data = await res.json();
+  await logEmailDelivery({
+    email_type: 'upgrade',
+    recipient_email: email,
+    status: res.ok ? 'sent' : 'failed',
+    error_message: res.ok ? null : (data?.message || `Resend status ${res.status}`),
+    provider_message_id: data?.id || null,
+    context: 'tier_upgrade',
+    metadata: { access_tier: tier },
+  });
   return new Response(JSON.stringify(data), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: res.ok ? 200 : 400 });
 });
