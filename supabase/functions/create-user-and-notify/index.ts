@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logEmailDelivery } from "../_shared/email-log.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -192,6 +193,19 @@ serve(async (req) => {
       emailError = e?.message || 'Unknown email send failure';
       console.error('[create-user] email send threw:', emailError);
     }
+
+    await logEmailDelivery({
+      email_type: 'welcome_approval',
+      recipient_email: normalizedEmail,
+      recipient_user_id: userId,
+      status: emailSent ? 'sent' : 'failed',
+      error_message: emailError,
+      provider_message_id: emailId,
+      triggered_by_user_id: caller.id,
+      triggered_by_email: caller.email || null,
+      context: wasExisting ? 'admin_approve_existing' : 'admin_approve_new',
+      metadata: { access_tier, payment_status, is_beta_user },
+    });
 
     return new Response(JSON.stringify({
       success: true,

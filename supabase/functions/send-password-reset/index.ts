@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { logEmailDelivery } from '../_shared/email-log.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -135,10 +136,32 @@ Deno.serve(async (req) => {
       }),
     });
 
+    let providerId: string | null = null;
     if (!emailRes.ok) {
       const errBody = await emailRes.text();
+      await logEmailDelivery({
+        email_type: 'password_reset',
+        recipient_email: targetEmail,
+        recipient_user_id: authUser.id,
+        status: 'failed',
+        error_message: `Resend ${emailRes.status}: ${errBody}`.slice(0, 1000),
+        context: isAdminRequest ? 'admin_initiated' : 'self_serve',
+      });
       throw new Error(`Resend failed: ${errBody}`);
     }
+    try {
+      const j = await emailRes.json();
+      providerId = j?.id || null;
+    } catch { /* ignore */ }
+
+    await logEmailDelivery({
+      email_type: 'password_reset',
+      recipient_email: targetEmail,
+      recipient_user_id: authUser.id,
+      status: 'sent',
+      provider_message_id: providerId,
+      context: isAdminRequest ? 'admin_initiated' : 'self_serve',
+    });
 
     return json({ sent: true, user_id: authUser.id, email: targetEmail, sent_at: new Date().toISOString() });
 
