@@ -2175,6 +2175,13 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                       )}
                       {canDo.editUsers(role) && (
                         <button
+                          onClick={() => { setSetPasswordUser(u); setNewPassword(generateStrongPassword()); }}
+                          title="Set Password (Manual)"
+                          style={{ width: 30, height: 30, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.2)', color: '#7c3aed', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >🔐</button>
+                      )}
+                      {canDo.editUsers(role) && (
+                        <button
                           onClick={() => setGiftingUser(u)}
                           title="Gift Credits"
                           style={{ width: 30, height: 30, background: 'rgba(5,150,105,0.06)', border: '1px solid rgba(5,150,105,0.2)', color: '#059669', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
