@@ -2985,7 +2985,7 @@ export default function AdminPanel() {
   const loadData = async () => {
     setLoading(true);
     const [usersRes, emailsRes, creditsRes, presenceRes, sessionsRes] = await Promise.all([
-      supabase.from('user_profiles').select('*').neq('access_tier', 'trial').order('created_at', { ascending: false }),
+      supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
       supabase.functions.invoke('admin-list-emails'),
       supabase.from('user_credits').select('user_id, balance'),
       supabase.from('user_presence').select('user_id, last_seen'),
