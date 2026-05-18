@@ -190,6 +190,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
   const [endingEarly, setEndingEarly] = useState(false);
   const [customDateOpen, setCustomDateOpen] = useState(false);
   const [customDateVal, setCustomDateVal] = useState('');
+  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
 
   const dirty = form.fullName !== user.full_name || form.email !== email || form.phone !== (user.phone || '') ||
     form.accessTier !== user.access_tier || form.paymentStatus !== user.payment_status ||
@@ -352,8 +353,6 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
     setCustomDateOpen(false);
   };
 
-  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
-
   const sendEmail = async (type: string) => {
     setSendingEmail(p => ({ ...p, [type]: true }));
     try {
@@ -362,16 +361,17 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
           body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier },
         });
       } else {
-        const tempPwd = 'Shk' + Math.random().toString(36).slice(2, 6).toUpperCase() + Math.random().toString(36).slice(2, 5);
-        await supabase.functions.invoke('admin-reset-password', { body: { user_id: user.id, new_password: tempPwd } });
-        await supabase.functions.invoke('send-welcome-email', {
-          body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier, temp_password: tempPwd, login_url: 'https://os.shikshantaram.in' },
+        const { data, error } = await supabase.functions.invoke('send-password-reset', {
+          body: { user_id: user.id, email: form.email.trim().toLowerCase() },
         });
+        if (error) throw new Error(error.message);
+        if (data?.sent === false) throw new Error(data?.error || 'Failed to send reset link');
+        await logActivity('password_reset_sent', user.id, form.fullName, { context: 'edit_user_modal', sent_at: data?.sent_at || new Date().toISOString() });
       }
       setSendingEmail(p => ({ ...p, [type]: false }));
       setEmailSent(p => ({ ...p, [type]: true }));
       setTimeout(() => setEmailSent(p => ({ ...p, [type]: false })), 4000);
-      showToast(`✅ Email sent to ${form.email}`);
+      showToast(type === 'password' ? `🔑 Password reset link sent to ${form.email}` : `✅ Email sent to ${form.email}`);
     } catch (err: any) {
       setSendingEmail(p => ({ ...p, [type]: false }));
       showToast(`❌ Email failed: ${err.message}`, 'error');
@@ -626,7 +626,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
                 }}>
                   {sendingEmail.password ? (
                     <><span style={{ width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spinSlow 0.6s linear infinite', display: 'inline-block' }} /> Sending...</>
-                  ) : emailSent.password ? '✅ Email Sent!' : '🔑 Send New Password Email'}
+                  ) : emailSent.password ? '✅ Reset Link Sent!' : '🔑 Send Password Reset Link'}
                 </button>
               </div>
             )}
@@ -1589,6 +1589,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [deletionReqs, setDeletionReqs] = useState<any[]>([]);
   const [showDeletionQueue, setShowDeletionQueue] = useState(false);
   const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
+  const [resettingPasswordId, setResettingPasswordId] = useState<string | null>(null);
 
   // Inline gift credits modal state
   const [giftingUser, setGiftingUser] = useState<UserRow | null>(null);
@@ -1771,6 +1772,26 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
     return true;
   });
 
+  const handleSendPasswordReset = async (target: UserRow) => {
+    const em = emailMap[target.id];
+    if (!em) { showToast('Email not found for this user', 'error'); return; }
+    if (!window.confirm(`Send password reset link to ${em}?`)) return;
+    setResettingPasswordId(target.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: { user_id: target.id, email: em.trim().toLowerCase() },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.sent === false) throw new Error(data?.error || 'Failed to send reset link');
+      await logActivity('password_reset_sent', target.id, em, { context: 'users_tab', sent_at: data?.sent_at || new Date().toISOString() });
+      showToast(`🔑 Password reset link sent to ${em}`, 'success');
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to send reset link'}`, 'error');
+    } finally {
+      setResettingPasswordId(null);
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteUser) return;
     setDeleting(true);
@@ -1852,7 +1873,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '8px 12px', border: '1.5px solid #e2e8f0' }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: 13, fontFamily: 'DM Sans' }} />
         </div>
-        {['All', 'Basic', 'Premium', 'Beta', 'Revoked'].map(f => (
+        {['All', 'Trial', 'Basic', 'Premium', 'Beta', 'Revoked'].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
             background: filter === f ? '#7c3aed' : '#f1f5f9', color: filter === f ? 'white' : '#64748b',
@@ -2090,21 +2111,11 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
                       {canDo.editUsers(role) && (
                         <button
-                          onClick={async () => {
-                            const em = emailMap[u.id];
-                            if (!em) { showToast('Email not found for this user', 'error'); return; }
-                            if (!window.confirm(`Send password reset email to ${em}?`)) return;
-                            try {
-                              await supabase.functions.invoke('send-password-reset', { body: { email: em } });
-                              await logActivity('password_reset_sent', u.id, em);
-                              showToast(`🔑 Password reset sent to ${em}`, 'success');
-                            } catch (e: any) {
-                              showToast(`❌ ${e.message || 'Failed to send'}`, 'error');
-                            }
-                          }}
-                          title="Send Password Reset"
-                          style={{ width: 30, height: 30, background: 'rgba(2,132,199,0.06)', border: '1px solid rgba(2,132,199,0.2)', color: '#0284c7', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
-                        >🔑</button>
+                          onClick={() => handleSendPasswordReset(u)}
+                          disabled={resettingPasswordId === u.id}
+                          title="Send Password Reset Link"
+                          style={{ width: 30, height: 30, background: 'rgba(2,132,199,0.06)', border: '1px solid rgba(2,132,199,0.2)', color: '#0284c7', borderRadius: 8, cursor: resettingPasswordId === u.id ? 'wait' : 'pointer', opacity: resettingPasswordId === u.id ? 0.65 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}
+                        >{resettingPasswordId === u.id ? '…' : '🔑'}</button>
                       )}
                       {canDo.editUsers(role) && (
                         <button
@@ -2975,7 +2986,7 @@ export default function AdminPanel() {
   const loadData = async () => {
     setLoading(true);
     const [usersRes, emailsRes, creditsRes, presenceRes, sessionsRes] = await Promise.all([
-      supabase.from('user_profiles').select('*').neq('access_tier', 'trial').order('created_at', { ascending: false }),
+      supabase.from('user_profiles').select('*').order('created_at', { ascending: false }),
       supabase.functions.invoke('admin-list-emails'),
       supabase.from('user_credits').select('user_id, balance'),
       supabase.from('user_presence').select('user_id, last_seen'),
