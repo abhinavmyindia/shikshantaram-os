@@ -366,6 +366,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
         });
         if (error) throw new Error(error.message);
         if (data?.sent === false) throw new Error(data?.error || 'Failed to send reset link');
+        await logActivity('password_reset_sent', user.id, form.fullName, { context: 'edit_user_modal', sent_at: data?.sent_at || new Date().toISOString() });
       }
       setSendingEmail(p => ({ ...p, [type]: false }));
       setEmailSent(p => ({ ...p, [type]: true }));
