@@ -254,6 +254,29 @@ Deno.serve(async (req) => {
       emailError = 'RESEND_API_KEY not configured';
     }
 
+    let trialProviderId: string | null = null;
+    try {
+      // best-effort: provider id is captured above only when r.ok — we already
+      // logged via emailSent flag, so include null here when missing.
+    } catch { /* noop */ }
+
+    try {
+      const { logEmailDelivery } = await import('../_shared/email-log.ts');
+      await logEmailDelivery({
+        email_type: 'trial_approval',
+        recipient_email: record.email,
+        recipient_user_id: userId,
+        status: emailSent ? 'sent' : 'failed',
+        error_message: emailError,
+        provider_message_id: trialProviderId,
+        triggered_by_user_id: adminId,
+        context: 'trial_approved',
+        metadata: { duration_days: durationDays, trial_request_id: requestId },
+      });
+    } catch (e) {
+      console.error('[approve-trial] email log failed:', (e as any)?.message);
+    }
+
     return new Response(
       JSON.stringify({ success: true, userId, expiresAt: expiresAt.toISOString(), tempPassword, email_sent: emailSent, email_error: emailError }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
