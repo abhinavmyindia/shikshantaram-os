@@ -2274,6 +2274,104 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
           </div>
         </div>
       )}
+
+      {/* Inline Set Password modal */}
+      {setPasswordUser && (
+        <div onClick={() => !setPasswordLoading && closeSetPasswordModal()} style={{ position: 'fixed', inset: 0, zIndex: 8888, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: 460, width: '100%', background: 'white', borderRadius: 20, padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.2)' }}>
+            <h2 style={{ fontFamily: 'Sora,sans-serif', fontWeight: 900, fontSize: 18, color: '#0f172a', margin: '0 0 6px' }}>🔐 Set Password Manually</h2>
+            <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#64748b', margin: '0 0 18px' }}>
+              {setPasswordUser.full_name} · {emailMap[setPasswordUser.id] || '—'}
+            </p>
+
+            {!setPasswordSuccess ? (
+              <>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: 10, marginBottom: 14 }}>
+                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11.5, color: '#92400e', margin: 0, lineHeight: 1.5 }}>
+                    ⚠️ This directly overwrites the user's password. Share it securely (WhatsApp/in-person). Min 8 chars with upper, lower, digit & special.
+                  </p>
+                </div>
+
+                <label style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, color: '#475569', display: 'block', marginBottom: 6 }}>New Password</label>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    disabled={setPasswordLoading}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontFamily: 'monospace', fontSize: 14, boxSizing: 'border-box' }}
+                  />
+                  <button type="button" onClick={() => setShowNewPassword(s => !s)}
+                    style={{ padding: '0 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 13 }}>
+                    {showNewPassword ? '🙈' : '👁'}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+                  <button type="button" onClick={() => setNewPassword(generateStrongPassword())} disabled={setPasswordLoading}
+                    style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 600, color: '#475569' }}>
+                    🎲 Regenerate
+                  </button>
+                  <button type="button" onClick={() => copyToClipboard(newPassword, 'pw-input')} disabled={!newPassword}
+                    style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 600, color: '#475569' }}>
+                    {copiedField === 'pw-input' ? '✓ Copied' : '📋 Copy'}
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={closeSetPasswordModal} disabled={setPasswordLoading}
+                    style={{ flex: 1, padding: 11, borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', cursor: setPasswordLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, color: '#64748b', opacity: setPasswordLoading ? 0.5 : 1 }}>Cancel</button>
+                  <button onClick={handleSetPassword} disabled={setPasswordLoading || !newPassword || newPassword.length < 8}
+                    style={{ flex: 2, padding: 11, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', cursor: setPasswordLoading ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13, opacity: setPasswordLoading ? 0.7 : 1 }}>
+                    {setPasswordLoading ? 'Setting…' : '🔐 Set Password'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12.5, color: '#166534', margin: 0, fontWeight: 700 }}>
+                    ✅ Password updated. Share these credentials with the user securely.
+                  </p>
+                </div>
+
+                <div style={{ background: '#0f172a', borderRadius: 12, padding: 14, marginBottom: 12 }}>
+                  <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Email</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+                    <code style={{ fontFamily: 'monospace', fontSize: 13, color: '#e2e8f0', wordBreak: 'break-all' }}>{emailMap[setPasswordUser.id] || '—'}</code>
+                    <button onClick={() => copyToClipboard(emailMap[setPasswordUser.id] || '', 'em')}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #334155', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      {copiedField === 'em' ? '✓' : '📋'}
+                    </button>
+                  </div>
+                  <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Password</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <code style={{ fontFamily: 'monospace', fontSize: 14, color: '#fbbf24', wordBreak: 'break-all' }}>{newPassword}</code>
+                    <button onClick={() => copyToClipboard(newPassword, 'pw')}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #334155', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      {copiedField === 'pw' ? '✓' : '📋'}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const em = emailMap[setPasswordUser.id] || '';
+                    const msg = `Hi ${setPasswordUser.full_name},\n\nYour Shikshantaram OS password has been reset by our team.\n\nLogin: https://os.shikshantaram.in\nEmail: ${em}\nPassword: ${newPassword}\n\nPlease sign in and change your password from Profile → Security.`;
+                    copyToClipboard(msg, 'msg');
+                  }}
+                  style={{ width: '100%', padding: 10, borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 10 }}>
+                  {copiedField === 'msg' ? '✓ Message Copied' : '📋 Copy Ready-to-Send Message'}
+                </button>
+
+                <button onClick={closeSetPasswordModal}
+                  style={{ width: '100%', padding: 11, borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 13 }}>
+                  Done
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
