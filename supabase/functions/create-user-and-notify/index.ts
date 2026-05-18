@@ -42,7 +42,10 @@ serve(async (req) => {
     const { email, full_name, phone, temp_password, access_tier, payment_status, payment_amount, is_beta_user, notes } = await req.json();
     const normalizedEmail = String(email || '').toLowerCase().trim();
 
-    // 1. Create auth user
+    // 1. Create auth user — if exists, locate them and reset their password
+    let userId: string | null = null;
+    let wasExisting = false;
+
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: normalizedEmail,
       password: temp_password,
@@ -50,24 +53,38 @@ serve(async (req) => {
       user_metadata: { full_name },
     });
 
-    if (authError) {
-      const isDuplicateEmail = authError.message?.toLowerCase().includes('already been registered');
-      if (isDuplicateEmail) {
-        return new Response(JSON.stringify({
-          success: false,
-          already_exists: true,
-          error: 'A user with this email address has already been registered',
-          email: normalizedEmail,
-        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (authData?.user?.id) {
+      userId = authData.user.id;
+    } else if (authError && (authError.message || '').toLowerCase().includes('already')) {
+      // User already exists — paginate to find them, then update password so the
+      // shared temp_password in the welcome email actually works.
+      wasExisting = true;
+      let page = 1;
+      while (page <= 25 && !userId) {
+        const { data: list } = await adminClient.auth.admin.listUsers({ page, perPage: 200 });
+        const users = list?.users || [];
+        const found = users.find((u: any) => (u.email || '').toLowerCase() === normalizedEmail);
+        if (found) {
+          userId = found.id;
+          await adminClient.auth.admin.updateUserById(found.id, {
+            password: temp_password,
+            email_confirm: true,
+          });
+          break;
+        }
+        if (users.length < 200) break;
+        page++;
       }
+      if (!userId) {
+        return new Response(JSON.stringify({
+          success: false, error: `User exists in auth but could not be located: ${normalizedEmail}`,
+        }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    } else if (authError) {
       return new Response(JSON.stringify({ error: authError.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const userId = authData.user.id;
-
-    // 2. Update the auto-created profile — access_tier comes directly from admin's selection
-    // The handle_new_user trigger creates the row with defaults on auth.users INSERT.
-    // We must wait for it, then update with the admin's chosen tier.
+    // 2. Update profile with admin's selected tier
     const profileData = {
       full_name,
       phone: phone || '',
@@ -79,7 +96,6 @@ serve(async (req) => {
       added_by: 'admin',
     };
 
-    // Try update first (trigger should have created the row)
     let { data: updateData, error: updateError } = await adminClient
       .from('user_profiles')
       .update(profileData)
@@ -87,7 +103,6 @@ serve(async (req) => {
       .select('access_tier')
       .single();
 
-    // If update found no row (trigger hasn't fired yet), wait and retry
     if (updateError || !updateData) {
       await new Promise(r => setTimeout(r, 500));
       const retry = await adminClient
@@ -97,12 +112,8 @@ serve(async (req) => {
         .select('access_tier')
         .single();
 
-      // If still no row, upsert as fallback
       if (retry.error || !retry.data) {
-        await adminClient.from('user_profiles').upsert({
-          id: userId,
-          ...profileData,
-        });
+        await adminClient.from('user_profiles').upsert({ id: userId, ...profileData });
         console.log('[create-user] Used upsert fallback for', normalizedEmail, 'tier:', access_tier);
       } else {
         console.log('[create-user] Retry update succeeded for', normalizedEmail, 'tier:', retry.data.access_tier);
@@ -111,7 +122,7 @@ serve(async (req) => {
       console.log('[create-user] Update succeeded for', normalizedEmail, 'tier:', updateData.access_tier);
     }
 
-    // 3. Send welcome email via Resend
+    // 3. Send welcome email via Resend — ALWAYS, even if user pre-existed
     const tierLabel = access_tier === 'premium' ? 'Premium' : access_tier === 'beta' ? 'Beta' : 'Basic';
     const toolsLine = access_tier === 'basic'
       ? 'You have access to Niche Clarity and Product Navigator.'
@@ -119,6 +130,9 @@ serve(async (req) => {
       ? 'You have full Beta access to all tools — including early previews.'
       : 'You have full Premium access to all tools as they unlock.';
     const appUrl = Deno.env.get('APP_URL') || 'https://os.shikshantaram.in';
+    const greetingLine = wasExisting
+      ? `Your Shikshantaram OS access has been approved and is now active. Your password has been reset — please use the credentials below to log in.`
+      : `Your access has been approved and your Shikshantaram OS account is now live. Here are your login credentials:`;
 
     const html = `
       <div style="max-width:520px;margin:0 auto;font-family:'Segoe UI',Arial,sans-serif;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
@@ -128,18 +142,18 @@ serve(async (req) => {
         </div>
         <div style="padding:28px;">
           <h2 style="font-size:20px;font-weight:800;color:#0f172a;margin:0 0 12px;">You're in, ${full_name}! 🎉</h2>
-          <p style="font-size:14px;color:#475569;line-height:1.7;">Your payment has been verified and your Shikshantaram OS account is now live. Here are your login credentials:</p>
+          <p style="font-size:14px;color:#475569;line-height:1.7;">${greetingLine}</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin:20px 0;">
             <tr>
               <td style="padding:14px 16px 10px 16px;border-bottom:1px solid #f1f5f9;">
                 <span style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Email</span><br/>
-                <span style="font-size:15px;color:#0f172a;font-weight:700;">${email}</span>
+                <span style="font-size:15px;color:#0f172a;font-weight:700;">${normalizedEmail}</span>
               </td>
             </tr>
             <tr>
               <td style="padding:10px 16px 14px 16px;">
                 <span style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Password</span><br/>
-                <span style="font-size:15px;color:#0f172a;font-weight:700;">${temp_password}</span>
+                <span style="font-size:15px;color:#0f172a;font-weight:700;font-family:monospace;">${temp_password}</span>
               </td>
             </tr>
           </table>
@@ -148,24 +162,46 @@ serve(async (req) => {
             <div style="font-size:13px;color:#475569;margin-top:4px;">${toolsLine}</div>
           </div>
           <a href="${appUrl}" style="display:block;text-align:center;background:linear-gradient(135deg,#7c3aed,#a855f7);color:white;padding:14px;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;margin:20px 0;">🚀 Log In to Shikshantaram OS →</a>
-          <p style="font-size:12px;color:#94a3b8;text-align:center;">⚠ Please change your password after your first login for security.</p>
+          <p style="font-size:12px;color:#94a3b8;text-align:center;">⚠ Please change your password after your first login from My Profile → Security.</p>
         </div>
       </div>`;
 
-    const emailRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "Shikshantaram OS <auth@shikshantaram.in>",
-        to: [normalizedEmail],
-        subject: `🎉 Your Shikshantaram OS ${tierLabel} Access is Live!`,
-        html,
-      }),
-    });
-    const emailResult = await emailRes.json();
-    console.log("Resend response:", JSON.stringify(emailResult));
+    let emailSent = false;
+    let emailError: string | null = null;
+    let emailId: string | null = null;
+    try {
+      const emailRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Shikshantaram OS <auth@shikshantaram.in>",
+          to: [normalizedEmail],
+          subject: `🎉 Your Shikshantaram OS ${tierLabel} Access is Live!`,
+          html,
+        }),
+      });
+      const emailResult = await emailRes.json();
+      console.log("Resend response:", emailRes.status, JSON.stringify(emailResult));
+      if (emailRes.ok && emailResult?.id) {
+        emailSent = true;
+        emailId = emailResult.id;
+      } else {
+        emailError = emailResult?.message || emailResult?.error || `Resend status ${emailRes.status}`;
+      }
+    } catch (e: any) {
+      emailError = e?.message || 'Unknown email send failure';
+      console.error('[create-user] email send threw:', emailError);
+    }
 
-    return new Response(JSON.stringify({ success: true, userId, temp_password }), {
+    return new Response(JSON.stringify({
+      success: true,
+      userId,
+      temp_password,
+      already_exists: wasExisting,
+      email_sent: emailSent,
+      email_error: emailError,
+      email_id: emailId,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
