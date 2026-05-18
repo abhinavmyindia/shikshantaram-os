@@ -1634,7 +1634,23 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
       const { data, error } = await supabase.functions.invoke('admin-reset-password', {
         body: { user_id: setPasswordUser.id, new_password: newPassword },
       });
-      if (error) throw new Error(error.message);
+      // supabase-js wraps non-2xx responses in FunctionsHttpError whose context
+      // holds the actual Response. Read its body to surface the real reason
+      // (e.g. "password has appeared in a known data breach").
+      if (error) {
+        let serverMsg = error.message;
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) serverMsg = body.error;
+          } else if (ctx && typeof ctx.text === 'function') {
+            const txt = await ctx.text();
+            if (txt) serverMsg = txt;
+          }
+        } catch { /* keep generic */ }
+        throw new Error(serverMsg);
+      }
       if (data?.error) throw new Error(data.error);
       const em = emailMap[setPasswordUser.id] || '';
       await logActivity('password_set_by_admin', setPasswordUser.id, em, { context: 'users_tab' });
