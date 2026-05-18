@@ -1601,6 +1601,62 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [forceLoggingOutUser, setForceLoggingOutUser] = useState<UserRow | null>(null);
   const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
 
+  // Inline Set Password modal state
+  const [setPasswordUser, setSetPasswordUser] = useState<UserRow | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [setPasswordLoading, setSetPasswordLoading] = useState(false);
+  const [setPasswordSuccess, setSetPasswordSuccess] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(true);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const generateStrongPassword = () => {
+    const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lower = 'abcdefghijkmnopqrstuvwxyz';
+    const digits = '23456789';
+    const special = '!@#$%^&*-_=+?';
+    const all = upper + lower + digits + special;
+    const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+    let pw = pick(upper) + pick(lower) + pick(digits) + pick(special);
+    for (let i = 0; i < 10; i++) pw += pick(all);
+    return pw.split('').sort(() => Math.random() - 0.5).join('');
+  };
+
+  const handleSetPassword = async () => {
+    if (!setPasswordUser || !newPassword) return;
+    setSetPasswordLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { user_id: setPasswordUser.id, new_password: newPassword },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      const em = emailMap[setPasswordUser.id] || '';
+      await logActivity('password_set_by_admin', setPasswordUser.id, em, { context: 'users_tab' });
+      setSetPasswordSuccess(true);
+      showToast(`🔐 Password set for ${em || setPasswordUser.full_name}`, 'success');
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to set password'}`, 'error');
+    } finally {
+      setSetPasswordLoading(false);
+    }
+  };
+
+  const closeSetPasswordModal = () => {
+    setSetPasswordUser(null);
+    setNewPassword('');
+    setSetPasswordSuccess(false);
+    setShowNewPassword(true);
+    setCopiedField(null);
+  };
+
+  const copyToClipboard = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch {}
+  };
+
   const handleInlineGift = async () => {
     if (!giftingUser || !giftAmount || giftAmount < 1) return;
     if (giftAmount > 1000) {
