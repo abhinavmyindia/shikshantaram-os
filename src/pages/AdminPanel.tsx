@@ -8,6 +8,7 @@ import AdminCreditsTab from '@/components/AdminCreditsTab';
 import AdminTrialTab from '@/components/AdminTrialTab';
 import AdminActivityLogTab from '@/components/AdminActivityLogTab';
 import AdminAISettingsTab from '@/components/AdminAISettingsTab';
+import AdminEmailDeliveryTab from '@/components/AdminEmailDeliveryTab';
 import AdminIpLookupModal from '@/components/AdminIpLookupModal';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 export interface UserRow {
@@ -3222,6 +3223,7 @@ export default function AdminPanel() {
       title: 'Governance',
       items: [
         canDo.viewSecurity(role) && { id: 'security', label: 'Security', icon: '🔒', badge: tabBadges.security },
+        canDo.viewSecurity(role) && { id: 'email_delivery', label: 'Email Delivery', icon: '📬', badge: 0 },
         canDo.viewSecurity(role) && { id: 'activity_log', label: 'Activity Log', icon: '📋', badge: 0 },
         canDo.viewTeam(role) && { id: 'team', label: 'Team Access', icon: '🔑', badge: 0 },
       ].filter(Boolean) as NavItem[],
@@ -3376,6 +3378,7 @@ export default function AdminPanel() {
               {tab === 'ai-settings' && role === 'owner' && <AdminAISettingsTab />}
               {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
               {tab === 'activity_log' && canDo.viewSecurity(role) && <AdminActivityLogTab showToast={showAdminToast} />}
+              {tab === 'email_delivery' && canDo.viewSecurity(role) && <AdminEmailDeliveryTab showToast={showAdminToast} />}
               {tab === 'team' && canDo.viewTeam(role) && <TeamAccessTab showToast={showAdminToast} />}
             </>
           )}
