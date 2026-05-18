@@ -368,6 +368,51 @@ export type Database = {
         }
         Relationships: []
       }
+      email_delivery_log: {
+        Row: {
+          context: string | null
+          created_at: string
+          email_type: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          provider_message_id: string | null
+          recipient_email: string
+          recipient_user_id: string | null
+          status: string
+          triggered_by_email: string | null
+          triggered_by_user_id: string | null
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          email_type: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_message_id?: string | null
+          recipient_email: string
+          recipient_user_id?: string | null
+          status: string
+          triggered_by_email?: string | null
+          triggered_by_user_id?: string | null
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          provider_message_id?: string | null
+          recipient_email?: string
+          recipient_user_id?: string | null
+          status?: string
+          triggered_by_email?: string | null
+          triggered_by_user_id?: string | null
+        }
+        Relationships: []
+      }
       error_logs: {
         Row: {
           additional_data: Json | null
