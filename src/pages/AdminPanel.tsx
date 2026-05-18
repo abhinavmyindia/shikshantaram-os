@@ -1588,6 +1588,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
   const [deletionReqs, setDeletionReqs] = useState<any[]>([]);
   const [showDeletionQueue, setShowDeletionQueue] = useState(false);
   const [byokKeys, setByokKeys] = useState<{ user_id: string; provider: string }[]>([]);
+  const [resettingPasswordId, setResettingPasswordId] = useState<string | null>(null);
 
   // Inline gift credits modal state
   const [giftingUser, setGiftingUser] = useState<UserRow | null>(null);
@@ -1770,6 +1771,26 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
     return true;
   });
 
+  const handleSendPasswordReset = async (target: UserRow) => {
+    const em = emailMap[target.id];
+    if (!em) { showToast('Email not found for this user', 'error'); return; }
+    if (!window.confirm(`Send password reset link to ${em}?`)) return;
+    setResettingPasswordId(target.id);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: { user_id: target.id, email: em.trim().toLowerCase() },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.sent === false) throw new Error(data?.error || 'Failed to send reset link');
+      await logActivity('password_reset_sent', target.id, em, { context: 'users_tab', sent_at: data?.sent_at || new Date().toISOString() });
+      showToast(`🔑 Password reset link sent to ${em}`, 'success');
+    } catch (e: any) {
+      showToast(`❌ ${e.message || 'Failed to send reset link'}`, 'error');
+    } finally {
+      setResettingPasswordId(null);
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteUser) return;
     setDeleting(true);
@@ -1851,7 +1872,7 @@ function UsersTab({ users, emailMap, onRefresh, showToast, logActivity, adminId,
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', borderRadius: 10, padding: '8px 12px', border: '1.5px solid #e2e8f0' }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." style={{ border: 'none', background: 'transparent', outline: 'none', flex: 1, fontSize: 13, fontFamily: 'DM Sans' }} />
         </div>
-        {['All', 'Basic', 'Premium', 'Beta', 'Revoked'].map(f => (
+        {['All', 'Trial', 'Basic', 'Premium', 'Beta', 'Revoked'].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
             background: filter === f ? '#7c3aed' : '#f1f5f9', color: filter === f ? 'white' : '#64748b',
