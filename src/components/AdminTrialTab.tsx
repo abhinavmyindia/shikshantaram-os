@@ -135,14 +135,18 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
   const [resettingPwId, setResettingPwId] = useState<string | null>(null);
   const handleTrialResetPw = async (r: TrialRequest) => {
     if (!r.email) return;
-    if (!window.confirm(`Send password reset email to ${r.email}?`)) return;
+    if (!window.confirm(`Send password reset link to ${r.email}?`)) return;
     setResettingPwId(r.id);
     try {
-      await supabase.functions.invoke('send-password-reset', { body: { email: r.email } });
-      await logActivity('password_reset_sent', r.user_id, r.full_name, { context: 'trial' });
-      showToast(`Password reset sent to ${r.email}`, 'success');
-    } catch {
-      showToast('Failed to send password reset', 'error');
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: { user_id: r.user_id, email: r.email.trim().toLowerCase() },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.sent === false) throw new Error(data?.error || 'Failed to send reset link');
+      await logActivity('password_reset_sent', r.user_id, r.full_name, { context: 'trial', sent_at: data?.sent_at || new Date().toISOString() });
+      showToast(`Password reset link sent to ${r.email}`, 'success');
+    } catch (e: any) {
+      showToast(e.message || 'Failed to send password reset', 'error');
     } finally { setResettingPwId(null); }
   };
 
