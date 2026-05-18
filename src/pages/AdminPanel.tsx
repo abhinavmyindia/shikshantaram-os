@@ -190,6 +190,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
   const [endingEarly, setEndingEarly] = useState(false);
   const [customDateOpen, setCustomDateOpen] = useState(false);
   const [customDateVal, setCustomDateVal] = useState('');
+  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
 
   const dirty = form.fullName !== user.full_name || form.email !== email || form.phone !== (user.phone || '') ||
     form.accessTier !== user.access_tier || form.paymentStatus !== user.payment_status ||
@@ -352,8 +353,6 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
     setCustomDateOpen(false);
   };
 
-  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
-
   const sendEmail = async (type: string) => {
     setSendingEmail(p => ({ ...p, [type]: true }));
     try {
@@ -362,16 +361,16 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
           body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier },
         });
       } else {
-        const tempPwd = 'Shk' + Math.random().toString(36).slice(2, 6).toUpperCase() + Math.random().toString(36).slice(2, 5);
-        await supabase.functions.invoke('admin-reset-password', { body: { user_id: user.id, new_password: tempPwd } });
-        await supabase.functions.invoke('send-welcome-email', {
-          body: { email: form.email, full_name: form.fullName, access_tier: form.accessTier, temp_password: tempPwd, login_url: 'https://os.shikshantaram.in' },
+        const { data, error } = await supabase.functions.invoke('send-password-reset', {
+          body: { user_id: user.id, email: form.email.trim().toLowerCase() },
         });
+        if (error) throw new Error(error.message);
+        if (data?.sent === false) throw new Error(data?.error || 'Failed to send reset link');
       }
       setSendingEmail(p => ({ ...p, [type]: false }));
       setEmailSent(p => ({ ...p, [type]: true }));
       setTimeout(() => setEmailSent(p => ({ ...p, [type]: false })), 4000);
-      showToast(`✅ Email sent to ${form.email}`);
+      showToast(type === 'password' ? `🔑 Password reset link sent to ${form.email}` : `✅ Email sent to ${form.email}`);
     } catch (err: any) {
       setSendingEmail(p => ({ ...p, [type]: false }));
       showToast(`❌ Email failed: ${err.message}`, 'error');
@@ -626,7 +625,7 @@ export function EditUserModal({ user, email, trialStartedAt, onClose, onSave, on
                 }}>
                   {sendingEmail.password ? (
                     <><span style={{ width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spinSlow 0.6s linear infinite', display: 'inline-block' }} /> Sending...</>
-                  ) : emailSent.password ? '✅ Email Sent!' : '🔑 Send New Password Email'}
+                  ) : emailSent.password ? '✅ Reset Link Sent!' : '🔑 Send Password Reset Link'}
                 </button>
               </div>
             )}
