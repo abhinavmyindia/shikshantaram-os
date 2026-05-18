@@ -240,7 +240,12 @@ export default function AdminTrialTab({ showToast }: { showToast: (msg: string, 
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      showToast(`✅ ${approving.full_name} approved for ${approveDays} days — credentials emailed.`, 'success');
+      if (data?.email_sent) {
+        showToast(`✅ ${approving.full_name} approved for ${approveDays} days — credentials emailed.`, 'success');
+      } else {
+        const tp = data?.tempPassword ? ` Temp password: ${data.tempPassword}` : '';
+        showToast(`⚠️ ${approving.full_name} approved, but email failed: ${data?.email_error || 'unknown'}. Share manually.${tp}`, 'warning');
+      }
       setApproving(null);
       load();
     } catch (e) {

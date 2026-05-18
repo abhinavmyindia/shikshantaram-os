@@ -800,12 +800,17 @@ function ApproveAccessModal({ request, onClose, onApproved, showToast, logActivi
         },
       });
       if (error) throw new Error(error.message);
-      if (data?.error && !data?.already_exists) throw new Error(data.error);
+      if (data?.error && !data?.already_exists && !data?.success) throw new Error(data.error);
       await supabase.from('signup_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() } as any).eq('id', request.id);
-      await logActivity('signup_approved', null, request.full_name, { email: request.email, tier: selectedTier, payment: paymentAmount });
+      await logActivity('signup_approved', null, request.full_name, { email: request.email, tier: selectedTier, payment: paymentAmount, already_existed: !!data?.already_exists, email_sent: !!data?.email_sent, email_error: data?.email_error || null });
       onClose();
       onApproved();
-      showToast(`✅ ${request.full_name} approved as ${selectedTier}! Email sent.`);
+      if (data?.email_sent) {
+        const note = data?.already_exists ? ' (existing user — password reset & emailed)' : '';
+        showToast(`✅ ${request.full_name} approved as ${selectedTier}! Email sent.${note}`);
+      } else {
+        showToast(`⚠️ ${request.full_name} approved as ${selectedTier}, but email failed: ${data?.email_error || 'unknown error'}. Share credentials manually — temp password: ${tempPassword}`, 'warning');
+      }
     } catch (err: any) {
       showToast(`❌ Error: ${err.message}`, 'error');
     } finally {

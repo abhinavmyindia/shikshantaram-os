@@ -183,6 +183,8 @@ Deno.serve(async (req) => {
 
     // Send approval email
     const RESEND_KEY = Deno.env.get('RESEND_API_KEY');
+    let emailSent = false;
+    let emailError: string | null = null;
     if (RESEND_KEY) {
       const expiryStr = expiresAt.toLocaleString('en-IN', {
         day: 'numeric',
@@ -227,7 +229,7 @@ Deno.serve(async (req) => {
 </div>`;
 
       try {
-        await fetch('https://api.resend.com/emails', {
+        const r = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_KEY}` },
           body: JSON.stringify({
@@ -237,13 +239,23 @@ Deno.serve(async (req) => {
             html,
           }),
         });
-      } catch (e) {
-        console.error('Resend approval email failed:', e);
+        const result = await r.json();
+        console.log('[approve-trial] Resend response:', r.status, JSON.stringify(result));
+        if (r.ok && result?.id) {
+          emailSent = true;
+        } else {
+          emailError = result?.message || result?.error || `Resend status ${r.status}`;
+        }
+      } catch (e: any) {
+        emailError = e?.message || 'Email send threw';
+        console.error('[approve-trial] Resend approval email failed:', emailError);
       }
+    } else {
+      emailError = 'RESEND_API_KEY not configured';
     }
 
     return new Response(
-      JSON.stringify({ success: true, userId, expiresAt: expiresAt.toISOString() }),
+      JSON.stringify({ success: true, userId, expiresAt: expiresAt.toISOString(), tempPassword, email_sent: emailSent, email_error: emailError }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
