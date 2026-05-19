@@ -45,16 +45,22 @@ serve(async (req) => {
 
     const { data: usage } = await supabase
       .from("product_creator_monthly_usage")
-      .select("ebook_count, mindmap_count")
+      .select("nonfiction_book_count, mindmap_count, fiction_book_count, course_count, checklist_count, colouring_book_count")
       .eq("user_id", user.id)
       .eq("year_month", yearMonth)
       .maybeSingle();
 
+    const u = (usage as any) || {};
     return new Response(JSON.stringify({
       products: products || [],
       monthly_usage: {
-        ebook_count: (usage as any)?.ebook_count ?? 0,
-        mindmap_count: (usage as any)?.mindmap_count ?? 0,
+        nonfiction_book_count: u.nonfiction_book_count ?? 0,
+        mindmap_count: u.mindmap_count ?? 0,
+        fiction_book_count: u.fiction_book_count ?? 0,
+        course_count: u.course_count ?? 0,
+        checklist_count: u.checklist_count ?? 0,
+        colouring_book_count: u.colouring_book_count ?? 0,
+        ebook_count: u.nonfiction_book_count ?? 0,
         limit: 5,
       },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
