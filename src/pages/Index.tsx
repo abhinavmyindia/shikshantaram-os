@@ -1731,6 +1731,7 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
 
 /* ───────── Product Page ───────── */
 function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; onAction?: () => void; onBuildOffer?: (data: any) => void }) {
+  const navigate = useNavigate();
   const [researchMode, setResearchMode] = useState<'ai' | 'browse' | 'expertise'>('ai');
   const [search, setSearch] = useState('');
   const [speed, setSpeed] = useState('All');
