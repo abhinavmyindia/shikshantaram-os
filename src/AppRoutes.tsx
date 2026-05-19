@@ -78,6 +78,7 @@ export default function AppRoutes() {
     <>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/product-creator" element={<ProductCreator />} />
         <Route path="/admin" element={isAdmin ? <AdminPanel /> : <Index />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
