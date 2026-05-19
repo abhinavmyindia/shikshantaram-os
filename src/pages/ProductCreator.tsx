@@ -412,7 +412,9 @@ export default function ProductCreator() {
 
                 {/* Usage row */}
                 <div style={{ fontSize: 13, color: '#64748b', marginTop: 10 }}>
-                  This month: 📚 Non Fiction: {usage.nonfiction_book_count}/5 · 🧠 Mind Maps: {usage.mindmap_count}/5
+                  {selectedType === 'nonfiction_book'
+                    ? <>This month: 📚 Non Fiction: {usage.nonfiction_book_count}/5</>
+                    : <>This month: 🧠 Mind Maps: {usage.mindmap_count}/5</>}
                 </div>
 
                 {prefillSource === 'product_navigator' && (
