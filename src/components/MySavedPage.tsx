@@ -46,6 +46,14 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
   onSavedCountChange: (count: number) => void;
   onBuildFunnel?: (data: any) => void;
 }) {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'saved' | 'products'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'my-products') return 'products';
+    }
+    return 'saved';
+  });
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
