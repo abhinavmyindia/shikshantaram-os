@@ -429,7 +429,7 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
       {/* Usage summary */}
       <div style={s({ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' })}>
         {[
-          { used: usage.ebook_count, label: 'eBooks this month', emoji: '📖', color: '#0ea5e9' },
+          { used: usage.nonfiction_book_count, label: 'Non Fiction Books this month', emoji: '📚', color: '#0ea5e9' },
           { used: usage.mindmap_count, label: 'Mind Maps this month', emoji: '🧠', color: '#0d9488' },
         ].map((u, i) => (
           <div key={i} style={PILL(u.used, u.label, u.emoji, u.color)}>
