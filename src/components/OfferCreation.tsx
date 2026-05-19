@@ -70,6 +70,28 @@ type OfferStep = 'brief' | 'generating' | 'structures' | 'building' | 'builder' 
 /* ───────── Helpers ───────── */
 const s = (styles: CSSProperties): CSSProperties => styles;
 
+/** Coerce dmScript into a string. AI sometimes returns arrays/objects instead of a string. */
+const dmScriptToString = (v: unknown): string => {
+  if (!v) return '';
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) {
+    return v.map((item, i) => {
+      if (typeof item === 'string') return `Message ${i + 1}: ${item}`;
+      if (item && typeof item === 'object') {
+        const o = item as Record<string, unknown>;
+        const body = o.message ?? o.text ?? o.content ?? o.body ?? JSON.stringify(o);
+        return `Message ${i + 1}: ${String(body)}`;
+      }
+      return `Message ${i + 1}: ${String(item)}`;
+    }).join('\n\n');
+  }
+  if (typeof v === 'object') {
+    try { return Object.values(v as Record<string, unknown>).map(String).join('\n\n'); }
+    catch { return String(v); }
+  }
+  return String(v);
+};
+
 const PRICE_RANGES_INR = [
   { range: '₹199–₹499', type: 'Impulse Buy' },
   { range: '₹499–₹1,999', type: 'Low Ticket' },
