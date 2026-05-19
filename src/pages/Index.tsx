@@ -2362,6 +2362,7 @@ function UsageValuePopup({ message, onClose, onNavigate, displayValue }: {
 /* ───────── Main Index ───────── */
 const Index = () => {
   const { user, profile, isAdmin, signOut, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [toast, setToast] = useState<ToastData | null>(null);
   const [showUsagePopup, setShowUsagePopup] = useState(false);
