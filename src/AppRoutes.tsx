@@ -8,6 +8,7 @@ import RevokedScreen from "@/pages/RevokedScreen";
 import ResetPassword from "@/pages/ResetPassword";
 import AdminPanel from "@/pages/AdminPanel";
 import Index from "@/pages/Index";
+import ProductCreator from "@/pages/ProductCreator";
 import NotFound from "@/pages/NotFound";
 import TrialPage from "@/pages/TrialPage";
 import IdleWarningModal from "@/components/IdleWarningModal";
@@ -77,6 +78,7 @@ export default function AppRoutes() {
     <>
       <Routes>
         <Route path="/" element={<Index />} />
+        <Route path="/product-creator" element={<ProductCreator />} />
         <Route path="/admin" element={isAdmin ? <AdminPanel /> : <Index />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -1,88 +1,53 @@
+## Product Creator — Tool #6 Build Plan
 
-The user wants three things:
-1. Reset all users' credits to exactly 500 (one-time bulk operation)
-2. Track the date of the last bulk reset and show it in the admin portal
-3. Add a view in the admin portal showing total credits across all users (system-wide aggregate) for tracking, with existing gift/deduct controls accessible
+A new live tool: AI-powered ebook + mind map creator using securely-embedded MindPal workflows, with monthly per-type usage limits and a "My Products" library.
 
-Let me check what already exists in the Credits admin tab to avoid duplication.
+### 1. Database (migration)
+- `product_creator_configs` — stores MindPal embed URLs (service-role only, no public RLS). Seeded with the two workflow URLs.
+- `user_products` — user-owned product records (in_progress / completed), with RLS.
+- `product_creator_monthly_usage` — per-user, per-month ebook/mindmap counters.
+- `edge_function_logs` — created if missing (service-role only).
 
-All capabilities exist:
-- `add_user_credits` and `deduct_user_credits` RPCs already exist
-- Gift flow exists via `gift-credits` Edge Function
-- `global_settings` table can store the last reset date
-- `AdminCreditsTab.tsx` exists per file listing — I'll extend it
+### 2. Edge Functions
+- `manage-product-creator` — actions: `get_config` (returns embed URL + usage), `start`, `complete` (increments counter), `delete`.
+- `get-user-products` — returns user's products + this month's usage.
 
-Plan is straightforward and concise.
-</plan>
+Both verify JWT in code; embed URLs are never exposed to frontend source. Registered in `supabase/config.toml` with `verify_jwt = false`.
 
-<lov-plan>
+### 3. New page `/product-creator`
+- Route added in `AppRoutes.tsx`.
+- Header with usage pills (📚 X/5, 🧠 X/5).
+- Pill tab switcher: Ebook Creator / Mind Map Creator.
+- **STATE 1**: details form (ebook = title/author/country, mindmap = topic/country), prefilled from `sessionStorage.pc_prefill`. Limit-reached warning card replaces CTA when applicable.
+- **STATE 2**: workspace — fetches embed URL via Edge Function, renders iframe (700px min, no border-radius break), with right-click + devtools keyboard shortcut blocker scoped to this page only. "Mark as Complete" → confirm modal → complete action.
+- **STATE 3**: success card with usage pill + "View My Products" / "Create Another".
+- Glassmorphism, Sora, teal/cyan gradient — matches existing tool identity.
 
-## Plan: Bulk Credit Reset + System-Wide Credit Tracking
+### 4. My Saved — new "My Products" tab
+- Added as leftmost tab.
+- Auto-selected when route is `/my-saved?tab=my-products` (or wherever My Saved lives).
+- Usage summary bar + 2-column grid of product cards with type/status badges, source badge, inline delete confirm.
+- Empty state CTA to `/product-creator`.
 
-### What this does
-1. **One-time bulk reset** — set every user's `user_credits.balance` to exactly 500 credits.
-2. **Track the reset date** — store the timestamp + admin who did it in `global_settings`, display in Admin → Credits tab.
-3. **System-wide credits dashboard** — new card in Admin → Credits showing total credits in circulation, average per user, top holders.
-4. **Re-runnable reset button** — owner-only "Reset all balances to N" button so future resets (to any amount) can be done from the UI.
+### 5. Product Navigator — "🛠 Build This Product" button
+- Teal outline button on the idea detail view.
+- Saves `{product_name, country, niche, source: 'product_navigator'}` to `sessionStorage.pc_prefill` and navigates to `/product-creator`.
 
-### Implementation
+### 6. Sidebar + Dashboard unlock
+- Remove lock icon / Coming Soon / disabled handler from Product Creator entries in `src/pages/Index.tsx`.
+- Wire to `navigate('/product-creator')`. Keep green→cyan gradient and active styling.
 
-**A. Backend — new edge function `admin-bulk-reset-credits`**
-- Owner-only (verifies `is_owner` via `admin_users`).
-- Input: `{ targetBalance: number, reason?: string }` (defaults to 500).
-- For each user in `user_credits`:
-  - Compute delta = `targetBalance - current_balance`.
-  - Insert a `credit_transactions` row of type `admin_reset` recording the adjustment + `balance_after`.
-  - Update `user_credits.balance` to `targetBalance` (timestamps updated).
-- Writes to `global_settings`:
-  - `last_bulk_credit_reset_at` = timestamp
-  - `last_bulk_credit_reset_by` = admin email
-  - `last_bulk_credit_reset_amount` = targetBalance
-  - `last_bulk_credit_reset_users_affected` = count
-- Logs into `admin_activity_log` (action_type: `bulk_credit_reset`).
+### Build order
+1. DB migration (await approval)
+2. Edge functions + config.toml
+3. `/product-creator` page + route
+4. My Saved tab
+5. Product Navigator button
+6. Sidebar/dashboard unlock
 
-**B. Database — add `admin_reset` to allowed transaction types**
-- Quick migration: ensure `credit_transactions.type` allows the new value (it's free-text today, so no constraint change needed — just document it).
-
-**C. Frontend — extend `AdminCreditsTab.tsx`**
-Add a new section at the top of the Credits tab called **"System-Wide Credits"**:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ SYSTEM-WIDE CREDITS                                         │
-│                                                             │
-│  💰 Total in Circulation    👥 Active Holders   📊 Avg/User│
-│       12,450 credits             47 users         265       │
-│                                                             │
-│  Last bulk reset: 17 Apr 2026 by abhinav@…                 │
-│  Reset value: 500 credits · 47 users affected               │
-│                                                             │
-│  [ Reset All Balances → ]   ← owner only, opens confirm    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-- Aggregate query: `SELECT SUM(balance), COUNT(*), AVG(balance) FROM user_credits`.
-- Reset metadata pulled from `global_settings`.
-- "Reset All Balances" opens a confirm modal: input field (default 500) + reason + double-confirm ("Type RESET to continue").
-- After success: toast + refresh aggregates + banner showing "Reset complete: N users → 500 credits".
-
-The existing per-user **Gift** and **Deduct** controls in the Users sub-tab stay as they are — this plan only adds the system-wide layer on top.
-
-### Files touched
-- `supabase/functions/admin-bulk-reset-credits/index.ts` (new)
-- `supabase/config.toml` (register function with `verify_jwt = false`)
-- `src/components/AdminCreditsTab.tsx` (new System-Wide section + reset modal)
-
-### Safety
-- Owner-only (server-side check).
-- Per-user `credit_transactions` row written for full audit trail (every user can see "Admin reset to 500" in their My Credits history).
-- Logged to `admin_activity_log` so the action shows in Admin Activity.
-- Confirmation requires typing "RESET" to prevent accidental clicks.
-
-### What you'll see after approving
-1. Click **Reset All Balances** in Admin → Credits.
-2. Enter `500` + reason → type RESET → confirm.
-3. Every user's balance becomes 500 (extras removed, deficits topped up).
-4. The banner shows `Last bulk reset: 17 Apr 2026 by you · 500 credits · N users affected`.
-5. The total-in-circulation card always shows live system credits going forward.
-
+### Notes / scope guards
+- No edits to existing tool logic beyond the Product Navigator CTA, sidebar/dashboard unlock, and adding a tab to My Saved.
+- Embed URLs live only in DB; frontend never references them.
+- Inspect-blocking active only on `/product-creator`.
+- Deletion does not decrement monthly counters.
+- I'll need to read several existing files (My Saved page, Product Navigator detail, sidebar/dashboard in `Index.tsx`, AppRoutes) before editing to match patterns and exact field names.
