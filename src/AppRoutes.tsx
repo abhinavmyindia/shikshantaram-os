@@ -8,6 +8,7 @@ import RevokedScreen from "@/pages/RevokedScreen";
 import ResetPassword from "@/pages/ResetPassword";
 import AdminPanel from "@/pages/AdminPanel";
 import Index from "@/pages/Index";
+import ProductCreator from "@/pages/ProductCreator";
 import NotFound from "@/pages/NotFound";
 import TrialPage from "@/pages/TrialPage";
 import IdleWarningModal from "@/components/IdleWarningModal";
