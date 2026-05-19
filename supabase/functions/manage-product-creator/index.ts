@@ -8,6 +8,27 @@ const corsHeaders = {
 };
 
 const MONTHLY_LIMIT = 5;
+const VALID_TYPES = ["nonfiction_book", "mindmap", "fiction_book", "course", "checklist", "colouring_book"];
+
+const LABEL_MAP: Record<string, string> = {
+  nonfiction_book: "Non Fiction Books",
+  mindmap: "Mind Maps",
+  fiction_book: "Fiction Books",
+  course: "Courses",
+  checklist: "Checklists",
+  colouring_book: "Colouring Books",
+};
+
+function countFieldFor(product_type: string): string {
+  switch (product_type) {
+    case "nonfiction_book": return "nonfiction_book_count";
+    case "fiction_book":    return "fiction_book_count";
+    case "course":          return "course_count";
+    case "checklist":       return "checklist_count";
+    case "colouring_book":  return "colouring_book_count";
+    default:                return "mindmap_count";
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -41,43 +62,46 @@ serve(async (req) => {
 
     if (action === "get_config") {
       const { product_type } = body;
-      if (!["ebook", "mindmap"].includes(product_type)) {
+      if (!VALID_TYPES.includes(product_type)) {
         return new Response(JSON.stringify({ error: "Invalid product_type" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       const { data: config, error: configError } = await supabase
         .from("product_creator_configs")
-        .select("embed_url")
+        .select("embed_url, is_active")
         .eq("product_type", product_type)
         .eq("is_active", true)
         .maybeSingle();
 
-      if (configError || !config) {
-        return new Response(JSON.stringify({ error: "Configuration not found" }),
+      if (configError || !config || !config.embed_url) {
+        return new Response(JSON.stringify({ error: "coming_soon", message: `${LABEL_MAP[product_type]} is coming soon.` }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      const countField = countFieldFor(product_type);
       const { data: usage } = await supabase
         .from("product_creator_monthly_usage")
-        .select("ebook_count, mindmap_count")
+        .select(countField)
         .eq("user_id", user.id)
         .eq("year_month", yearMonth)
         .maybeSingle();
 
-      const countField = product_type === "ebook" ? "ebook_count" : "mindmap_count";
       const currentCount = (usage as any)?.[countField] ?? 0;
+      const label = LABEL_MAP[product_type];
 
       if (currentCount >= MONTHLY_LIMIT) {
         return new Response(JSON.stringify({
           limit_reached: true,
-          message: `You have used all ${MONTHLY_LIMIT} ${product_type === "ebook" ? "ebook" : "mind map"} creations for this month. Resets on the 1st.`,
+          label,
+          message: `You have used all ${MONTHLY_LIMIT} ${label} creations for this month. Resets on the 1st.`,
           current_count: currentCount, limit: MONTHLY_LIMIT, remaining: 0,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       return new Response(JSON.stringify({
         embed_url: config.embed_url,
+        label,
         current_count: currentCount,
         limit: MONTHLY_LIMIT,
         remaining: MONTHLY_LIMIT - currentCount,
@@ -87,25 +111,35 @@ serve(async (req) => {
 
     if (action === "start") {
       const { product_type, product_name, author_name, country, niche, source } = body;
-      if (!["ebook", "mindmap"].includes(product_type) || !product_name) {
+      if (!VALID_TYPES.includes(product_type) || !product_name) {
         return new Response(JSON.stringify({ error: "Missing required fields" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
+      const { data: cfg } = await supabase
+        .from("product_creator_configs")
+        .select("is_active, embed_url")
+        .eq("product_type", product_type)
+        .maybeSingle();
+      if (!cfg?.is_active || !cfg?.embed_url) {
+        return new Response(JSON.stringify({ error: "coming_soon", message: `${LABEL_MAP[product_type]} is coming soon.` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const countField = countFieldFor(product_type);
       const { data: usage } = await supabase
         .from("product_creator_monthly_usage")
-        .select("ebook_count, mindmap_count")
+        .select(countField)
         .eq("user_id", user.id)
         .eq("year_month", yearMonth)
         .maybeSingle();
 
-      const countField = product_type === "ebook" ? "ebook_count" : "mindmap_count";
       const currentCount = (usage as any)?.[countField] ?? 0;
 
       if (currentCount >= MONTHLY_LIMIT) {
         return new Response(JSON.stringify({
           error: "monthly_limit_reached",
-          message: `You have used all ${MONTHLY_LIMIT} creations for ${product_type === "ebook" ? "ebooks" : "mind maps"} this month.`,
+          message: `You have used all ${MONTHLY_LIMIT} creations for ${LABEL_MAP[product_type]} this month.`,
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -174,10 +208,10 @@ serve(async (req) => {
         .eq("id", product_id)
         .eq("user_id", user.id);
 
-      const countField = product.product_type === "ebook" ? "ebook_count" : "mindmap_count";
+      const countField = countFieldFor(product.product_type);
       const { data: existingUsage } = await supabase
         .from("product_creator_monthly_usage")
-        .select("id, ebook_count, mindmap_count")
+        .select(`id, ${countField}`)
         .eq("user_id", user.id)
         .eq("year_month", yearMonth)
         .maybeSingle();
@@ -186,22 +220,21 @@ serve(async (req) => {
         await supabase
           .from("product_creator_monthly_usage")
           .update({
-            [countField]: (existingUsage as any)[countField] + 1,
+            [countField]: ((existingUsage as any)[countField] ?? 0) + 1,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", existingUsage.id);
+          .eq("id", (existingUsage as any).id);
       } else {
         await supabase.from("product_creator_monthly_usage").insert({
           user_id: user.id,
           year_month: yearMonth,
-          ebook_count: product.product_type === "ebook" ? 1 : 0,
-          mindmap_count: product.product_type === "mindmap" ? 1 : 0,
+          [countField]: 1,
         });
       }
 
       const { data: updatedUsage } = await supabase
         .from("product_creator_monthly_usage")
-        .select("ebook_count, mindmap_count")
+        .select(countField)
         .eq("user_id", user.id)
         .eq("year_month", yearMonth)
         .maybeSingle();
@@ -219,6 +252,7 @@ serve(async (req) => {
         success: true,
         new_count: newCount,
         remaining: MONTHLY_LIMIT - newCount,
+        label: LABEL_MAP[product.product_type],
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

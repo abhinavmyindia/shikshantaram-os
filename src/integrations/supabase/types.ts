@@ -691,28 +691,40 @@ export type Database = {
       }
       product_creator_monthly_usage: {
         Row: {
+          checklist_count: number | null
+          colouring_book_count: number | null
+          course_count: number | null
           created_at: string | null
-          ebook_count: number | null
+          fiction_book_count: number | null
           id: string
           mindmap_count: number | null
+          nonfiction_book_count: number | null
           updated_at: string | null
           user_id: string
           year_month: string
         }
         Insert: {
+          checklist_count?: number | null
+          colouring_book_count?: number | null
+          course_count?: number | null
           created_at?: string | null
-          ebook_count?: number | null
+          fiction_book_count?: number | null
           id?: string
           mindmap_count?: number | null
+          nonfiction_book_count?: number | null
           updated_at?: string | null
           user_id: string
           year_month: string
         }
         Update: {
+          checklist_count?: number | null
+          colouring_book_count?: number | null
+          course_count?: number | null
           created_at?: string | null
-          ebook_count?: number | null
+          fiction_book_count?: number | null
           id?: string
           mindmap_count?: number | null
+          nonfiction_book_count?: number | null
           updated_at?: string | null
           user_id?: string
           year_month?: string

@@ -380,7 +380,7 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
 interface UserProduct {
   id: string;
   product_name: string;
-  product_type: 'ebook' | 'mindmap';
+  product_type: 'nonfiction_book' | 'mindmap';
   status: 'in_progress' | 'completed';
   source: string;
   niche?: string | null;
@@ -392,8 +392,8 @@ interface UserProduct {
 function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => void }) {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<UserProduct[]>([]);
-  const [usage, setUsage] = useState<{ ebook_count: number; mindmap_count: number }>({ ebook_count: 0, mindmap_count: 0 });
-  const [filter, setFilter] = useState<'all' | 'ebook' | 'mindmap'>('all');
+  const [usage, setUsage] = useState<{ nonfiction_book_count: number; mindmap_count: number }>({ nonfiction_book_count: 0, mindmap_count: 0 });
+  const [filter, setFilter] = useState<'all' | 'nonfiction_book' | 'mindmap'>('all');
 
   useEffect(() => {
     let alive = true;
@@ -408,7 +408,7 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
         if (!alive) return;
         if (error) throw error;
         setProducts((data?.products || []) as UserProduct[]);
-        if (data?.monthly_usage) setUsage({ ebook_count: data.monthly_usage.ebook_count || 0, mindmap_count: data.monthly_usage.mindmap_count || 0 });
+        if (data?.monthly_usage) setUsage({ nonfiction_book_count: data.monthly_usage.nonfiction_book_count ?? data.monthly_usage.ebook_count ?? 0, mindmap_count: data.monthly_usage.mindmap_count || 0 });
       } catch (e: any) {
         toast.error(e.message || 'Failed to load products');
       } finally {
@@ -429,7 +429,7 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
       {/* Usage summary */}
       <div style={s({ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' })}>
         {[
-          { used: usage.ebook_count, label: 'eBooks this month', emoji: '📖', color: '#0ea5e9' },
+          { used: usage.nonfiction_book_count, label: 'Non Fiction Books this month', emoji: '📚', color: '#0ea5e9' },
           { used: usage.mindmap_count, label: 'Mind Maps this month', emoji: '🧠', color: '#0d9488' },
         ].map((u, i) => (
           <div key={i} style={PILL(u.used, u.label, u.emoji, u.color)}>
@@ -457,7 +457,7 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
       <div style={s({ display: 'flex', gap: 6, marginBottom: 16 })}>
         {[
           { id: 'all' as const, label: `All (${products.length})` },
-          { id: 'ebook' as const, label: `📖 eBooks (${products.filter(p => p.product_type === 'ebook').length})` },
+          { id: 'nonfiction_book' as const, label: `📚 Non Fiction (${products.filter(p => p.product_type === 'nonfiction_book').length})` },
           { id: 'mindmap' as const, label: `🧠 Mind Maps (${products.filter(p => p.product_type === 'mindmap').length})` },
         ].map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)} style={s({
@@ -487,9 +487,9 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
       {!loading && filtered.length > 0 && (
         <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 })}>
           {filtered.map((p, i) => {
-            const isEbook = p.product_type === 'ebook';
-            const gradient = isEbook ? 'linear-gradient(90deg,#0ea5e9,#38bdf8)' : 'linear-gradient(90deg,#0d9488,#10b981)';
-            const accent = isEbook ? '#0ea5e9' : '#0d9488';
+            const isBook = p.product_type === 'nonfiction_book';
+            const gradient = isBook ? 'linear-gradient(90deg,#0ea5e9,#38bdf8)' : 'linear-gradient(90deg,#0d9488,#10b981)';
+            const accent = isBook ? '#0ea5e9' : '#0d9488';
             const done = p.status === 'completed';
             return (
               <div key={p.id} style={s({
@@ -501,7 +501,7 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
                 <div style={s({ padding: '16px 18px 18px' })}>
                   <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 })}>
                     <span style={s({ background: `${accent}14`, color: accent, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', padding: '3px 10px', borderRadius: 50 })}>
-                      {isEbook ? '📖 eBook' : '🧠 Mind Map'}
+                      {isBook ? '📚 Non Fiction Book' : '🧠 Mind Map'}
                     </span>
                     <span style={s({
                       fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
