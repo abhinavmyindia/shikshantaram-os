@@ -457,7 +457,7 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
       <div style={s({ display: 'flex', gap: 6, marginBottom: 16 })}>
         {[
           { id: 'all' as const, label: `All (${products.length})` },
-          { id: 'ebook' as const, label: `📖 eBooks (${products.filter(p => p.product_type === 'ebook').length})` },
+          { id: 'nonfiction_book' as const, label: `📚 Non Fiction (${products.filter(p => p.product_type === 'nonfiction_book').length})` },
           { id: 'mindmap' as const, label: `🧠 Mind Maps (${products.filter(p => p.product_type === 'mindmap').length})` },
         ].map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)} style={s({
