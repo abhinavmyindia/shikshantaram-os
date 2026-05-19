@@ -2546,6 +2546,11 @@ const Index = () => {
   };
 
   const navigateTo = (page: PageId) => {
+    // Product Creator lives on its own route
+    if (page === 'creator' as any) {
+      navigate('/product-creator');
+      return;
+    }
     // Trial-user gating: block locked tools
     if (isTrialUser && LOCKED_FOR_TRIAL.includes(page as LockedTool)) {
       setTrialLockTool(page as LockedTool);
