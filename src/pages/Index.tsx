@@ -1731,6 +1731,7 @@ function NichePage({ onBack, onAction, onNavigate }: { onBack: () => void; onAct
 
 /* ───────── Product Page ───────── */
 function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; onAction?: () => void; onBuildOffer?: (data: any) => void }) {
+  const navigate = useNavigate();
   const [researchMode, setResearchMode] = useState<'ai' | 'browse' | 'expertise'>('ai');
   const [search, setSearch] = useState('');
   const [speed, setSpeed] = useState('All');
@@ -2021,6 +2022,24 @@ function ProductPage({ onBack, onAction, onBuildOffer }: { onBack: () => void; o
                         </span>
                       </div>
                     )}
+
+                    {/* Build This Product CTA → Product Creator */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                      <button
+                        onClick={() => {
+                          sessionStorage.setItem('pc_prefill', JSON.stringify({
+                            product_name: idea.productName || '',
+                            country: '',
+                            niche: expertiseProfile?.detectedNiche || expertiseProfile?.niche || '',
+                            source: 'product_navigator',
+                          }));
+                          navigate('/product-creator');
+                        }}
+                        style={{ background: 'linear-gradient(135deg,#0ea5e9,#0d9488)', color: 'white', border: 'none', borderRadius: 10, padding: '9px 18px', fontFamily: 'Sora', fontWeight: 800, fontSize: 13, cursor: 'pointer', boxShadow: '0 4px 14px rgba(13,148,136,0.3)' }}
+                      >
+                        🛠 Build This Product →
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

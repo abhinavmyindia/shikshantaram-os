@@ -1,4 +1,5 @@
 import { useState, useEffect, CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,6 +46,14 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
   onSavedCountChange: (count: number) => void;
   onBuildFunnel?: (data: any) => void;
 }) {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'saved' | 'products'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'my-products') return 'products';
+    }
+    return 'saved';
+  });
   const [items, setItems] = useState<SavedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -134,6 +143,26 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
         </div>
         <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' })}>{items.length} items saved</span>
       </div>
+
+      {/* Tabs */}
+      <div style={s({ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid #e2e8f0' })}>
+        {[
+          { id: 'saved' as const, label: '🔖 Saved Items', count: items.length },
+          { id: 'products' as const, label: '📦 My Products', count: null },
+        ].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)} style={s({
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13.5,
+            color: activeTab === t.id ? '#0f172a' : '#94a3b8',
+            borderBottom: activeTab === t.id ? '2px solid #0d9488' : '2px solid transparent',
+            marginBottom: -1,
+          })}>{t.label}{t.count !== null ? ` (${t.count})` : ''}</button>
+        ))}
+      </div>
+
+      {activeTab === 'products' && <MyProductsTab userId={userId} onCreate={() => navigate('/product-creator')} />}
+
+      {activeTab === 'saved' && <>
 
       {/* Filter bar */}
       <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 10 })}>
@@ -339,6 +368,163 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      </>}
+    </div>
+  );
+}
+
+/* ───────── My Products tab ───────── */
+interface UserProduct {
+  id: string;
+  product_name: string;
+  product_type: 'ebook' | 'mindmap';
+  status: 'in_progress' | 'completed';
+  source: string;
+  niche?: string | null;
+  country?: string | null;
+  created_at: string;
+  completed_at?: string | null;
+}
+
+function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<UserProduct[]>([]);
+  const [usage, setUsage] = useState<{ ebook_count: number; mindmap_count: number }>({ ebook_count: 0, mindmap_count: 0 });
+  const [filter, setFilter] = useState<'all' | 'ebook' | 'mindmap'>('all');
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { setLoading(false); return; }
+        const { data, error } = await supabase.functions.invoke('get-user-products', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!alive) return;
+        if (error) throw error;
+        setProducts((data?.products || []) as UserProduct[]);
+        if (data?.monthly_usage) setUsage({ ebook_count: data.monthly_usage.ebook_count || 0, mindmap_count: data.monthly_usage.mindmap_count || 0 });
+      } catch (e: any) {
+        toast.error(e.message || 'Failed to load products');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [userId]);
+
+  const filtered = products.filter(p => filter === 'all' || p.product_type === filter);
+
+  const PILL = (used: number, label: string, emoji: string, color: string): CSSProperties => ({
+    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 14, padding: '12px 16px', flex: 1, minWidth: 180,
+  });
+
+  return (
+    <div style={s({ animation: 'fadeUp 0.3s ease' })}>
+      {/* Usage summary */}
+      <div style={s({ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' })}>
+        {[
+          { used: usage.ebook_count, label: 'eBooks this month', emoji: '📖', color: '#0ea5e9' },
+          { used: usage.mindmap_count, label: 'Mind Maps this month', emoji: '🧠', color: '#0d9488' },
+        ].map((u, i) => (
+          <div key={i} style={PILL(u.used, u.label, u.emoji, u.color)}>
+            <div style={s({ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 })}>
+              <span style={s({ fontSize: 18 })}>{u.emoji}</span>
+              <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#64748b', fontWeight: 600 })}>{u.label}</span>
+            </div>
+            <div style={s({ display: 'flex', alignItems: 'baseline', gap: 6 })}>
+              <span style={s({ fontFamily: 'Sora', fontWeight: 900, fontSize: 22, color: u.color })}>{u.used}</span>
+              <span style={s({ fontFamily: 'DM Sans', fontSize: 12, color: '#94a3b8' })}>/ 5</span>
+            </div>
+            <div style={s({ height: 4, background: '#e2e8f0', borderRadius: 4, marginTop: 6, overflow: 'hidden' })}>
+              <div style={s({ height: '100%', width: `${Math.min(100, (u.used / 5) * 100)}%`, background: u.color, transition: 'width 0.3s' })} />
+            </div>
+          </div>
+        ))}
+        <button onClick={onCreate} style={s({
+          background: 'linear-gradient(135deg,#0ea5e9,#0d9488)', color: 'white', border: 'none',
+          borderRadius: 14, padding: '12px 22px', fontFamily: 'Sora', fontWeight: 800, fontSize: 13,
+          cursor: 'pointer', boxShadow: '0 4px 16px rgba(13,148,136,0.35)', alignSelf: 'stretch',
+        })}>+ Create Product</button>
+      </div>
+
+      {/* Filter */}
+      <div style={s({ display: 'flex', gap: 6, marginBottom: 16 })}>
+        {[
+          { id: 'all' as const, label: `All (${products.length})` },
+          { id: 'ebook' as const, label: `📖 eBooks (${products.filter(p => p.product_type === 'ebook').length})` },
+          { id: 'mindmap' as const, label: `🧠 Mind Maps (${products.filter(p => p.product_type === 'mindmap').length})` },
+        ].map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)} style={s({
+            fontFamily: 'DM Sans', fontWeight: 700, fontSize: 12, padding: '6px 14px', borderRadius: 50,
+            border: 'none', cursor: 'pointer',
+            background: filter === f.id ? 'linear-gradient(135deg,#0ea5e9,#0d9488)' : '#f8fafc',
+            color: filter === f.id ? 'white' : '#64748b',
+          })}>{f.label}</button>
+        ))}
+      </div>
+
+      {loading && <div style={s({ textAlign: 'center', padding: 40, fontFamily: 'DM Sans', color: '#94a3b8' })}>Loading your products...</div>}
+
+      {!loading && filtered.length === 0 && (
+        <div style={s({ textAlign: 'center', padding: '60px 40px' })}>
+          <span style={s({ fontSize: 48, display: 'block' })}>📦</span>
+          <h2 style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 18, color: '#0f172a', marginTop: 16 })}>No products yet</h2>
+          <p style={s({ fontFamily: 'DM Sans', fontSize: 13.5, color: '#64748b', marginTop: 6, maxWidth: 420, margin: '6px auto 0', lineHeight: 1.7 })}>
+            Create AI-powered eBooks and mind maps in minutes — they'll all show up here.
+          </p>
+          <button onClick={onCreate} style={s({ marginTop: 18, background: 'linear-gradient(135deg,#0ea5e9,#0d9488)', color: 'white', border: 'none', borderRadius: 12, padding: '11px 22px', fontFamily: 'Sora', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 18px rgba(13,148,136,0.35)' })}>
+            → Create Your First Product
+          </button>
+        </div>
+      )}
+
+      {!loading && filtered.length > 0 && (
+        <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 })}>
+          {filtered.map((p, i) => {
+            const isEbook = p.product_type === 'ebook';
+            const gradient = isEbook ? 'linear-gradient(90deg,#0ea5e9,#38bdf8)' : 'linear-gradient(90deg,#0d9488,#10b981)';
+            const accent = isEbook ? '#0ea5e9' : '#0d9488';
+            const done = p.status === 'completed';
+            return (
+              <div key={p.id} style={s({
+                background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)', borderRadius: 18,
+                border: '1px solid rgba(255,255,255,0.95)', boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+                overflow: 'hidden', animation: `fadeUp 0.4s ease ${i * 0.04}s both`,
+              })}>
+                <div style={s({ height: 3, background: gradient })} />
+                <div style={s({ padding: '16px 18px 18px' })}>
+                  <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 })}>
+                    <span style={s({ background: `${accent}14`, color: accent, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', padding: '3px 10px', borderRadius: 50 })}>
+                      {isEbook ? '📖 eBook' : '🧠 Mind Map'}
+                    </span>
+                    <span style={s({
+                      fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
+                      padding: '3px 10px', borderRadius: 50,
+                      background: done ? '#dcfce7' : '#fef3c7',
+                      color: done ? '#059669' : '#b45309',
+                    })}>{done ? '✓ Completed' : '⏳ In Progress'}</span>
+                  </div>
+                  <div style={s({ fontFamily: 'Sora', fontWeight: 800, fontSize: 15, color: '#0f172a', lineHeight: 1.3, marginBottom: 8 })}>
+                    {p.product_name.length > 60 ? p.product_name.slice(0, 60) + '...' : p.product_name}
+                  </div>
+                  <div style={s({ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 })}>
+                    {p.niche && <span style={s({ fontSize: 10.5, fontWeight: 700, background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: 20 })}>🎯 {p.niche}</span>}
+                    {p.country && <span style={s({ fontSize: 10.5, fontWeight: 700, background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: 20 })}>📍 {p.country}</span>}
+                    {p.source === 'product_navigator' && <span style={s({ fontSize: 10.5, fontWeight: 700, background: 'rgba(234,88,12,0.08)', color: '#ea580c', padding: '2px 8px', borderRadius: 20 })}>🔍 From Navigator</span>}
+                  </div>
+                  <div style={s({ fontFamily: 'DM Sans', fontSize: 11, color: '#94a3b8' })}>
+                    {done && p.completed_at ? `Completed ${new Date(p.completed_at).toLocaleDateString()}` : `Started ${new Date(p.created_at).toLocaleDateString()}`}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
