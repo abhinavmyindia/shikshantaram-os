@@ -70,6 +70,28 @@ type OfferStep = 'brief' | 'generating' | 'structures' | 'building' | 'builder' 
 /* ───────── Helpers ───────── */
 const s = (styles: CSSProperties): CSSProperties => styles;
 
+/** Coerce dmScript into a string. AI sometimes returns arrays/objects instead of a string. */
+const dmScriptToString = (v: unknown): string => {
+  if (!v) return '';
+  if (typeof v === 'string') return v;
+  if (Array.isArray(v)) {
+    return v.map((item, i) => {
+      if (typeof item === 'string') return `Message ${i + 1}: ${item}`;
+      if (item && typeof item === 'object') {
+        const o = item as Record<string, unknown>;
+        const body = o.message ?? o.text ?? o.content ?? o.body ?? JSON.stringify(o);
+        return `Message ${i + 1}: ${String(body)}`;
+      }
+      return `Message ${i + 1}: ${String(item)}`;
+    }).join('\n\n');
+  }
+  if (typeof v === 'object') {
+    try { return Object.values(v as Record<string, unknown>).map(String).join('\n\n'); }
+    catch { return String(v); }
+  }
+  return String(v);
+};
+
 const PRICE_RANGES_INR = [
   { range: '₹199–₹499', type: 'Impulse Buy' },
   { range: '₹499–₹1,999', type: 'Low Ticket' },
@@ -957,7 +979,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
               <div style={s({ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 })}>
                 <CopyButton text={
                   outputTab === 'page' ? (offerData.offerDescription || '') :
-                  outputTab === 'dm' ? (offerData.dmScript || '') :
+                  outputTab === 'dm' ? dmScriptToString(offerData.dmScript) :
                   outputTab === 'social' ? (offerData.socialCaption || `${offerData.offerHeadline}\n\n${offerData.oneLinerPitch}\n\nPrice: ${offerData.yourPrice}`) :
                   (offerData.emailPitch || offerData.offerDescription || '')
                 } />
@@ -969,7 +991,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
 
               {outputTab === 'dm' && (
                 <div>
-                  {(offerData.dmScript || '').split(/Message \d+:|message \d+:/i).filter(Boolean).map((msg, i) => (
+                  {dmScriptToString(offerData.dmScript).split(/Message \d+:|message \d+:/i).filter(Boolean).map((msg, i) => (
                     <div key={i} style={s({ marginBottom: 10 })}>
                       <span style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' })}>Message {i + 1}:</span>
                       <div style={s({ background: 'white', borderRadius: '18px 18px 18px 4px', padding: '14px 16px', maxWidth: '85%', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', fontFamily: 'DM Sans', fontSize: 13.5, color: '#0f172a', lineHeight: 1.6 })}>{msg.trim()}</div>
