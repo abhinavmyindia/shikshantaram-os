@@ -222,9 +222,9 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'offer', label: 'Offer Creation', icon: (c) => <GiftIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'funnel', label: 'Funnel Builder', icon: (c) => <GitMergeIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'copy_suite', label: 'Copywriting Suite', icon: (c) => <TypeIcon color={c} />, badge: 'LIVE', locked: false },
-  { id: 'ads', label: 'AI Ad Suite', icon: (c) => <MegaphoneIcon color={c} />, badge: 'SOON', locked: true },
   { id: 'creator', label: 'Product Creator', icon: (c) => <PackageIcon color={c} />, badge: 'SOON', locked: true },
   { id: 'landing', label: 'Landing Page Designer', icon: (c) => <MonitorIcon color={c} />, badge: 'SOON', locked: true },
+  { id: 'ads', label: 'AI Ads Suite', icon: (c) => <MegaphoneIcon color={c} />, badge: 'SOON', locked: true },
 ];
 
 const TOOL_CARDS = [
@@ -233,9 +233,9 @@ const TOOL_CARDS = [
   { id: 'offer', num: '03', name: 'Offer Creation', desc: 'Build irresistible offers with pricing psychology, bonuses & positioning frameworks.', tags: ['Offers', 'Pricing'], gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)', accent: '#f59e0b', accentLight: 'rgba(245,158,11,0.08)', locked: false },
   { id: 'funnel', num: '04', name: 'Funnel Builder', desc: 'Design your complete sales funnel — from lead magnet to high-ticket back-end.', tags: ['Funnels', 'Automation'], gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)', accent: '#06b6d4', accentLight: 'rgba(6,182,212,0.08)', locked: false },
   { id: 'copy_suite', num: '05', name: 'Copywriting Suite', desc: 'Write sales pages, email sequences, ad copy & hooks in minutes with AI-powered copywriting.', tags: ['Copywriting', 'AI Writing'], gradient: 'linear-gradient(135deg, #8b5cf6, #ec4899)', accent: '#8b5cf6', accentLight: 'rgba(139,92,246,0.08)', locked: false },
-  { id: 'ads', num: '06', name: 'AI Ad Suite', desc: 'Generate Meta, Google & YouTube ads with AI — creatives, copy, targeting & budgets.', tags: ['Paid Ads', 'Ad Creatives'], gradient: 'linear-gradient(135deg, #f97316, #ec4899)', accent: '#f97316', accentLight: 'rgba(249,115,22,0.08)', locked: true },
-  { id: 'creator', num: '07', name: 'Product Creator', desc: 'AI-powered suite to create ebooks, templates, prompt packs & micro-courses inside the app.', tags: ['AI Creator', 'Auto-build'], gradient: 'linear-gradient(135deg, #10b981, #06b6d4)', accent: '#10b981', accentLight: 'rgba(16,185,129,0.08)', locked: true },
-  { id: 'landing', num: '08', name: 'Landing Page Designer', desc: 'Drag-and-drop page builder with conversion-optimized templates for every product type.', tags: ['Pages', 'Conversion'], gradient: 'linear-gradient(135deg, #6366f1, #7c3aed)', accent: '#6366f1', accentLight: 'rgba(99,102,241,0.08)', locked: true },
+  { id: 'creator', num: '06', name: 'Product Creator', desc: 'AI-powered suite to create ebooks, templates, prompt packs & micro-courses inside the app.', tags: ['AI Creator', 'Auto-build'], gradient: 'linear-gradient(135deg, #10b981, #06b6d4)', accent: '#10b981', accentLight: 'rgba(16,185,129,0.08)', locked: true },
+  { id: 'landing', num: '07', name: 'Landing Page Designer', desc: 'Drag-and-drop page builder with conversion-optimized templates for every product type.', tags: ['Pages', 'Conversion'], gradient: 'linear-gradient(135deg, #6366f1, #7c3aed)', accent: '#6366f1', accentLight: 'rgba(99,102,241,0.08)', locked: true },
+  { id: 'ads', num: '08', name: 'AI Ads Suite', desc: 'Generate Meta, Google & YouTube ads with AI — creatives, copy, targeting & budgets.', tags: ['Paid Ads', 'Ad Creatives'], gradient: 'linear-gradient(135deg, #f97316, #ec4899)', accent: '#f97316', accentLight: 'rgba(249,115,22,0.08)', locked: true },
 ];
 
 /* ───────── Navbar ───────── */
