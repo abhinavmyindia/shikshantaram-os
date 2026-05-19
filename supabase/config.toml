@@ -89,3 +89,9 @@ verify_jwt = false
 
 [functions.get-trial-requests]
 verify_jwt = false
+
+[functions.manage-product-creator]
+verify_jwt = false
+
+[functions.get-user-products]
+verify_jwt = false
