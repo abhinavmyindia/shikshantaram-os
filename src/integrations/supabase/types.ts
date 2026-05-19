@@ -368,6 +368,33 @@ export type Database = {
         }
         Relationships: []
       }
+      edge_function_logs: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          function_name: string | null
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string | null
+          function_name?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string | null
+          function_name?: string | null
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_delivery_log: {
         Row: {
           context: string | null
@@ -632,6 +659,63 @@ export type Database = {
           old_credits?: number
           reason?: string | null
           tool_module?: string
+        }
+        Relationships: []
+      }
+      product_creator_configs: {
+        Row: {
+          created_at: string | null
+          embed_url: string
+          id: string
+          is_active: boolean | null
+          product_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          embed_url: string
+          id?: string
+          is_active?: boolean | null
+          product_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          embed_url?: string
+          id?: string
+          is_active?: boolean | null
+          product_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      product_creator_monthly_usage: {
+        Row: {
+          created_at: string | null
+          ebook_count: number | null
+          id: string
+          mindmap_count: number | null
+          updated_at: string | null
+          user_id: string
+          year_month: string
+        }
+        Insert: {
+          created_at?: string | null
+          ebook_count?: number | null
+          id?: string
+          mindmap_count?: number | null
+          updated_at?: string | null
+          user_id: string
+          year_month: string
+        }
+        Update: {
+          created_at?: string | null
+          ebook_count?: number | null
+          id?: string
+          mindmap_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+          year_month?: string
         }
         Relationships: []
       }
@@ -1165,6 +1249,51 @@ export type Database = {
           user_email?: string | null
           user_id?: string
           user_name?: string | null
+        }
+        Relationships: []
+      }
+      user_products: {
+        Row: {
+          author_name: string | null
+          completed_at: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          niche: string | null
+          product_name: string
+          product_type: string
+          source: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          author_name?: string | null
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          product_name: string
+          product_type: string
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          author_name?: string | null
+          completed_at?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          niche?: string | null
+          product_name?: string
+          product_type?: string
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
