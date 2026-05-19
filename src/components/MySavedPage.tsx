@@ -144,6 +144,26 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
         <span style={s({ fontFamily: 'DM Sans', fontSize: 13, color: '#94a3b8' })}>{items.length} items saved</span>
       </div>
 
+      {/* Tabs */}
+      <div style={s({ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid #e2e8f0' })}>
+        {[
+          { id: 'saved' as const, label: '🔖 Saved Items', count: items.length },
+          { id: 'products' as const, label: '📦 My Products', count: null },
+        ].map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)} style={s({
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '10px 18px', fontFamily: 'DM Sans', fontWeight: 700, fontSize: 13.5,
+            color: activeTab === t.id ? '#0f172a' : '#94a3b8',
+            borderBottom: activeTab === t.id ? '2px solid #0d9488' : '2px solid transparent',
+            marginBottom: -1,
+          })}>{t.label}{t.count !== null ? ` (${t.count})` : ''}</button>
+        ))}
+      </div>
+
+      {activeTab === 'products' && <MyProductsTab userId={userId} onCreate={() => navigate('/product-creator')} />}
+
+      {activeTab === 'saved' && <>
+
       {/* Filter bar */}
       <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 10 })}>
         <div style={s({ display: 'flex', gap: 6 })}>
