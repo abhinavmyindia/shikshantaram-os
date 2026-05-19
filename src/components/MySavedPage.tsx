@@ -380,7 +380,7 @@ export default function MySavedPage({ userId, onNavigate, onSavedCountChange, on
 interface UserProduct {
   id: string;
   product_name: string;
-  product_type: 'ebook' | 'mindmap';
+  product_type: 'nonfiction_book' | 'mindmap';
   status: 'in_progress' | 'completed';
   source: string;
   niche?: string | null;
@@ -392,8 +392,8 @@ interface UserProduct {
 function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => void }) {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<UserProduct[]>([]);
-  const [usage, setUsage] = useState<{ ebook_count: number; mindmap_count: number }>({ ebook_count: 0, mindmap_count: 0 });
-  const [filter, setFilter] = useState<'all' | 'ebook' | 'mindmap'>('all');
+  const [usage, setUsage] = useState<{ nonfiction_book_count: number; mindmap_count: number }>({ nonfiction_book_count: 0, mindmap_count: 0 });
+  const [filter, setFilter] = useState<'all' | 'nonfiction_book' | 'mindmap'>('all');
 
   useEffect(() => {
     let alive = true;
