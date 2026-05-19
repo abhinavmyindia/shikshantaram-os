@@ -222,7 +222,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'offer', label: 'Offer Creation', icon: (c) => <GiftIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'funnel', label: 'Funnel Builder', icon: (c) => <GitMergeIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'copy_suite', label: 'Copywriting Suite', icon: (c) => <TypeIcon color={c} />, badge: 'LIVE', locked: false },
-  { id: 'creator', label: 'Product Creator', icon: (c) => <PackageIcon color={c} />, badge: 'SOON', locked: true },
+  { id: 'creator', label: 'Product Creator', icon: (c) => <PackageIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'landing', label: 'Landing Page Designer', icon: (c) => <MonitorIcon color={c} />, badge: 'SOON', locked: true },
   { id: 'ads', label: 'AI Ads Suite', icon: (c) => <MegaphoneIcon color={c} />, badge: 'SOON', locked: true },
 ];
