@@ -957,7 +957,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
               <div style={s({ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 })}>
                 <CopyButton text={
                   outputTab === 'page' ? (offerData.offerDescription || '') :
-                  outputTab === 'dm' ? (offerData.dmScript || '') :
+                  outputTab === 'dm' ? dmScriptToString(offerData.dmScript) :
                   outputTab === 'social' ? (offerData.socialCaption || `${offerData.offerHeadline}\n\n${offerData.oneLinerPitch}\n\nPrice: ${offerData.yourPrice}`) :
                   (offerData.emailPitch || offerData.offerDescription || '')
                 } />
@@ -969,7 +969,7 @@ export default function OfferCreation({ onBack, prefill, onPrefillConsumed, onBu
 
               {outputTab === 'dm' && (
                 <div>
-                  {(offerData.dmScript || '').split(/Message \d+:|message \d+:/i).filter(Boolean).map((msg, i) => (
+                  {dmScriptToString(offerData.dmScript).split(/Message \d+:|message \d+:/i).filter(Boolean).map((msg, i) => (
                     <div key={i} style={s({ marginBottom: 10 })}>
                       <span style={s({ fontFamily: 'DM Sans', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' })}>Message {i + 1}:</span>
                       <div style={s({ background: 'white', borderRadius: '18px 18px 18px 4px', padding: '14px 16px', maxWidth: '85%', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', fontFamily: 'DM Sans', fontSize: 13.5, color: '#0f172a', lineHeight: 1.6 })}>{msg.trim()}</div>
