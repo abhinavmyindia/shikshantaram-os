@@ -487,9 +487,9 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
       {!loading && filtered.length > 0 && (
         <div style={s({ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 })}>
           {filtered.map((p, i) => {
-            const isEbook = p.product_type === 'ebook';
-            const gradient = isEbook ? 'linear-gradient(90deg,#0ea5e9,#38bdf8)' : 'linear-gradient(90deg,#0d9488,#10b981)';
-            const accent = isEbook ? '#0ea5e9' : '#0d9488';
+            const isBook = p.product_type === 'nonfiction_book';
+            const gradient = isBook ? 'linear-gradient(90deg,#0ea5e9,#38bdf8)' : 'linear-gradient(90deg,#0d9488,#10b981)';
+            const accent = isBook ? '#0ea5e9' : '#0d9488';
             const done = p.status === 'completed';
             return (
               <div key={p.id} style={s({
@@ -501,7 +501,7 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
                 <div style={s({ padding: '16px 18px 18px' })}>
                   <div style={s({ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 })}>
                     <span style={s({ background: `${accent}14`, color: accent, fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', padding: '3px 10px', borderRadius: 50 })}>
-                      {isEbook ? '📖 eBook' : '🧠 Mind Map'}
+                      {isBook ? '📚 Non Fiction Book' : '🧠 Mind Map'}
                     </span>
                     <span style={s({
                       fontFamily: 'DM Sans', fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
