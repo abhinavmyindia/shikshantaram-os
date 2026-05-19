@@ -408,7 +408,7 @@ function MyProductsTab({ userId, onCreate }: { userId: string; onCreate: () => v
         if (!alive) return;
         if (error) throw error;
         setProducts((data?.products || []) as UserProduct[]);
-        if (data?.monthly_usage) setUsage({ ebook_count: data.monthly_usage.ebook_count || 0, mindmap_count: data.monthly_usage.mindmap_count || 0 });
+        if (data?.monthly_usage) setUsage({ nonfiction_book_count: data.monthly_usage.nonfiction_book_count ?? data.monthly_usage.ebook_count ?? 0, mindmap_count: data.monthly_usage.mindmap_count || 0 });
       } catch (e: any) {
         toast.error(e.message || 'Failed to load products');
       } finally {
