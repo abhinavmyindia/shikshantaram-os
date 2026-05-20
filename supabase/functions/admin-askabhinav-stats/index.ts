@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
       admin.from('credit_transactions').select('user_id, amount, call_type, created_at').eq('tool_module', 'ask_abhinav_ai').gte('created_at', since).limit(5000),
       admin.from('error_logs').select('id, error_type, severity, message, stack_trace, page_url, additional_data, created_at, is_resolved, user_id')
         .gte('created_at', new Date(Date.now() - 30 * 86400_000).toISOString())
-        .or('message.ilike.%abhinav%,stack_trace.ilike.%ask-abhinav%,stack_trace.ilike.%chat-sessions%,stack_trace.ilike.%chat-messages%,additional_data.ilike.%abhinav%,page_url.ilike.%abhinav%')
+        .or('message.ilike.%abhinav%,stack_trace.ilike.%ask-abhinav%,stack_trace.ilike.%chat-sessions%,stack_trace.ilike.%chat-messages%,page_url.ilike.%abhinav%')
         .order('created_at', { ascending: false })
         .limit(100),
       admin.from('user_profiles').select('id, full_name'),
