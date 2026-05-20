@@ -162,6 +162,24 @@ export default function AskAbhinavAI({ userId, userEmail, userName }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Part C — load a past session when sidebar fires the event
+  useEffect(() => {
+    const handleLoadSession = async (e: Event) => {
+      const { sessionId } = (e as CustomEvent).detail || {};
+      if (!sessionId || sessionId === currentSessionId) return;
+      setMessages([]);
+      setIsStreaming(false);
+      setInputText('');
+      setSelectedImages([]);
+      setCurrentSessionId(sessionId);
+      localStorage.setItem('askabhinav_session_id', sessionId);
+      await loadSessionMessages(sessionId);
+    };
+    window.addEventListener('askabhinav:load_session', handleLoadSession);
+    return () => window.removeEventListener('askabhinav:load_session', handleLoadSession);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSessionId]);
+
   const startNewChat = () => {
     setMessages([]);
     setCurrentSessionId(null);
