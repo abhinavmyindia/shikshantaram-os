@@ -374,7 +374,7 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', 
       backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.85)', padding: '20px 12px',
       boxShadow: '2px 0 16px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column',
     }}>
-      <ChatHistorySidebar onNavigateHome={handleNavigateHome} />
+      {activePage === 'ask_abhinav' && <ChatHistorySidebar onNavigateHome={handleNavigateHome} />}
 
       <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginTop: 4, paddingBottom: 12, fontFamily: 'DM Sans' }}>MY WORKSPACE</div>
 
