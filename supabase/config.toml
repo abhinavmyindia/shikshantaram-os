@@ -95,3 +95,12 @@ verify_jwt = false
 
 [functions.get-user-products]
 verify_jwt = false
+
+[functions.ask-abhinav-ai]
+verify_jwt = false
+
+[functions.get-chat-sessions]
+verify_jwt = false
+
+[functions.get-chat-messages]
+verify_jwt = false
