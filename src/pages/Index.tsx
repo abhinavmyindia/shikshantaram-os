@@ -8,6 +8,7 @@ import FunnelBuilder from '@/components/FunnelBuilder';
 import MySavedPage from '@/components/MySavedPage';
 import KnowledgeBasePage from '@/components/KnowledgeBasePage';
 import AskAbhinavAI from '@/components/AskAbhinavAI';
+import ChatHistorySidebar from '@/components/ChatHistorySidebar';
 import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
@@ -350,6 +351,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatar
 
 /* ───────── Sidebar ───────── */
 function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', savedCount = 0 }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string; savedCount?: number }) {
+  const handleNavigateHome = () => onNavigate('dashboard');
   const [hoveredSoon, setHoveredSoon] = useState<string | null>(null);
 
   const BookmarkIcon = ({ filled, color = '#64748b' }: { filled?: boolean; color?: string }) => (
@@ -367,6 +369,8 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', 
       backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.85)', padding: '20px 12px',
       boxShadow: '2px 0 16px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column',
     }}>
+      <ChatHistorySidebar onNavigateHome={handleNavigateHome} />
+
       <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginTop: 4, paddingBottom: 12, fontFamily: 'DM Sans' }}>MY WORKSPACE</div>
 
       {/* LIVE items */}
