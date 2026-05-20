@@ -175,6 +175,9 @@ const MegaphoneIcon = ({ color = '#94a3b8' }: { color?: string }) => (
 const MonitorIcon = ({ color = '#94a3b8' }: { color?: string }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
 );
+const ChatBubbleIcon = ({ color = '#64748b' }: { color?: string }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+);
 const GearIcon = ({ color = '#64748b' }: { color?: string }) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
 );
@@ -189,10 +192,10 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 );
 
 /* ───────── Types ───────── */
-type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'copy_suite' | 'settings' | 'help' | 'profile' | 'saved' | 'knowledge_base';
+type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'copy_suite' | 'settings' | 'help' | 'profile' | 'saved' | 'knowledge_base' | 'ask_abhinav';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
-const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite', 'knowledge_base'];
+const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite', 'knowledge_base', 'ask_abhinav'];
 
 const TOOL_ACCESS: Record<string, string[]> = {
   dashboard: ['trial','basic','premium','beta'],
@@ -202,6 +205,7 @@ const TOOL_ACCESS: Record<string, string[]> = {
   funnel: ['basic','premium','beta'],
   copy_suite: ['basic','premium','beta'],
   knowledge_base: ['basic','premium','beta'],
+  ask_abhinav: ['trial','basic','premium','beta'],
   creator: ['premium','beta'],
   copy: ['premium','beta'],
   ads: ['premium','beta'],
@@ -224,6 +228,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'offer', label: 'Offer Creation', icon: (c) => <GiftIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'funnel', label: 'Funnel Builder', icon: (c) => <GitMergeIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'copy_suite', label: 'Copywriting Suite', icon: (c) => <TypeIcon color={c} />, badge: 'LIVE', locked: false },
+  { id: 'ask_abhinav', label: 'AskAbhinavAI', icon: (c) => <ChatBubbleIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'creator', label: 'Product Creator', icon: (c) => <PackageIcon color={c} />, badge: 'LIVE', locked: false },
   { id: 'landing', label: 'Landing Page Designer', icon: (c) => <MonitorIcon color={c} />, badge: 'SOON', locked: true },
   { id: 'ads', label: 'AI Ads Suite', icon: (c) => <MegaphoneIcon color={c} />, badge: 'SOON', locked: true },
@@ -351,7 +356,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatar
 
 /* ───────── Sidebar ───────── */
 function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', savedCount = 0 }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string; savedCount?: number }) {
-  const handleNavigateHome = () => onNavigate('dashboard');
+  const handleNavigateHome = () => onNavigate('ask_abhinav');
   const [hoveredSoon, setHoveredSoon] = useState<string | null>(null);
 
   const BookmarkIcon = ({ filled, color = '#64748b' }: { filled?: boolean; color?: string }) => (
@@ -369,7 +374,7 @@ function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', 
       backdropFilter: 'blur(20px)', borderRight: '1px solid rgba(255,255,255,0.85)', padding: '20px 12px',
       boxShadow: '2px 0 16px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column',
     }}>
-      <ChatHistorySidebar onNavigateHome={handleNavigateHome} />
+      {activePage === 'ask_abhinav' && <ChatHistorySidebar onNavigateHome={handleNavigateHome} />}
 
       <div style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' as const, padding: '0 8px', marginTop: 4, paddingBottom: 12, fontFamily: 'DM Sans' }}>MY WORKSPACE</div>
 
@@ -895,6 +900,68 @@ function getGreeting() {
   if (hour < 12) return 'Good morning';
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
+}
+
+function AskAbhinavFeaturedCard({ onClick }: { onClick: () => void }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: hover
+          ? 'linear-gradient(135deg, #22b386 0%, #0f7d62 100%)'
+          : 'linear-gradient(135deg, #1D9E75 0%, #0F6E56 100%)',
+        borderRadius: 16,
+        padding: '20px 24px',
+        marginBottom: 24,
+        cursor: 'pointer',
+        transform: hover ? 'scale(1.01)' : 'scale(1)',
+        transition: 'transform 0.18s ease, background 0.18s ease',
+        boxShadow: '0 10px 28px rgba(15,110,86,0.25)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 20,
+        animation: 'fadeUp 0.4s ease',
+      }}
+    >
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{
+          fontFamily: 'DM Sans', fontSize: 10, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+          color: 'rgba(255,255,255,0.7)', marginBottom: 6,
+        }}>NEW FEATURE</div>
+        <div style={{ fontFamily: 'Sora', fontSize: 20, fontWeight: 700, color: 'white' }}>
+          AskAbhinavAI
+        </div>
+        <div style={{
+          fontFamily: 'DM Sans', fontSize: 13, color: 'rgba(255,255,255,0.85)',
+          marginTop: 4, maxWidth: 420, lineHeight: 1.5,
+        }}>
+          Get instant guidance from Abhinav — ask anything, share your ads, find your niche.
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          style={{
+            marginTop: 16,
+            background: hover ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 8, padding: '8px 16px',
+            fontFamily: 'DM Sans', fontSize: 13, fontWeight: 500, color: 'white',
+            cursor: 'pointer', transition: 'background 0.18s ease',
+          }}
+        >Start conversation →</button>
+      </div>
+      <div style={{
+        width: 64, height: 64, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        fontFamily: 'Sora', fontSize: 24, fontWeight: 700, color: 'white',
+      }}>A</div>
+    </div>
+  );
 }
 
 function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha', isTrialUser = false }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string; isTrialUser?: boolean }) {
@@ -2704,12 +2771,18 @@ const Index = () => {
           </div>
           <main id="main-content-area" style={{
             flex: 1,
-            overflowY: activePage === 'dashboard' ? 'hidden' : 'auto',
-            padding: activePage === 'dashboard' ? 0 : (isMobile ? '32px 16px' : '32px 36px'),
+            overflowY: activePage === 'ask_abhinav' ? 'hidden' : 'auto',
+            padding: activePage === 'ask_abhinav' ? 0 : (isMobile ? '32px 16px' : '32px 36px'),
             marginLeft: 0,
             position: 'relative',
           }}>
-            {activePage === 'dashboard' && user && (
+            {activePage === 'dashboard' && (
+              <>
+                <AskAbhinavFeaturedCard onClick={() => navigateTo('ask_abhinav')} />
+                <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} isTrialUser={isTrialUser} />
+              </>
+            )}
+            {activePage === 'ask_abhinav' && user && (
               <AskAbhinavAI userId={user.id} userEmail={user.email || ''} userName={userName} />
             )}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onNavigate={navigateTo} />}
