@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    const token = authHeader.replace('Bearer ', '')
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -104,12 +105,25 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    // Validate via getClaims (fast, local, tolerates brief refresh window) with getUser fallback
+    let userId: string | null = null
+    let userEmail: string | null = null
+    try {
+      const { data: claimsData } = await supabase.auth.getClaims(token)
+      userId = (claimsData as any)?.claims?.sub ?? null
+      userEmail = (claimsData as any)?.claims?.email ?? null
+    } catch (_) {}
+    if (!userId) {
+      const { data: userData } = await supabase.auth.getUser()
+      userId = userData?.user?.id ?? null
+      userEmail = userData?.user?.email ?? null
+    }
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    const user = { id: userId, email: userEmail }
 
     const { session_id, message, images, is_new_session } = await req.json()
 
