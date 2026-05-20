@@ -7,6 +7,7 @@ import OfferCreation from '@/components/OfferCreation';
 import FunnelBuilder from '@/components/FunnelBuilder';
 import MySavedPage from '@/components/MySavedPage';
 import KnowledgeBasePage from '@/components/KnowledgeBasePage';
+import AskAbhinavAI from '@/components/AskAbhinavAI';
 import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
@@ -2697,14 +2698,15 @@ const Index = () => {
             )}
             <Sidebar activePage={activePage} onNavigate={navigateTo} onLockedClick={showLockedToast} accessTier={tier} savedCount={savedCount} />
           </div>
-          <main id="main-content-area" style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '32px 16px' : '32px 36px', marginLeft: 0 }}>
-            {activePage === 'dashboard' && (
-              <>
-                {isTrialUser && trialEndsAt && (
-                  <TrialStatusBanner trialEndsAt={trialEndsAt} fullName={userName} />
-                )}
-                <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} isTrialUser={isTrialUser} />
-              </>
+          <main id="main-content-area" style={{
+            flex: 1,
+            overflowY: activePage === 'dashboard' ? 'hidden' : 'auto',
+            padding: activePage === 'dashboard' ? 0 : (isMobile ? '32px 16px' : '32px 36px'),
+            marginLeft: 0,
+            position: 'relative',
+          }}>
+            {activePage === 'dashboard' && user && (
+              <AskAbhinavAI userId={user.id} userEmail={user.email || ''} userName={userName} />
             )}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onNavigate={navigateTo} />}
             {activePage === 'product' && <ProductPage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onBuildOffer={(data) => {
