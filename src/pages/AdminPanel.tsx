@@ -3233,6 +3233,7 @@ export default function AdminPanel() {
       items: [
         canDo.viewAnalytics(role) && { id: 'credits', label: 'Credits', icon: '💰', badge: 0 },
         canDo.viewAnalytics(role) && { id: 'ai-analytics', label: 'AI Analytics', icon: '⚡', badge: 0 },
+        canDo.viewAnalytics(role) && { id: 'askabhinav', label: 'AskAbhinavAI', icon: '💬', badge: 0 },
         role === 'owner' && { id: 'ai-settings', label: 'AI Settings', icon: '🤖', badge: 0 },
       ].filter(Boolean) as NavItem[],
     },
