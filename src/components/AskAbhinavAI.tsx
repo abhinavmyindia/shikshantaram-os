@@ -394,22 +394,6 @@ export default function AskAbhinavAI({ userId, userEmail, userName }: Props) {
           <span style={{ fontFamily: 'Sora', fontSize: 14, fontWeight: 600, color: '#1D9E75' }}>AskAbhinavAI</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {isLoadingBalance ? (
-            <div style={{ width: 80, height: 22, borderRadius: 10, background: 'linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%)', backgroundSize: '200% 100%', animation: 'pulse 1.5s infinite' }} />
-          ) : (
-            <button
-              onClick={() => { setTopUpRequired(undefined); setShowTopUp(true); }}
-              style={{
-                background: showLowCreditsWarning ? '#FEF3C7' : '#E1F5EE',
-                border: `1px solid ${showLowCreditsWarning ? '#F59E0B' : '#1D9E75'}`,
-                color: showLowCreditsWarning ? '#92400E' : '#0F6E56',
-                fontFamily: 'DM Sans', fontSize: 12, fontWeight: 500,
-                padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
-              }}
-            >
-              ⚡ {creditBalance} credits
-            </button>
-          )}
           {messages.length > 0 && (
             <button onClick={startNewChat} style={{
               background: 'transparent', border: 'none', cursor: 'pointer',
