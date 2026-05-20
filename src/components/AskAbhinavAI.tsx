@@ -35,7 +35,9 @@ const ASKABHINAV_CSS = `
 }
 .askabhinav-dot { animation: askAbhinav-bounce 1s infinite; }
 .askabhinav-cursor { animation: askAbhinav-blink 0.8s infinite; }
-.askabhinav-chip:hover { border-color: #1D9E75 !important; background: rgba(29, 158, 117, 0.04) !important; color: #0F6E56 !important; }
+.askabhinav-chip { outline: none !important; }
+.askabhinav-chip:focus, .askabhinav-chip:focus-visible, .askabhinav-chip:active { outline: none !important; box-shadow: none !important; }
+.askabhinav-chip:hover { border-color: rgba(29, 158, 117, 0.4) !important; border-left-color: #1D9E75 !important; background: rgba(29, 158, 117, 0.04) !important; color: #0F6E56 !important; }
 .askabhinav-input-wrap:focus-within { border-color: #1D9E75 !important; box-shadow: 0 0 0 3px rgba(29,158,117,0.08); }
 .askabhinav-upload-btn:hover:not(:disabled) { background: rgba(29,158,117,0.08) !important; color: #1D9E75 !important; }
 `;
