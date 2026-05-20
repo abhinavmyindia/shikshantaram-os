@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -22,12 +22,15 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    const token = authHeader.replace('Bearer ', '')
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token)
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error('[get-chat-sessions] Auth error:', claimsError?.message)
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    const user = { id: claimsData.claims.sub as string }
 
     const { data: sessions, error: sessionsError } = await supabase
       .from('chat_sessions')
