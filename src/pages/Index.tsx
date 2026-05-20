@@ -351,6 +351,7 @@ function Navbar({ userName, userTier, isAdmin, onSignOut, onProfileClick, avatar
 
 /* ───────── Sidebar ───────── */
 function Sidebar({ activePage, onNavigate, onLockedClick, accessTier = 'basic', savedCount = 0 }: { activePage: PageId; onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; accessTier?: string; savedCount?: number }) {
+  const handleNavigateHome = () => onNavigate('dashboard');
   const [hoveredSoon, setHoveredSoon] = useState<string | null>(null);
 
   const BookmarkIcon = ({ filled, color = '#64748b' }: { filled?: boolean; color?: string }) => (
