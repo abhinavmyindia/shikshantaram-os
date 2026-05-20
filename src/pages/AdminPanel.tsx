@@ -9,6 +9,7 @@ import AdminTrialTab from '@/components/AdminTrialTab';
 import AdminActivityLogTab from '@/components/AdminActivityLogTab';
 import AdminAISettingsTab from '@/components/AdminAISettingsTab';
 import AdminEmailDeliveryTab from '@/components/AdminEmailDeliveryTab';
+import AdminAskAbhinavTab from '@/components/AdminAskAbhinavTab';
 import AdminIpLookupModal from '@/components/AdminIpLookupModal';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 export interface UserRow {
