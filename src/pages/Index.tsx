@@ -902,6 +902,68 @@ function getGreeting() {
   return 'Good evening';
 }
 
+function AskAbhinavFeaturedCard({ onClick }: { onClick: () => void }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: hover
+          ? 'linear-gradient(135deg, #22b386 0%, #0f7d62 100%)'
+          : 'linear-gradient(135deg, #1D9E75 0%, #0F6E56 100%)',
+        borderRadius: 16,
+        padding: '20px 24px',
+        marginBottom: 24,
+        cursor: 'pointer',
+        transform: hover ? 'scale(1.01)' : 'scale(1)',
+        transition: 'transform 0.18s ease, background 0.18s ease',
+        boxShadow: '0 10px 28px rgba(15,110,86,0.25)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 20,
+        animation: 'fadeUp 0.4s ease',
+      }}
+    >
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{
+          fontFamily: 'DM Sans', fontSize: 10, fontWeight: 600,
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+          color: 'rgba(255,255,255,0.7)', marginBottom: 6,
+        }}>NEW FEATURE</div>
+        <div style={{ fontFamily: 'Sora', fontSize: 20, fontWeight: 700, color: 'white' }}>
+          AskAbhinavAI
+        </div>
+        <div style={{
+          fontFamily: 'DM Sans', fontSize: 13, color: 'rgba(255,255,255,0.85)',
+          marginTop: 4, maxWidth: 420, lineHeight: 1.5,
+        }}>
+          Get instant guidance from Abhinav — ask anything, share your ads, find your niche.
+        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          style={{
+            marginTop: 16,
+            background: hover ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 8, padding: '8px 16px',
+            fontFamily: 'DM Sans', fontSize: 13, fontWeight: 500, color: 'white',
+            cursor: 'pointer', transition: 'background 0.18s ease',
+          }}
+        >Start conversation →</button>
+      </div>
+      <div style={{
+        width: 64, height: 64, borderRadius: '50%',
+        background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        fontFamily: 'Sora', fontSize: 24, fontWeight: 700, color: 'white',
+      }}>A</div>
+    </div>
+  );
+}
+
 function DashboardHome({ onNavigate, onLockedClick, userName = 'Shiksha', isTrialUser = false }: { onNavigate: (p: PageId) => void; onLockedClick: (name: string) => void; userName?: string; isTrialUser?: boolean }) {
   const [greeting, setGreeting] = useState(getGreeting());
   const [popupCard, setPopupCard] = useState<typeof TOOL_CARDS[0] | null>(null);
