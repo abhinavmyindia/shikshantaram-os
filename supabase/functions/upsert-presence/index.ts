@@ -24,22 +24,23 @@ Deno.serve(async (req) => {
     const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify caller identity
+    // Verify caller identity via JWKS (local verification, no roundtrip)
     const anonClient = createClient(supabaseUrl, supabaseAnon, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } = await anonClient.auth.getUser();
-    if (userErr || !userData?.user) {
-      console.error("[upsert-presence] Auth error:", userErr?.message);
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsErr } = await anonClient.auth.getClaims(token);
+    if (claimsErr || !claimsData?.claims?.sub) {
+      console.error("[upsert-presence] Auth error:", claimsErr?.message);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = userData.user.id;
-    const email = userData.user.email;
+    const userId = claimsData.claims.sub as string;
+    const email = (claimsData.claims.email as string | undefined) ?? null;
 
     const { current_page, user_name, session_start } = await req.json();
 
