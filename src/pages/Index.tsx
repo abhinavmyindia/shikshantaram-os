@@ -2709,12 +2709,18 @@ const Index = () => {
           </div>
           <main id="main-content-area" style={{
             flex: 1,
-            overflowY: activePage === 'dashboard' ? 'hidden' : 'auto',
-            padding: activePage === 'dashboard' ? 0 : (isMobile ? '32px 16px' : '32px 36px'),
+            overflowY: activePage === 'ask_abhinav' ? 'hidden' : 'auto',
+            padding: activePage === 'ask_abhinav' ? 0 : (isMobile ? '32px 16px' : '32px 36px'),
             marginLeft: 0,
             position: 'relative',
           }}>
-            {activePage === 'dashboard' && user && (
+            {activePage === 'dashboard' && (
+              <>
+                <AskAbhinavFeaturedCard onClick={() => navigateTo('ask_abhinav')} />
+                <DashboardHome onNavigate={navigateTo} onLockedClick={showLockedToast} userName={userName} isTrialUser={isTrialUser} />
+              </>
+            )}
+            {activePage === 'ask_abhinav' && user && (
               <AskAbhinavAI userId={user.id} userEmail={user.email || ''} userName={userName} />
             )}
             {activePage === 'niche' && <NichePage onBack={() => navigateTo('dashboard')} onAction={handleToolAction} onNavigate={navigateTo} />}
