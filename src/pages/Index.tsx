@@ -7,6 +7,7 @@ import OfferCreation from '@/components/OfferCreation';
 import FunnelBuilder from '@/components/FunnelBuilder';
 import MySavedPage from '@/components/MySavedPage';
 import KnowledgeBasePage from '@/components/KnowledgeBasePage';
+import AskAbhinavAI from '@/components/AskAbhinavAI';
 import { useNavigate } from 'react-router-dom';
 import { nicheCategories, NicheCategory } from '@/data/niches';
 import { productCategories, ProductCategory } from '@/data/products';
