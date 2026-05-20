@@ -189,10 +189,10 @@ const CloseIcon = ({ size = 14, color = '#94a3b8' }: { size?: number; color?: st
 );
 
 /* ───────── Types ───────── */
-type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'copy_suite' | 'settings' | 'help' | 'profile' | 'saved' | 'knowledge_base';
+type PageId = 'dashboard' | 'niche' | 'product' | 'offer' | 'funnel' | 'copy_suite' | 'settings' | 'help' | 'profile' | 'saved' | 'knowledge_base' | 'ask_abhinav';
 interface ToastData { toolName: string; type?: 'locked' | 'premium'; }
 
-const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite', 'knowledge_base'];
+const UNLOCKED: PageId[] = ['dashboard', 'niche', 'product', 'offer', 'funnel', 'copy_suite', 'knowledge_base', 'ask_abhinav'];
 
 const TOOL_ACCESS: Record<string, string[]> = {
   dashboard: ['trial','basic','premium','beta'],
@@ -202,6 +202,7 @@ const TOOL_ACCESS: Record<string, string[]> = {
   funnel: ['basic','premium','beta'],
   copy_suite: ['basic','premium','beta'],
   knowledge_base: ['basic','premium','beta'],
+  ask_abhinav: ['trial','basic','premium','beta'],
   creator: ['premium','beta'],
   copy: ['premium','beta'],
   ads: ['premium','beta'],
