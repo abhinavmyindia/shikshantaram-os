@@ -9,6 +9,7 @@ import AdminTrialTab from '@/components/AdminTrialTab';
 import AdminActivityLogTab from '@/components/AdminActivityLogTab';
 import AdminAISettingsTab from '@/components/AdminAISettingsTab';
 import AdminEmailDeliveryTab from '@/components/AdminEmailDeliveryTab';
+import AdminAskAbhinavTab from '@/components/AdminAskAbhinavTab';
 import AdminIpLookupModal from '@/components/AdminIpLookupModal';
 import { useAdminRole, canDo, roleMeta, type AdminRole } from '@/hooks/useAdminRole';
 export interface UserRow {
@@ -3232,6 +3233,7 @@ export default function AdminPanel() {
       items: [
         canDo.viewAnalytics(role) && { id: 'credits', label: 'Credits', icon: '💰', badge: 0 },
         canDo.viewAnalytics(role) && { id: 'ai-analytics', label: 'AI Analytics', icon: '⚡', badge: 0 },
+        canDo.viewAnalytics(role) && { id: 'askabhinav', label: 'AskAbhinavAI', icon: '💬', badge: 0 },
         role === 'owner' && { id: 'ai-settings', label: 'AI Settings', icon: '🤖', badge: 0 },
       ].filter(Boolean) as NavItem[],
     },
@@ -3392,6 +3394,7 @@ export default function AdminPanel() {
               {tab === 'credits' && canDo.viewAnalytics(role) && <AdminCreditsTab showToast={showAdminToast} />}
               {tab === 'ai-analytics' && canDo.viewAnalytics(role) && <AIAnalyticsTab dateRange={analyticsDateRange} onDateRangeChange={setAnalyticsDateRange} />}
               {tab === 'ai-settings' && role === 'owner' && <AdminAISettingsTab />}
+              {tab === 'askabhinav' && canDo.viewAnalytics(role) && <AdminAskAbhinavTab showToast={showAdminToast} />}
               {tab === 'security' && canDo.viewSecurity(role) && <SecurityTab adminId={adminId} showToast={showAdminToast} />}
               {tab === 'activity_log' && canDo.viewSecurity(role) && <AdminActivityLogTab showToast={showAdminToast} />}
               {tab === 'email_delivery' && canDo.viewSecurity(role) && <AdminEmailDeliveryTab showToast={showAdminToast} />}
