@@ -436,24 +436,25 @@ export default function AskAbhinavAI({ userId, userEmail, userName }: Props) {
         }}>
           {messages.length === 0 && !isStreaming ? (
             <div style={{
-              flex: 1, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              minHeight: '60%', padding: '40px 16px',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'flex-start',
+              paddingTop: '15vh', width: '100%',
             }}>
               <div style={{
                 width: 72, height: 72, borderRadius: '50%',
                 background: 'linear-gradient(135deg, #1D9E75, #0F6E56)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: 'Sora', fontSize: 28, fontWeight: 700, color: 'white',
+                boxShadow: '0 0 0 4px rgba(29, 158, 117, 0.15)',
               }}>A</div>
               <div style={{ fontFamily: 'Sora', fontSize: 22, fontWeight: 600, color: '#111', marginTop: 16 }}>
                 AskAbhinavAI
               </div>
               <div style={{
                 fontFamily: 'DM Sans', fontSize: 14, color: '#6B7280',
-                marginTop: 6, textAlign: 'center', maxWidth: 320,
+                marginTop: 6, textAlign: 'center', whiteSpace: 'nowrap',
               }}>
-                Your 24/7 guide to the Indian knowledge economy
+                Your 24/7 guide to building digital products
               </div>
               <div style={{
                 display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
@@ -468,9 +469,10 @@ export default function AskAbhinavAI({ userId, userEmail, userName }: Props) {
                       textareaRef.current?.focus();
                     }}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.9)',
-                      border: '1px solid rgba(29, 158, 117, 0.25)',
-                      borderRadius: 12, padding: '12px 16px',
+                      background: 'white',
+                      border: '1px solid rgba(29, 158, 117, 0.2)',
+                      borderLeft: '2px solid #1D9E75',
+                      borderRadius: 10, padding: '10px 14px 10px 12px',
                       cursor: 'pointer', transition: 'all 0.15s',
                       fontFamily: 'DM Sans', fontSize: 13, color: '#374151',
                       display: 'flex', alignItems: 'center', gap: 8,
