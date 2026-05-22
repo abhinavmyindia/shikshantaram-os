@@ -1,0 +1,1 @@
+UPDATE public.product_creator_configs SET embed_url = 'https://workflow.getmindpal.com/nonfiction-ebook-generator', updated_at = NOW() WHERE product_type = 'nonfiction_book';
