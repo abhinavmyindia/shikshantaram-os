@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,11 +10,16 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+  if (!caller.isAdmin) return forbidden(corsHeaders, 'Admin access required');
+
   try {
     const body = await req.json().catch(() => ({}));
     const requestId = String(body.requestId ?? '').trim();
     const reason = body.reason ? String(body.reason).slice(0, 500) : null;
-    const adminId = body.adminId ? String(body.adminId) : null;
+    // adminId must come from verified JWT, never request body — prevents audit log spoofing.
+    const adminId = caller.userId;
 
     if (!requestId) throw new Error('requestId is required.');
 
