@@ -1,10 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { logEmailDelivery } from "../_shared/email-log.ts";
+import { verifyCaller, unauthorized, forbidden } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
 
 const TIER_LABELS: Record<string, string> = {
   basic: 'Basic',
@@ -24,6 +26,11 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+  if (!caller.isAdmin) return forbidden(corsHeaders, 'Admin access required');
+
 
   const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
   if (!RESEND_API_KEY) {

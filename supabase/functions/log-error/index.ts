@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -74,6 +75,11 @@ const diagnose = (message: string, errorType: string, module: string): { diagnos
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  // Require auth — prevents anonymous log poisoning and admin alert email spam.
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -92,8 +98,6 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      userId = null,
-      userEmail = null,
       errorType = 'js_error',
       severity = 'error',
       message = 'Unknown error',
@@ -105,6 +109,10 @@ Deno.serve(async (req) => {
       deviceType = 'desktop',
       additionalData = {},
     } = body;
+    // Identity always derived from verified JWT — never trust client values.
+    const userId = caller.userId;
+    const userEmail = caller.email;
+
 
     // Auto-elevate severity (network blips are warnings unless they indicate server crashes)
     const msgLower = String(message).toLowerCase();

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { logEmailDelivery } from "../_shared/email-log.ts";
+import { verifyCaller, unauthorized, forbidden } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,10 @@ const escapeHtml = (s: string) => String(s ?? '')
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+  if (!caller.isAdmin) return forbidden(corsHeaders, 'Admin access required');
 
   try {
     const RESEND = Deno.env.get('RESEND_API_KEY');
