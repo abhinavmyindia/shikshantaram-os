@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encryptKey, validateAnthropicKey, validateOpenAIKey, validateGeminiKey } from '../_shared/byok.ts';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +10,9 @@ const cors = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(cors);
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -16,10 +20,11 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { userId, provider, rawKey } = await req.json();
+    const { provider, rawKey } = await req.json();
+    const userId = caller.userId; // derived from verified JWT
 
-    if (!userId || !provider || !rawKey) {
-      throw new Error('userId, provider, and rawKey are required');
+    if (!provider || !rawKey) {
+      throw new Error('provider and rawKey are required');
     }
 
     if (!['anthropic', 'openai', 'gemini'].includes(provider)) {

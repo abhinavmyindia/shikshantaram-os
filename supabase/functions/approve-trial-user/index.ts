@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,13 +18,18 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
+  // Auth: only team members can approve trial requests. adminId comes from JWT.
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+  if (!caller.isAdmin) return forbidden(corsHeaders, 'Admin access required');
+
   try {
     const body = await req.json().catch(() => ({}));
     const requestId = String(body.requestId ?? body.trial_request_id ?? '').trim();
     const rawDuration = body.durationDays ?? body.duration_days ?? body.days;
     const durationDays = Number(rawDuration);
     const adminNotes = body.adminNotes ? String(body.adminNotes) : null;
-    const adminId = body.adminId ? String(body.adminId) : null;
+    const adminId = caller.userId;
 
     if (!requestId) return jsonResp(400, { error: 'requestId is required.' });
     if (!Number.isFinite(durationDays) || ![2, 7, 14, 30].includes(durationDays)) {
@@ -277,8 +283,10 @@ Deno.serve(async (req) => {
       console.error('[approve-trial] email log failed:', (e as any)?.message);
     }
 
+    // SECURITY: never return tempPassword in the response — credential delivery
+    // is handled exclusively via the approval email.
     return new Response(
-      JSON.stringify({ success: true, userId, expiresAt: expiresAt.toISOString(), tempPassword, email_sent: emailSent, email_error: emailError }),
+      JSON.stringify({ success: true, userId, expiresAt: expiresAt.toISOString(), email_sent: emailSent, email_error: emailError }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {

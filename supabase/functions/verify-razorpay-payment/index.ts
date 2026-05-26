@@ -18,24 +18,26 @@ Deno.serve(async (req) => {
     const body = await req.text();
     const payload = JSON.parse(body);
 
-    // Verify webhook signature if configured
+    // Verify webhook signature — REQUIRED. Fail closed if not configured.
     const webhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET') || '';
     const signature = req.headers.get('x-razorpay-signature') || '';
 
-    if (webhookSecret) {
-      if (!signature) {
-        return new Response('Missing signature', { status: 400 });
-      }
-      const key = await crypto.subtle.importKey(
-        'raw', new TextEncoder().encode(webhookSecret),
-        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-      );
-      const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
-      const expected = Array.from(new Uint8Array(mac))
-        .map(b => b.toString(16).padStart(2, '0')).join('');
-      if (expected !== signature) {
-        return new Response('Invalid signature', { status: 400 });
-      }
+    if (!webhookSecret) {
+      console.error('RAZORPAY_WEBHOOK_SECRET is not configured');
+      return new Response('Webhook secret not configured', { status: 500 });
+    }
+    if (!signature) {
+      return new Response('Missing signature', { status: 400 });
+    }
+    const key = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(webhookSecret),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+    const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
+    const expected = Array.from(new Uint8Array(mac))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    if (expected !== signature) {
+      return new Response('Invalid signature', { status: 400 });
     }
 
     if (payload.event === 'payment.captured') {

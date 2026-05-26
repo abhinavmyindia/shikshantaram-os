@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,12 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  // Auth: must be an authenticated team member. adminId is derived from JWT.
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+  if (!caller.isAdmin) return forbidden(corsHeaders, 'Admin access required');
+  const adminId = caller.userId;
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -15,7 +22,7 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { userId, newTier, paymentRecorded, amountPaid, notes, sendEmail, adminId } = await req.json();
+    const { userId, newTier, paymentRecorded, amountPaid, notes, sendEmail } = await req.json();
     if (!userId || !newTier) {
       return new Response(JSON.stringify({ error: 'userId and newTier are required' }), {
         status: 400,
@@ -28,21 +35,6 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-    }
-
-    // Verify caller is a team member
-    if (adminId) {
-      const { data: admin } = await supabase
-        .from('admin_users')
-        .select('user_id, role')
-        .eq('user_id', adminId)
-        .maybeSingle();
-      if (!admin) {
-        return new Response(JSON.stringify({ error: 'Not authorized' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
     }
 
     // Fetch profile
