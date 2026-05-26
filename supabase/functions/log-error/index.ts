@@ -75,6 +75,11 @@ const diagnose = (message: string, errorType: string, module: string): { diagnos
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  // Require auth — prevents anonymous log poisoning and admin alert email spam.
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
