@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +10,10 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  // Identity for security-critical session logging MUST come from a verified JWT.
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -16,9 +21,9 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { userId, userEmail, userAgent, sessionToken } = await req.json();
-
-    if (!userId) throw new Error('userId required');
+    const { userAgent, sessionToken } = await req.json();
+    const userId = caller.userId;
+    const userEmail = caller.email;
 
     // ─── OWNER BYPASS — check FIRST before anything else ─────────────────────
     const { data: ownerCheck } = await supabase

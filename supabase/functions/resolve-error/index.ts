@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,11 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  // Only admins/owners may bulk-resolve or delete error logs.
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+  if (!caller.isAdmin) return forbidden(corsHeaders, 'Admin access required');
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -15,7 +21,8 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { action, errorId, errorIds, resolvedBy } = await req.json();
+    const { action, errorId, errorIds } = await req.json();
+    const resolvedBy = caller.userId;
 
     if (action === 'resolve_one') {
       const { error } = await supabase

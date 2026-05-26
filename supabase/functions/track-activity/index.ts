@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,9 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -15,9 +19,12 @@ Deno.serve(async (req) => {
     );
 
     const {
-      userId, userEmail, eventType, module,
+      eventType, module,
       eventData = {}, sessionId, ipAddress, durationMs
     } = await req.json();
+    // Identity is derived from verified JWT — never trust client-supplied values.
+    const userId = caller.userId;
+    const userEmail = caller.email;
 
     await supabase.from('activity_logs').insert({
       user_id: userId,

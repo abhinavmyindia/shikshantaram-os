@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,9 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -15,7 +19,12 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { userId, toolModule, callType } = await req.json();
+    const { userId: bodyUserId, toolModule, callType } = await req.json();
+    // Users may only check their own credits unless they are admins.
+    if (bodyUserId && bodyUserId !== caller.userId && !caller.isAdmin) {
+      return forbidden(corsHeaders, 'Cannot check credits for another user');
+    }
+    const userId = caller.isAdmin && bodyUserId ? bodyUserId : caller.userId;
 
     // 1. Check GLOBAL enforcement mode
     const { data: globalSetting } = await supabase

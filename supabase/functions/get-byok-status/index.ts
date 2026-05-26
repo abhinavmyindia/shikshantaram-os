@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized } from '../_shared/auth.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,9 @@ const cors = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(cors);
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -15,8 +19,7 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { userId } = await req.json();
-    if (!userId) throw new Error('userId required');
+    const userId = caller.userId; // derived from verified JWT
 
     // Explicitly exclude encrypted_key and iv — NEVER return these
     // Use safe view — encrypted_key and iv are physically absent
