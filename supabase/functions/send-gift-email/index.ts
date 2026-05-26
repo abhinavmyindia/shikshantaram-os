@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { logEmailDelivery } from '../_shared/email-log.ts';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
