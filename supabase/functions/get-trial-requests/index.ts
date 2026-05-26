@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,8 +7,41 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// Explicit safe column list — NEVER include otp_code or otp_expires_at.
+const SAFE_COLUMNS = [
+  'id',
+  'full_name',
+  'email',
+  'phone',
+  'status',
+  'submitted_at',
+  'created_at',
+  'updated_at',
+  'user_id',
+  'user_agent',
+  'ip_address',
+  'otp_verified',
+  'admin_notes',
+  'payment_status',
+  'payment_amount',
+  'payment_link',
+  'trial_credits',
+  'access_starts_at',
+  'access_ends_at',
+  'access_duration_days',
+  'approved_at',
+  'approved_by',
+  'upgraded_at',
+  'upgraded_to_tier',
+].join(', ');
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  // Require authenticated admin caller — endpoint exposes applicant PII.
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+  if (!caller.isAdmin) return forbidden(corsHeaders, 'Admin access required');
 
   try {
     const url = new URL(req.url);
@@ -22,7 +56,7 @@ Deno.serve(async (req) => {
 
     let query = supabase
       .from('trial_requests')
-      .select('*')
+      .select(SAFE_COLUMNS)
       .order('submitted_at', { ascending: false })
       .limit(limit);
 
