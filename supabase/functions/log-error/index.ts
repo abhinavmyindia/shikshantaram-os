@@ -98,8 +98,6 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      userId = null,
-      userEmail = null,
       errorType = 'js_error',
       severity = 'error',
       message = 'Unknown error',
@@ -111,6 +109,10 @@ Deno.serve(async (req) => {
       deviceType = 'desktop',
       additionalData = {},
     } = body;
+    // Identity always derived from verified JWT — never trust client values.
+    const userId = caller.userId;
+    const userEmail = caller.email;
+
 
     // Auto-elevate severity (network blips are warnings unless they indicate server crashes)
     const msgLower = String(message).toLowerCase();
