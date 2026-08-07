@@ -56,7 +56,7 @@ async function callGatewayStream(
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: unknown }>,
-  maxTokens = 1500,
+  maxTokens = 4000,
 ): Promise<Response> {
   return await fetch(GATEWAY_URL, {
     method: 'POST',
@@ -78,7 +78,7 @@ async function callGatewaySync(
   apiKey: string,
   model: string,
   messages: Array<{ role: string; content: unknown }>,
-  maxTokens = 60,
+  maxTokens = 300,
 ): Promise<string> {
   const response = await fetch(GATEWAY_URL, {
     method: 'POST',
