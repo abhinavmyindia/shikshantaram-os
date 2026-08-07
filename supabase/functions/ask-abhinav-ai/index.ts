@@ -98,9 +98,9 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
+    const apiKey = Deno.env.get('LOVABLE_API_KEY') ?? ''
     if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY is not set')
+      console.error('LOVABLE_API_KEY is not set')
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -195,9 +195,9 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: true })
       .limit(20)
 
-    const anthropicMessages: Array<{ role: string; content: unknown }> = []
+    const chatMessages: Array<{ role: string; content: unknown }> = []
     if (history && history.length > 0) {
-      for (const msg of history) anthropicMessages.push({ role: msg.role, content: msg.content })
+      for (const msg of history) chatMessages.push({ role: msg.role, content: msg.content })
     }
 
     const userContent: Array<unknown> = []
@@ -205,14 +205,14 @@ Deno.serve(async (req) => {
       for (const img of images) {
         if (img.data && img.media_type) {
           userContent.push({
-            type: 'image',
-            source: { type: 'base64', media_type: img.media_type, data: img.data },
+            type: 'image_url',
+            image_url: { url: `data:${img.media_type};base64,${img.data}` },
           })
         }
       }
     }
     userContent.push({ type: 'text', text: message.trim() })
-    anthropicMessages.push({ role: 'user', content: userContent })
+    chatMessages.push({ role: 'user', content: hasImages ? userContent : message.trim() })
 
     await supabaseAdmin.from('chat_messages').insert({
       session_id: currentSessionId,
@@ -222,16 +222,22 @@ Deno.serve(async (req) => {
       image_urls: [],
     })
 
-    const anthropicResponse = await callAnthropicStream(
-      apiKey, SONNET_MODEL, ABHINAV_SYSTEM_PROMPT, anthropicMessages,
+    const aiResponse = await callGatewayStream(
+      apiKey, CHAT_MODEL, ABHINAV_SYSTEM_PROMPT, chatMessages,
     )
 
-    if (!anthropicResponse.ok || !anthropicResponse.body) {
-      const errorText = await anthropicResponse.text().catch(() => '')
-      console.error(`Anthropic API error: ${anthropicResponse.status}`, errorText)
+    if (!aiResponse.ok || !aiResponse.body) {
+      const errorText = await aiResponse.text().catch(() => '')
+      console.error(`AI gateway error: ${aiResponse.status}`, errorText)
+      const msg = aiResponse.status === 429
+        ? 'Too many requests right now. Please try again in a moment.'
+        : aiResponse.status === 402
+          ? 'AI credits exhausted. Please contact support.'
+          : `AI service error (${aiResponse.status})`
       return new Response(
-        JSON.stringify({ error: `Anthropic API error: ${anthropicResponse.status}` }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        JSON.stringify({ error: msg }),
+        { status: aiResponse.status === 429 ? 429 : aiResponse.status === 402 ? 402 : 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
