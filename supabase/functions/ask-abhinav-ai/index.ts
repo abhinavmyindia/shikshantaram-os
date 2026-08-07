@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
           // 4. Generate title for new sessions
           if (is_new_session || !session_id) {
             try {
-              const title = await callAnthropicSync(apiKey, HAIKU_MODEL, [{
+              const title = await callGatewaySync(apiKey, TITLE_MODEL, [{
                 role: 'user',
                 content: `Generate a 4 to 6 word title for a chat that started with this message: "${message.trim().slice(0, 200)}". Reply with ONLY the title. No quotes. No full stop at the end.`,
               }])
@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
               user_email: user.email,
               module: 'ask_abhinav_ai',
               call_type: hasImages ? 'chat_image' : 'chat_text',
-              model: SONNET_MODEL,
+              model: CHAT_MODEL,
               input_tokens: 0,
               output_tokens: 0,
               total_tokens: 0,
