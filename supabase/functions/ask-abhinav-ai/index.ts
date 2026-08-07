@@ -6,8 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const SONNET_MODEL = 'claude-sonnet-4-5'
-const HAIKU_MODEL  = 'claude-haiku-4-5'
+const CHAT_MODEL  = 'google/gemini-3.6-flash'
+const TITLE_MODEL = 'google/gemini-3.1-flash-lite'
+const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions'
 
 const CREDIT_COST_TEXT  = 3
 const CREDIT_COST_IMAGE = 6
@@ -50,42 +51,47 @@ Respond in the same language the user writes in. If they write in Hindi, respond
 WHAT YOU STAND FOR:
 Hard work plus right guidance plus right resources equals real results. No shortcuts. Right?`
 
-async function callAnthropicStream(
+async function callGatewayStream(
   apiKey: string,
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: unknown }>,
-  maxTokens = 1024,
+  maxTokens = 1500,
 ): Promise<Response> {
-  return await fetch('https://api.anthropic.com/v1/messages', {
+  return await fetch(GATEWAY_URL, {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Lovable-API-Key': apiKey,
+      'X-Lovable-AIG-SDK': 'fetch',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages, stream: true }),
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      stream: true,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+    }),
   })
 }
 
-async function callAnthropicSync(
+async function callGatewaySync(
   apiKey: string,
   model: string,
   messages: Array<{ role: string; content: unknown }>,
-  maxTokens = 30,
+  maxTokens = 60,
 ): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(GATEWAY_URL, {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Lovable-API-Key': apiKey,
+      'X-Lovable-AIG-SDK': 'fetch',
       'content-type': 'application/json',
     },
     body: JSON.stringify({ model, max_tokens: maxTokens, messages }),
   })
   if (!response.ok) return 'New Chat'
   const data = await response.json()
-  return data?.content?.[0]?.text?.trim() ?? 'New Chat'
+  return data?.choices?.[0]?.message?.content?.trim()?.replace(/^"|"$/g, '') || 'New Chat'
 }
 
 Deno.serve(async (req) => {
