@@ -6,8 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const SONNET_MODEL = 'claude-sonnet-4-5'
-const HAIKU_MODEL  = 'claude-haiku-4-5'
+const CHAT_MODEL  = 'google/gemini-3.6-flash'
+const TITLE_MODEL = 'google/gemini-3.1-flash-lite'
+const GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions'
 
 const CREDIT_COST_TEXT  = 3
 const CREDIT_COST_IMAGE = 6
@@ -50,51 +51,56 @@ Respond in the same language the user writes in. If they write in Hindi, respond
 WHAT YOU STAND FOR:
 Hard work plus right guidance plus right resources equals real results. No shortcuts. Right?`
 
-async function callAnthropicStream(
+async function callGatewayStream(
   apiKey: string,
   model: string,
   systemPrompt: string,
   messages: Array<{ role: string; content: unknown }>,
-  maxTokens = 1024,
+  maxTokens = 4000,
 ): Promise<Response> {
-  return await fetch('https://api.anthropic.com/v1/messages', {
+  return await fetch(GATEWAY_URL, {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Lovable-API-Key': apiKey,
+      'X-Lovable-AIG-SDK': 'fetch',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages, stream: true }),
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      stream: true,
+      messages: [{ role: 'system', content: systemPrompt }, ...messages],
+    }),
   })
 }
 
-async function callAnthropicSync(
+async function callGatewaySync(
   apiKey: string,
   model: string,
   messages: Array<{ role: string; content: unknown }>,
-  maxTokens = 30,
+  maxTokens = 300,
 ): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch(GATEWAY_URL, {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Lovable-API-Key': apiKey,
+      'X-Lovable-AIG-SDK': 'fetch',
       'content-type': 'application/json',
     },
     body: JSON.stringify({ model, max_tokens: maxTokens, messages }),
   })
   if (!response.ok) return 'New Chat'
   const data = await response.json()
-  return data?.content?.[0]?.text?.trim() ?? 'New Chat'
+  return data?.choices?.[0]?.message?.content?.trim()?.replace(/^"|"$/g, '') || 'New Chat'
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
+    const apiKey = Deno.env.get('LOVABLE_API_KEY') ?? ''
     if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY is not set')
+      console.error('LOVABLE_API_KEY is not set')
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -189,9 +195,9 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: true })
       .limit(20)
 
-    const anthropicMessages: Array<{ role: string; content: unknown }> = []
+    const chatMessages: Array<{ role: string; content: unknown }> = []
     if (history && history.length > 0) {
-      for (const msg of history) anthropicMessages.push({ role: msg.role, content: msg.content })
+      for (const msg of history) chatMessages.push({ role: msg.role, content: msg.content })
     }
 
     const userContent: Array<unknown> = []
@@ -199,14 +205,14 @@ Deno.serve(async (req) => {
       for (const img of images) {
         if (img.data && img.media_type) {
           userContent.push({
-            type: 'image',
-            source: { type: 'base64', media_type: img.media_type, data: img.data },
+            type: 'image_url',
+            image_url: { url: `data:${img.media_type};base64,${img.data}` },
           })
         }
       }
     }
     userContent.push({ type: 'text', text: message.trim() })
-    anthropicMessages.push({ role: 'user', content: userContent })
+    chatMessages.push({ role: 'user', content: hasImages ? userContent : message.trim() })
 
     await supabaseAdmin.from('chat_messages').insert({
       session_id: currentSessionId,
@@ -216,21 +222,27 @@ Deno.serve(async (req) => {
       image_urls: [],
     })
 
-    const anthropicResponse = await callAnthropicStream(
-      apiKey, SONNET_MODEL, ABHINAV_SYSTEM_PROMPT, anthropicMessages,
+    const aiResponse = await callGatewayStream(
+      apiKey, CHAT_MODEL, ABHINAV_SYSTEM_PROMPT, chatMessages,
     )
 
-    if (!anthropicResponse.ok || !anthropicResponse.body) {
-      const errorText = await anthropicResponse.text().catch(() => '')
-      console.error(`Anthropic API error: ${anthropicResponse.status}`, errorText)
+    if (!aiResponse.ok || !aiResponse.body) {
+      const errorText = await aiResponse.text().catch(() => '')
+      console.error(`AI gateway error: ${aiResponse.status}`, errorText)
+      const msg = aiResponse.status === 429
+        ? 'Too many requests right now. Please try again in a moment.'
+        : aiResponse.status === 402
+          ? 'AI credits exhausted. Please contact support.'
+          : `AI service error (${aiResponse.status})`
       return new Response(
-        JSON.stringify({ error: `Anthropic API error: ${anthropicResponse.status}` }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        JSON.stringify({ error: msg }),
+        { status: aiResponse.status === 429 ? 429 : aiResponse.status === 402 ? 402 : 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
     const encoder = new TextEncoder()
-    const reader = anthropicResponse.body.getReader()
+    const reader = aiResponse.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
     let fullResponse = ''
@@ -254,12 +266,8 @@ Deno.serve(async (req) => {
               if (!dataStr || dataStr === '[DONE]') continue
               try {
                 const event = JSON.parse(dataStr)
-                if (
-                  event.type === 'content_block_delta' &&
-                  event.delta?.type === 'text_delta' &&
-                  event.delta.text
-                ) {
-                  const text = event.delta.text
+                const text = event?.choices?.[0]?.delta?.content
+                if (typeof text === 'string' && text.length > 0) {
                   fullResponse += text
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
                 }
@@ -295,7 +303,7 @@ Deno.serve(async (req) => {
           // 4. Generate title for new sessions
           if (is_new_session || !session_id) {
             try {
-              const title = await callAnthropicSync(apiKey, HAIKU_MODEL, [{
+              const title = await callGatewaySync(apiKey, TITLE_MODEL, [{
                 role: 'user',
                 content: `Generate a 4 to 6 word title for a chat that started with this message: "${message.trim().slice(0, 200)}". Reply with ONLY the title. No quotes. No full stop at the end.`,
               }])
@@ -315,7 +323,7 @@ Deno.serve(async (req) => {
               user_email: user.email,
               module: 'ask_abhinav_ai',
               call_type: hasImages ? 'chat_image' : 'chat_text',
-              model: SONNET_MODEL,
+              model: CHAT_MODEL,
               input_tokens: 0,
               output_tokens: 0,
               total_tokens: 0,
