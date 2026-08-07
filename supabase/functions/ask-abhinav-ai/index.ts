@@ -242,7 +242,7 @@ Deno.serve(async (req) => {
     }
 
     const encoder = new TextEncoder()
-    const reader = anthropicResponse.body.getReader()
+    const reader = aiResponse.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
     let fullResponse = ''
@@ -266,12 +266,8 @@ Deno.serve(async (req) => {
               if (!dataStr || dataStr === '[DONE]') continue
               try {
                 const event = JSON.parse(dataStr)
-                if (
-                  event.type === 'content_block_delta' &&
-                  event.delta?.type === 'text_delta' &&
-                  event.delta.text
-                ) {
-                  const text = event.delta.text
+                const text = event?.choices?.[0]?.delta?.content
+                if (typeof text === 'string' && text.length > 0) {
                   fullResponse += text
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`))
                 }
