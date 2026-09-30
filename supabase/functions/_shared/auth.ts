@@ -55,6 +55,44 @@ export async function verifyCaller(req: Request): Promise<AuthCaller | null> {
   };
 }
 
+export type VerifiedUser = { userId: string; userEmail: string | null; userName: string | null };
+
+/**
+ * Verify the Bearer token with getClaims (signature checked) and return the
+ * caller's identity. Returns null for a missing, invalid or anon-key token.
+ * Never trust a userId sent in the request body; use this instead.
+ */
+export async function getVerifiedUser(req: Request): Promise<VerifiedUser | null> {
+  const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return null;
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { auth: { persistSession: false } }
+  );
+  const { data, error } = await supabase.auth.getClaims(token);
+  if (error || !data?.claims?.sub) return null;
+  const claims = data.claims as Record<string, any>;
+  // The public anon key is also a valid JWT, but it has no user subject.
+  if (claims.role === 'anon') return null;
+  const email = (claims.email as string | undefined) ?? null;
+  const meta = (claims.user_metadata ?? {}) as Record<string, any>;
+  return {
+    userId: String(claims.sub),
+    userEmail: email,
+    userName: meta.full_name || (email ? email.split('@')[0] : null),
+  };
+}
+
+/** True when the caller is an admin whose role is in the allowed list (owners always pass). */
+export function hasRole(caller: AuthCaller | null, roles: string[]): boolean {
+  if (!caller || !caller.isAdmin) return false;
+  if (caller.isOwner) return true;
+  return !!caller.adminRole && roles.includes(caller.adminRole);
+}
+
 export const unauthorized = (corsHeaders: Record<string, string>, msg = 'Unauthorized') =>
   new Response(JSON.stringify({ error: msg }), {
     status: 401,

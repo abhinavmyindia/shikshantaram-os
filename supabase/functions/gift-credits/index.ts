@@ -23,8 +23,9 @@ Deno.serve(async (req) => {
     if (!adminUser) throw new Error('Unauthorized');
 
     const { data: adminRow } = await supabase
-      .from('admin_users').select('role').eq('user_id', adminUser.id).single();
+      .from('admin_users').select('role, is_owner').eq('user_id', adminUser.id).single();
     if (!adminRow) throw new Error('Not an admin');
+    if (!adminRow.is_owner && !['admin', 'manager'].includes(adminRow.role)) throw new Error('Your role cannot gift credits');
 
     const { targetEmail, amount, reason } = await req.json();
     if (!targetEmail || !amount || amount <= 0) throw new Error('Email and amount are required');

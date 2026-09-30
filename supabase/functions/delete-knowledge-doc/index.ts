@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getVerifiedUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,9 +9,13 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const caller = await getVerifiedUser(req);
+  if (!caller) return unauthorized(corsHeaders);
+
   try {
-    const { userId, docId } = await req.json();
-    if (!userId || !docId) throw new Error('userId and docId required');
+    const { docId } = await req.json();
+    const userId = caller.userId; // never trust a userId from the request body
+    if (!docId) throw new Error('docId required');
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,

@@ -204,6 +204,14 @@ Deno.serve(async (req) => {
     const userId = user?.id || '';
     const userEmail = user?.email || '';
 
+    // Only signed-in users may spend platform AI budget (the public anon key has no user).
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'Please sign in to use the Niche Finder.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (userId) {
       const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL')!,

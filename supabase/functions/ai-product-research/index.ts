@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveAIKey, callWithBYOK, logByokUsage, logUsage } from '../_shared/byok.ts';
+import { getVerifiedUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -658,20 +659,6 @@ async function callLovableAI(prompt: string, model: string, maxTokens: number, o
 
 // ─── Extract user info from auth header ──────────────────────
 
-function extractUserFromAuth(authHeader: string | null): { userId: string | null; userEmail: string | null; userName: string | null } {
-  if (!authHeader) return { userId: null, userEmail: null, userName: null };
-  try {
-    const token = authHeader.replace('Bearer ', '');
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return {
-      userId: payload.sub || null,
-      userEmail: payload.email || null,
-      userName: payload.user_metadata?.full_name || payload.email?.split('@')[0] || null,
-    };
-  } catch {
-    return { userId: null, userEmail: null, userName: null };
-  }
-}
 
 // ─── MAIN HANDLER ────────────────────────────────────────────
 
@@ -686,14 +673,15 @@ serve(async (req) => {
   );
 
   const authHeader = req.headers.get('authorization');
-  const userInfo = extractUserFromAuth(authHeader);
+  const userInfo = await getVerifiedUser(req);
+  if (!userInfo) return unauthorized(corsHeaders);
 
   try {
     const body = await req.json();
     const { action } = body;
 
     // BYOK: resolve user's preferred key
-    const byokUserId = body.userId || userInfo.userId;
+    const byokUserId = userInfo.userId;
     const byok = byokUserId ? await resolveAIKey(byokUserId) : { useByok: false as const };
 
     let prompt: string;
@@ -956,7 +944,7 @@ Return ONLY a JSON array of exactly 5 objects:
         });
 
         await logByokUsage(
-          byokUserId!, body.userEmail || userInfo.userEmail,
+          byokUserId!, userInfo.userEmail,
           byok.provider, byok.model,
           'product_navigator', callType,
           byokResult.inputTokens, byokResult.outputTokens, true

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getVerifiedUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,14 +20,20 @@ const pickOne = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const caller = await getVerifiedUser(req);
+  if (!caller) return unauthorized(corsHeaders);
+
   const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!;
 
   try {
     const {
-      userId, userEmail, country = 'India',
+      country = 'India',
       fileBase64, fileType, filename, docId,
       extractedText, existingProducts = [],
     } = await req.json();
+
+    const userId = caller.userId; // never trust a userId from the request body
+    const userEmail = caller.userEmail;
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,

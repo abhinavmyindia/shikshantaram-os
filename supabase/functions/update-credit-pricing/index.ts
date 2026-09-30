@@ -21,8 +21,9 @@ Deno.serve(async (req) => {
     if (!admin) throw new Error('Unauthorized');
 
     const { data: adminRow } = await supabase
-      .from('admin_users').select('role').eq('user_id', admin.id).single();
+      .from('admin_users').select('role, is_owner').eq('user_id', admin.id).single();
     if (!adminRow) throw new Error('Not an admin');
+    if (!adminRow.is_owner && adminRow.role !== 'admin') throw new Error('Your role cannot change credit pricing');
 
     const { toolModule, callType, newCredits, reason } = await req.json();
 

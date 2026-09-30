@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveAIKey, callWithBYOK, logByokUsage, logUsage } from '../_shared/byok.ts';
+import { getVerifiedUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,13 +16,6 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
 
 // logAiUsage replaced by shared logUsage from _shared/byok.ts
 
-function extractUserFromAuth(authHeader: string | null) {
-  if (!authHeader) return { userId: null, userEmail: null, userName: null };
-  try {
-    const payload = JSON.parse(atob(authHeader.replace('Bearer ', '').split('.')[1]));
-    return { userId: payload.sub || null, userEmail: payload.email || null, userName: payload.user_metadata?.full_name || payload.email?.split('@')[0] || null };
-  } catch { return { userId: null, userEmail: null, userName: null }; }
-}
 
 function buildStructuresPrompt(brief: any): string {
   return `You are Alex Hormozi — the world's best offer builder. Your job is to design irresistible digital product offers.
@@ -200,14 +194,15 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const userInfo = extractUserFromAuth(req.headers.get('authorization'));
+  const userInfo = await getVerifiedUser(req);
+  if (!userInfo) return unauthorized(corsHeaders);
 
   try {
     const body = await req.json();
     const { action } = body;
 
     // BYOK resolution
-    const byokUserId = body.userId || userInfo.userId;
+    const byokUserId = userInfo.userId;
     const byok = byokUserId ? await resolveAIKey(byokUserId) : { useByok: false as const };
 
     let prompt: string;
@@ -238,7 +233,7 @@ serve(async (req) => {
           provider: byok.provider as any, apiKey: byok.apiKey, model: byok.model,
           userMessage: prompt, maxTokens,
         });
-        await logByokUsage(byokUserId!, body.userEmail || userInfo.userEmail, byok.provider, byok.model,
+        await logByokUsage(byokUserId!, userInfo.userEmail, byok.provider, byok.model,
           'offer_creation', callType, byokResult.inputTokens, byokResult.outputTokens, true);
         try {
           const parsed = parseJsonResponse(byokResult.text);

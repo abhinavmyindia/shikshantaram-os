@@ -30,9 +30,12 @@ serve(async (req) => {
     }
 
     const adminClient = createClient(supabaseUrl, serviceKey);
-    const { data: adminRow } = await adminClient.from('admin_users').select('user_id').eq('user_id', caller.id).single();
+    const { data: adminRow } = await adminClient.from('admin_users').select('user_id, role, is_owner').eq('user_id', caller.id).single();
     if (!adminRow) {
       return new Response(JSON.stringify({ error: 'Not an admin' }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (!adminRow.is_owner && !['admin'].includes(adminRow.role)) {
+      return new Response(JSON.stringify({ error: 'Your role cannot delete users' }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const { userId, action } = await req.json();

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveAIKey, callWithBYOK, logByokUsage, logUsage } from '../_shared/byok.ts';
+import { getVerifiedUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,13 +13,6 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'google/gemini-3-flash-preview': { input: 0.10, output: 0.40 },
 };
 
-function extractUserFromAuth(authHeader: string | null) {
-  if (!authHeader) return { userId: null, userEmail: null, userName: null };
-  try {
-    const payload = JSON.parse(atob(authHeader.replace('Bearer ', '').split('.')[1]));
-    return { userId: payload.sub || null, userEmail: payload.email || null, userName: payload.user_metadata?.full_name || payload.email?.split('@')[0] || null };
-  } catch { return { userId: null, userEmail: null, userName: null }; }
-}
 
 // logAiUsage replaced by shared logUsage from _shared/byok.ts
 
@@ -157,14 +151,15 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const userInfo = extractUserFromAuth(req.headers.get('authorization'));
+  const userInfo = await getVerifiedUser(req);
+  if (!userInfo) return unauthorized(corsHeaders);
 
   try {
     const body = await req.json();
     const { copyType, baseBrief, typeSpecificInputs, tone } = body;
 
     // BYOK resolution
-    const byokUserId = body.userId || userInfo.userId;
+    const byokUserId = userInfo.userId;
     const byok = byokUserId ? await resolveAIKey(byokUserId) : { useByok: false as const };
 
     const copyTypeKey = copyType.replace(/\s+/g, '_').toLowerCase();
@@ -223,7 +218,7 @@ Return ONLY a JSON object:
           provider: byok.provider as any, apiKey: byok.apiKey, model: byok.model,
           system, userMessage: prompt, maxTokens: 8000,
         });
-        await logByokUsage(byokUserId!, body.userEmail || userInfo.userEmail, byok.provider, byok.model,
+        await logByokUsage(byokUserId!, userInfo.userEmail, byok.provider, byok.model,
           'copywriting_suite', `generate_${copyTypeKey}`, byokResult.inputTokens, byokResult.outputTokens, true);
         try {
           const parsed = parseJsonResponse(byokResult.text);

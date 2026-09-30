@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getVerifiedUser, unauthorized } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,14 +9,18 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const caller = await getVerifiedUser(req);
+  if (!caller) return unauthorized(corsHeaders);
+
   const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY')!;
 
   try {
     const {
-      userId, filename, fileType,
+      filename, fileType,
       fileBase64, extractedText, fileSizeBytes,
     } = await req.json();
 
+    const userId = caller.userId; // never trust a userId from the request body
     if (!userId || !filename || !fileBase64)
       throw new Error('userId, filename, and fileBase64 are required');
 

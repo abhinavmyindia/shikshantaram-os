@@ -39,7 +39,28 @@ Deno.serve(async (req) => {
     if (!record.otp_expires_at || new Date(record.otp_expires_at) < new Date()) {
       throw new Error('OTP has expired. Please start over.');
     }
-    if (record.otp_code !== otp) throw new Error('Incorrect OTP. Please try again.');
+    // Limit wrong guesses. Works once the otp_attempts column exists; before that it is skipped.
+    const MAX_OTP_ATTEMPTS = 5;
+    let attempts = 0;
+    let attemptsTracked = false;
+    const { data: attemptRow, error: attemptErr } = await supabase
+      .from('trial_requests')
+      .select('otp_attempts')
+      .eq('id', requestId)
+      .maybeSingle();
+    if (!attemptErr && attemptRow) {
+      attempts = (attemptRow as { otp_attempts?: number }).otp_attempts ?? 0;
+      attemptsTracked = true;
+    }
+    if (attemptsTracked && attempts >= MAX_OTP_ATTEMPTS) {
+      throw new Error('Too many incorrect attempts. Please request a new code.');
+    }
+    if (record.otp_code !== otp) {
+      if (attemptsTracked) {
+        await supabase.from('trial_requests').update({ otp_attempts: attempts + 1 }).eq('id', requestId);
+      }
+      throw new Error('Incorrect OTP. Please try again.');
+    }
 
     await supabase
       .from('trial_requests')

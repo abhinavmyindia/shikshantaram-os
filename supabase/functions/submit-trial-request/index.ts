@@ -6,7 +6,12 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+// Cryptographically secure 6-digit code (Math.random is predictable).
+const generateOTP = () => {
+  const b = new Uint32Array(1);
+  crypto.getRandomValues(b);
+  return String(100000 + (b[0] % 900000));
+};
 
 const PAYMENT_LINK = 'https://rzp.io/rzp/osaccess';
 const WHATSAPP_LINK = 'https://wa.me/918933966250';
@@ -71,6 +76,8 @@ Deno.serve(async (req) => {
         .from('trial_requests')
         .update({ otp_code: newOtp, otp_expires_at: newExpiry, otp_verified: false, updated_at: new Date().toISOString() })
         .eq('id', existing.id);
+      // Best effort: reset the wrong-attempt counter (column added by the security migration).
+      await supabase.from('trial_requests').update({ otp_attempts: 0 }).eq('id', existing.id).then(() => {}, () => {});
 
       const RESEND_API_KEY_R = Deno.env.get('RESEND_API_KEY');
       if (RESEND_API_KEY_R) {

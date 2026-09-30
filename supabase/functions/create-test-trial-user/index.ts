@@ -1,6 +1,7 @@
 // Admin-only: provisions a complete test trial user end-to-end.
 // Skips the OTP/waitlist flow. Creates auth user + profile + credits + trial_request.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { verifyCaller, unauthorized, forbidden } from '../_shared/auth.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,10 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const caller = await verifyCaller(req);
+  if (!caller) return unauthorized(corsHeaders);
+  if (!caller.isAdmin) return forbidden(corsHeaders, 'Admin access required');
+
   try {
     const body = await req.json().catch(() => ({}));
     const fullName = String(body.fullName ?? '').trim();
@@ -18,7 +23,7 @@ Deno.serve(async (req) => {
     const phone = String(body.phone ?? '').trim() || '+910000000000';
     const durationDays = Number(body.durationDays);
     const adminNotes = body.adminNotes ? String(body.adminNotes) : 'Created via Test Trial (admin)';
-    const adminId = body.adminId ? String(body.adminId) : null;
+    const adminId: string = caller.userId; // verified admin; never trust a body value
 
     if (!fullName) throw new Error('fullName is required.');
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) throw new Error('Valid email is required.');

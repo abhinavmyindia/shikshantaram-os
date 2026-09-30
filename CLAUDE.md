@@ -289,6 +289,8 @@ Most functions set `verify_jwt = false` in `config.toml` and must authenticate t
 ### The standard pattern (copy this for every new function)
 `_shared/auth.ts` exports `verifyCaller(req)`, which uses `getClaims` (signature-verified) plus an `admin_users` lookup and returns `{ userId, email, isAdmin, adminRole, isOwner }`, plus `unauthorized` and `forbidden` response helpers. Use it, derive the user id from the verified token only, and check `isOwner` or `adminRole` when the action needs it.
 
+For user-facing functions, use `getVerifiedUser(req)` (verified token, rejects the anon key) and never read a user id from the request body. For admin actions, use `verifyCaller(req)` with `hasRole(caller, [...])` so the role is checked on the server.
+
 Reference implementations to copy: `check-credits`, `deduct-credits`, `create-razorpay-order`, `save-byok-key`, `verify-razorpay-payment`, `approve-trial-user`, `get-trial-requests`.
 
 ### Secrets and env (Deno)
