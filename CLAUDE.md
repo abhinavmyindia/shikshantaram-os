@@ -1,6 +1,6 @@
 # Shikshantaram OS: Project Instructions for Claude
 
-Read this file fully before touching any code. It describes what the product is, how it is built, the rules every change must follow, and the known risks in the current code. Where this file and README.md disagree, this file and the code win. README.md is the original seed prompt (2 live tools, 6 locked, seeded RNG) and is stale.
+Read this file fully before touching any code. It describes what the product is, how it is built, the rules every change must follow. Where this file and README.md disagree, this file and the code win. README.md is the original seed prompt (2 live tools, 6 locked, seeded RNG) and is stale.
 
 Facts below were taken from the repo as read. Anything the repo cannot prove (live database state, Supabase dashboard settings, Lovable settings) is marked "unverified".
 
@@ -122,7 +122,7 @@ Frontend `TOOL_ACCESS`:
 
 Trial fields on the profile: `is_trial`, `trial_started_at`, `trial_ends_at`, `trial_source_tier`, `trial_request_id`.
 
-The frontend gate is cosmetic. Real enforcement must be in edge functions and RLS (see known risks).
+The frontend gate is cosmetic. Real enforcement must be in edge functions and RLS.
 
 ### Profile field protection
 Trigger `trg_protect_sensitive_profile_fields` blocks non-admin changes to `access_tier`, `payment_status`, `payment_amount`, `credits_enforcement`, `is_beta_user`, `added_by`, `is_trial`, `trial_ends_at`, `trial_request_id`, `trial_source_tier`. It is bypassed when `auth.uid()` is NULL (service role) and for team members. If you add a new sensitive column to `user_profiles`, add it to this trigger in the same migration.
@@ -130,7 +130,7 @@ Trigger `trg_protect_sensitive_profile_fields` blocks non-admin changes to `acce
 ### Admin roles
 `admin_users` holds admins. Roles: `owner`, `admin`, `manager`, `operator`. The UI uses `useAdminRole` with a `canDo` matrix. SQL helpers: `is_admin`, `is_owner`, `is_team_member`, `has_admin_role`, `get_my_admin_role`. Admin tabs: Overview, Users, Signups, Trials, Credits, AI Analytics, AskAbhinavAI, AI Settings (owner), Security, Email Delivery, Activity Log, Team Access.
 
-Important: role checks are mostly UI-level. Most admin edge functions only check that a row exists in `admin_users`. Only `manage-team` and `admin-bulk-reset-credits` require `is_owner`. When you add an admin function, enforce the role server-side.
+Enforce admin roles on the server for every admin action.
 
 ---
 
@@ -162,7 +162,7 @@ Seeded pricing (tool_module / call_type, credits): generate_30_ideas 5, deep_res
 
 AskAbhinavAI deducts 3 credits (text) or 6 (image) inside its own edge function via `deduct_chat_credits`.
 
-Known mismatch: the NichePage AI finder calls `deductCredits('niche_clarity','ai_niche_finder')` with no pre-gate and no seeded pricing row. `deduct_user_credits` returns success with 0 deducted when no pricing row exists, so this call is effectively free. Live DB may differ from migrations (unverified).
+Check that every call type used by the client has a matching `credit_pricing` row.
 
 Rules for new credit-using features:
 - Add a `credit_pricing` row through a migration.
@@ -296,35 +296,9 @@ Reference implementations to copy: `check-credits`, `deduct-credits`, `create-ra
 
 ---
 
-## 13. Known risks and inconsistencies
+## 13. Security and quality backlog
 
-These were observed in code. They are not claimed to have been exploited. Treat them as a backlog, and do not make them worse. When you touch an affected file, fix the issue if the user agrees, or flag it.
-
-High priority:
-1. Unverified JWT decode. `offer-creation`, `funnel-builder`, `generate-copy` (all `verify_jwt=false`) and `ai-product-research` use `extractUserFromAuth`, which base64-decodes the JWT payload without verifying the signature. They resolve the BYOK user from `body.userId || jwt.sub`. Consequence: an unauthenticated caller can spend platform AI budget, and can trigger use of another user's stored BYOK key if they know that user's UUID. Fix: switch to `verifyCaller` and ignore `body.userId`.
-2. `find-my-niche` is not in `config.toml` (so the gateway requires a JWT) but the public anon key is itself a valid JWT, and the function works with an empty `userId`. Anyone with the anon key can burn platform AI credit. Fix: `verifyCaller`.
-3. `create-test-trial-user` only verifies an admin if `adminId` is supplied in the request body (client-controlled). Without it, it provisions users with no admin check. Fix: `verifyCaller` with an admin requirement, or remove the function in production.
-4. `save-knowledge-doc`, `delete-knowledge-doc`, `analyze-document-expertise` trust `body.userId` (IDOR risk), and the first and last use the platform Anthropic key. Fix: derive the user from the token.
-5. Public signup risk. `handle_new_user` copies `access_tier` from `raw_user_meta_data` at signup. Public email signups must be disabled in Supabase Auth settings. This cannot be verified from the repo. Check it.
-
-Medium:
-6. `end-session` and `cleanup-recent-work` have no auth. `submit-trial-request` and `verify-trial-otp` are public by design, but the OTP has no attempt limit and uses `Math.random`. Fix: use `crypto.getRandomValues`, cap attempts, rate limit by email and IP.
-7. Admin role enforcement is mostly UI-only. `gift-credits`, `update-credit-pricing`, `admin-delete-user`, `admin-update-user`, `admin-reset-password` accept any `admin_users` row. A low-privilege operator could call them directly. Fix: check `adminRole` server-side using the `canDo` matrix.
-8. Credit gating is client-initiated and fails open, and the default mode is shadow. Credits are not a hard limit today. Hard enforcement would need the gate inside each AI function.
-9. `approve-trial-user` emails a temporary password in plaintext. Prefer a set-password link.
-10. `log-session` calls `http://ip-api.com` over plain HTTP.
-11. `.env` is committed to a public repo. It only holds publishable Supabase values, so it is not a leak, but keep it that way.
-
-Product and data honesty:
-12. Seeded-RNG niche and product stats are synthetic; AI "real data" prompts have no search backing (section 9).
-13. `global_settings.default_claude_model` is written but unused.
-14. The `ai_niche_finder` pricing mismatch (section 7). Also check other call types used by the client against `credit_pricing` rows whenever you touch credits.
-15. `getRetailValue` is an inflated marketing number.
-16. README.md is stale.
-17. Custom top-up minimum of Rs 10 is a testing value.
-18. Only one trivial test exists.
-
----
+The security and quality backlog is tracked privately by the owner and is deliberately not kept in this public repository. Ask the owner for it before changing authentication, credits, payments or admin functions. Follow the rules in section 14 for all new work.
 
 ## 14. Rules for Claude working on this repo
 
@@ -391,7 +365,6 @@ Style for your replies on this project: short, plain, no filler. State what chan
 
 ## 16. Open questions for the owner
 
-- Is public email signup disabled in Supabase Auth? (risk 5)
 - Is `credits_enforcement_mode` currently `shadow` or `enforced` in production?
 - Trial credits: 50 (trigger) or 100 (approval policy)?
 - Should `default_claude_model` be wired into functions or removed from the admin UI?
